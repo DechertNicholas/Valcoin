@@ -37,10 +37,10 @@ namespace Valcoin_Core
 
         public void StartNode()
         {
-            var db = new DbHandler();
-            db.CreateDBConnection();
+            //var db = new DbHandler();
+            //db.CreateDBConnection();
             var block = BuildNewBlock();
-            Console.WriteLine(block);
+            Console.WriteLine(block); // Just for debug to inspect the block
         }
 
         private Block BuildNewBlock()
@@ -50,15 +50,13 @@ namespace Valcoin_Core
             var hashedBlockData = BuildMerkleRoot(transactions);
             return new Block
             {
-                Header = new BlockHeader
-                {
-                    BlockVersion = 1,
-                    PreviousHash = "D7E88CEFB452B8B53B6EEE935735BF21B915D651630324D45187F1C73E4828A6", // placeholder
-                    BlockDateTime = DateTime.UtcNow,
-                    TargetDifficulty = "000000FF00000000000000000000000000000000000000000000000000000000",
-                    RootHash = Utils.HashByteToString(hashedBlockData.NodeSHA256Hash)
-                },
-                TxData = hashedBlockData
+                BlockNumber = 1, //placeholder
+                BlockVersion = 1,
+                PreviousHash = "D7E88CEFB452B8B53B6EEE935735BF21B915D651630324D45187F1C73E4828A6", // placeholder
+                BlockDateTime = DateTime.UtcNow,
+                TargetDifficulty = "000000FF00000000000000000000000000000000000000000000000000000000",
+                RootHash = Utils.HashByteToString(hashedBlockData.NodeSHA256Hash),
+                //TxData = hashedBlockData
             }; // The block contains the root hash twice (RootHash and root of TxData). Will figure out how to remove this later
         }
 

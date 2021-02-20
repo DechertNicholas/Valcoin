@@ -75,7 +75,7 @@ namespace Valcoin_Core
         {
             hash = new byte[32];
             hashFound = false;
-            randomGen.GetBytes(block.Header.Nonce);
+            randomGen.GetBytes(block.Nonce);
             var computedHash = hasher.ComputeHash(block);
             //if (computedHash[0] < 0x0F)
             //{
