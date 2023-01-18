@@ -29,6 +29,7 @@ namespace Valcoin
         public MainWindow()
         {
             this.InitializeComponent();
+            Title = "Valcoin";
         }
 
         private void myButton_Click(object sender, RoutedEventArgs e)
