@@ -15,6 +15,8 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Valcoin_Core;
+using Microsoft.UI.Xaml.Documents;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -34,7 +36,13 @@ namespace Valcoin
 
         private void myButton_Click(object sender, RoutedEventArgs e)
         {
-            myButton.Content = "Clicked";
+            var block = BuildTestBlock();
+            myButton.Content = $"{block.BlockHeader.Nonce}";
+        }
+
+        private ValcoinBlock BuildTestBlock()
+        {
+            return new ValcoinBlock();
         }
     }
 }
