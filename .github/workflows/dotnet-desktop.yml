@@ -97,10 +97,10 @@ jobs:
         [IO.File]::WriteAllBytes("$certificatePath", $pfx_cert_byte)
         
     # Add the certificate to the store as it is self-signed
-    #- name: Trust the signing certificate
-    #  run: |
-    #    $certificatePath = Join-Path -Path $env:Wap_Project_Directory -ChildPath GitHubActionsWorkflow.pfx
-    #    Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation Cert:\CurrentUser\TrustedPeople
+    - name: Trust the signing certificate
+      run: |
+        $certificatePath = "GitHubActionsWorkflow.pfx"
+        Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation Cert:\CurrentUser\TrustedPeople
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
