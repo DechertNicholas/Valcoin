@@ -45,9 +45,8 @@ on:
     branches: [ "main", "develop" ]
 
 jobs:
-
   build:
-
+    environment: Development
     strategy:
       matrix:
         configuration: [Debug, Release]
