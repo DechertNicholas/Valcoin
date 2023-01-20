@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Valcoin (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Valcoin (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
