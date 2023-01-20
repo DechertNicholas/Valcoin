@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Valcoin_Core
+namespace Valcoin.Core
 {
     public class BlockHeader
     {
