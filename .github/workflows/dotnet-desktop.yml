@@ -93,6 +93,38 @@ jobs:
       run: |
         $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.BASE64_ENCODED_PFX }}")
         [IO.File]::WriteAllBytes($env:CertificatePath, $pfx_cert_byte)
+        
+    - name: Setup Versioning
+      uses: paulhatch/semantic-version@v5.0.3
+      with:
+        # The prefix to use to identify tags
+        tag_prefix: "v"
+        # A string which, if present in a git commit, indicates that a change represents a
+        # major (breaking) change, supports regular expressions wrapped with '/'
+        major_pattern: "(MAJOR)"
+        # Same as above except indicating a minor change, supports regular expressions wrapped with '/'
+        minor_pattern: "(MINOR)"
+        # A string to determine the format of the version output
+        version_format: "${major}.${minor}.${patch}.${increment}"
+        # If this is set to true, *every* commit will be treated as a new version.
+        bump_each_commit: false
+        # If true, the body of commits will also be searched for major/minor patterns to determine the version type.
+        search_commit_body: true
+      id: version
+    
+    - name: Set Package Version
+      run: |
+        $file = "Valcoin\Package.appxmanifest"
+        $path = Resolve-Path $file
+        Write-Output "Expected Path: $path"
+        Write-Output "Version: $env:FullVersion"
+        $doc = Get-Content $path
+        $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"$env:FullVersion`""
+        Write-Output "New manifest:`n"
+        $new
+        $new | Out-File $path
+      env:
+        FullVersion: ${{ steps.version.outputs.version }}
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
@@ -103,6 +135,7 @@ jobs:
         Appx_Package_Dir: Packages\
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
+        FullVersion: ${{ steps.version.outputs.version }}
 
     # Remove the pfx
     - name: Remove the pfx
@@ -112,6 +145,6 @@ jobs:
     - name: Upload MSIX package
       uses: actions/upload-artifact@v2
       with:
-        name: MSIX Package
+        name: Valcoin v${{ steps.version.outputs.version }}
         path: ${{ env.Solution_Name }}\\Packages
         if-no-files-found: error
