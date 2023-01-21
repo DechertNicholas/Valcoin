@@ -63,23 +63,6 @@ jobs:
       CertificatePath: Valcoin\GitHubActionsWorkflow.pfx
 
     steps:
-    - name: Setup Versioning
-      uses: paulhatch/semantic-version@v5.0.3
-      with:
-        # The prefix to use to identify tags
-        tag_prefix: "v"
-        # A string which, if present in a git commit, indicates that a change represents a
-        # major (breaking) change, supports regular expressions wrapped with '/'
-        major_pattern: "(MAJOR)"
-        # Same as above except indicating a minor change, supports regular expressions wrapped with '/'
-        minor_pattern: "(MINOR)"
-        # A string to determine the format of the version output
-        version_format: "${major}.${minor}.${patch}.${increment}"
-        # If this is set to true, *every* commit will be treated as a new version.
-        bump_each_commit: true
-        # If true, the body of commits will also be searched for major/minor patterns to determine the version type.
-        search_commit_body: true
-    
     - name: Checkout
       uses: actions/checkout@v3
       with:
@@ -110,6 +93,23 @@ jobs:
       run: |
         $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.BASE64_ENCODED_PFX }}")
         [IO.File]::WriteAllBytes($env:CertificatePath, $pfx_cert_byte)
+        
+    - name: Setup Versioning
+      uses: paulhatch/semantic-version@v5.0.3
+      with:
+        # The prefix to use to identify tags
+        tag_prefix: "v"
+        # A string which, if present in a git commit, indicates that a change represents a
+        # major (breaking) change, supports regular expressions wrapped with '/'
+        major_pattern: "(MAJOR)"
+        # Same as above except indicating a minor change, supports regular expressions wrapped with '/'
+        minor_pattern: "(MINOR)"
+        # A string to determine the format of the version output
+        version_format: "${major}.${minor}.${patch}.${increment}"
+        # If this is set to true, *every* commit will be treated as a new version.
+        bump_each_commit: true
+        # If true, the body of commits will also be searched for major/minor patterns to determine the version type.
+        search_commit_body: true
     
     - name: Set Package Version
       run: |
