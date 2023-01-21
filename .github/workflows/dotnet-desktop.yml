@@ -135,6 +135,7 @@ jobs:
         Appx_Package_Dir: Packages\
         Configuration: ${{ matrix.configuration }}
         Platform: ${{ matrix.platform }}
+        FullVersion: ${{ steps.version.outputs.version }}
 
     # Remove the pfx
     - name: Remove the pfx
