@@ -48,7 +48,6 @@ on:
 
 jobs:
   build:
-    environment: Development
     strategy:
       matrix:
         configuration: [Release]
