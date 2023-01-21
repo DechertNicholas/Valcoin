@@ -32,17 +32,12 @@ namespace Valcoin
         {
             this.InitializeComponent();
             Title = "Valcoin";
+            Miner.Mine();
         }
 
         private void myButton_Click(object sender, RoutedEventArgs e)
         {
-            var block = BuildTestBlock();
-            myButton.Content = $"{block.BlockHeader.Nonce}";
-        }
-
-        private ValcoinBlock BuildTestBlock()
-        {
-            return new ValcoinBlock();
+            myButton.Content = $"Nothing";
         }
     }
 }
