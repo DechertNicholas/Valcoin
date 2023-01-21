@@ -116,9 +116,11 @@ jobs:
         $file = "Valcoin\Package.appxmanifest"
         $path = Resolve-Path $file
         Write-Output "Expected Path: $path"
+        Write-Output "Version: $version_format"
         $doc = Get-Content $path
-        $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"$env:version_format`""
-        Write-Output "New manifest:`n$doc"
+        $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"version_format`""
+        Write-Output "New manifest:`n"
+        $doc
         $new | Out-File $path
 
     # Create the app package by building and packaging the Windows Application Packaging project
