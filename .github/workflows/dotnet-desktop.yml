@@ -110,18 +110,21 @@ jobs:
         bump_each_commit: flase
         # If true, the body of commits will also be searched for major/minor patterns to determine the version type.
         search_commit_body: true
+      id: version
     
     - name: Set Package Version
       run: |
         $file = "Valcoin\Package.appxmanifest"
         $path = Resolve-Path $file
         Write-Output "Expected Path: $path"
-        Write-Output "Version: ${{ steps.version.outputs.version }}"
+        Write-Output "Version: $env:FullVersion"
         $doc = Get-Content $path
-        $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"${{ steps.version.outputs.version }}`""
+        $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"$env:FullVersion`""
         Write-Output "New manifest:`n"
         $new
         $new | Out-File $path
+      env:
+        FullVersion: ${{ steps.version.outputs.version }}
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
