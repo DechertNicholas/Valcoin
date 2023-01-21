@@ -9,7 +9,7 @@
   <Identity
     Name="8f622f8f-740e-470f-b9df-6d2fe57268eb"
     Publisher="CN=Nicholas Dechert"
-    Version="0.1.0.0" />
+    Version="0.0.0.0" />
 
   <Properties>
     <DisplayName>Valcoin</DisplayName>
