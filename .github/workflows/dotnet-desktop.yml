@@ -145,6 +145,6 @@ jobs:
     - name: Upload MSIX package
       uses: actions/upload-artifact@v2
       with:
-        name: MSIX Package
+        name: Valcoin v${{ steps.version.outputs.version }}
         path: ${{ env.Solution_Name }}\\Packages
         if-no-files-found: error
