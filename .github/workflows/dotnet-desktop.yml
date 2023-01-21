@@ -62,8 +62,6 @@ jobs:
       #Test_Project_Path: your-test-project-path                 # Replace with the path to your test project, i.e. MyWpfApp.Tests\MyWpfApp.Tests.csproj.
       Wap_Project_Directory: Valcoin                             # Replace with the Wap project directory relative to the solution, i.e. MyWpfApp.Package.
       CertificatePath: Valcoin\GitHubActionsWorkflow.pfx
-      #Wap_Project_Path: Valcoin\Valcoin.csproj                   # Replace with the path to your Wap project, i.e. MyWpf.App.Package\MyWpfApp.Package.wapproj.
-      
 
     steps:
     - name: Checkout
@@ -95,17 +93,7 @@ jobs:
     - name: Decode the pfx
       run: |
         $pfx_cert_byte = [System.Convert]::FromBase64String("${{ secrets.BASE64_ENCODED_PFX }}")
-        #$certificatePath = "$env:Wap_Project_Directory\GitHubActionsWorkflow.pfx"
         [IO.File]::WriteAllBytes($env:CertificatePath, $pfx_cert_byte)
-        Resolve-Path $env:CertificatePath
-        $env:CertificatePath = Resolve-Path $env:CertificatePath
-        
-    # Add the certificate to the store as it is self-signed
-    #- name: Trust the signing certificate
-    #  run: |
-    #    #$certificatePath = "GitHubActionsWorkflow.pfx"
-    #    Write-Output "Cert Path: $env:CertificatePath"
-    #    Import-PfxCertificate -FilePath $env:CertificatePath -CertStoreLocation Cert:\CurrentUser\TrustedPeople
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
