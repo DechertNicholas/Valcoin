@@ -101,15 +101,15 @@ jobs:
         $env:CertificatePath = Resolve-Path $env:CertificatePath
         
     # Add the certificate to the store as it is self-signed
-    - name: Trust the signing certificate
-      run: |
-        #$certificatePath = "GitHubActionsWorkflow.pfx"
-        Write-Output "Cert Path: $env:CertificatePath"
-        Import-PfxCertificate -FilePath $env:CertificatePath -CertStoreLocation Cert:\CurrentUser\TrustedPeople
+    #- name: Trust the signing certificate
+    #  run: |
+    #    #$certificatePath = "GitHubActionsWorkflow.pfx"
+    #    Write-Output "Cert Path: $env:CertificatePath"
+    #    Import-PfxCertificate -FilePath $env:CertificatePath -CertStoreLocation Cert:\CurrentUser\TrustedPeople
 
     # Create the app package by building and packaging the Windows Application Packaging project
     - name: Create the app package
-      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile=(Split-Path $env:CertificatePath -Leaf) /p:AppxPackageDir="$env:Appx_Package_Dir" /p:GenerateAppxPackageOnBuild=true
+      run: msbuild $env:Solution_Name /p:Configuration=$env:Configuration /p:Platform=$env:Platform /p:UapAppxPackageBuildMode=$env:Appx_Package_Build_Mode /p:AppxBundle=$env:Appx_Bundle /p:PackageCertificateKeyFile="$(Split-Path $env:CertificatePath -Leaf)" /p:AppxPackageDir="$env:Appx_Package_Dir" /p:GenerateAppxPackageOnBuild=true
       env:
         Appx_Bundle: Never
         Appx_Package_Build_Mode: SideloadOnly
