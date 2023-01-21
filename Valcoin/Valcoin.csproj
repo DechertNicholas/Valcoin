@@ -16,13 +16,13 @@
     <AppxAutoIncrementPackageRevision>False</AppxAutoIncrementPackageRevision>
     <AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
-    <AppxBundle>Never</AppxBundle>
-    <AppInstallerUri>C:\Code\Valcoin-Deploy</AppInstallerUri>
+    <AppxBundle>Always</AppxBundle>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
     <Title>Valcoin</Title>
-    <AppxPackageDir>C:\Code\Valcoin-Deploy\</AppxPackageDir>
+    <AppxPackageDir>AppPackages\</AppxPackageDir>
     <PackageCertificateKeyFile>Valcoin_TemporaryKey.pfx</PackageCertificateKeyFile>
     <Platform>x64</Platform>
+    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
   </PropertyGroup>
 
   <ItemGroup>
