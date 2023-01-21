@@ -98,11 +98,13 @@ jobs:
         #$certificatePath = "$env:Wap_Project_Directory\GitHubActionsWorkflow.pfx"
         [IO.File]::WriteAllBytes($env:CertificatePath, $pfx_cert_byte)
         Resolve-Path $env:CertificatePath
+        $env:CertificatePath = Resolve-Path $env:CertificatePath
         
     # Add the certificate to the store as it is self-signed
     - name: Trust the signing certificate
       run: |
         #$certificatePath = "GitHubActionsWorkflow.pfx"
+        Write-Output "Cert Path: $env:CertificatePath"
         Import-PfxCertificate -FilePath $env:CertificatePath -CertStoreLocation Cert:\CurrentUser\TrustedPeople
 
     # Create the app package by building and packaging the Windows Application Packaging project
