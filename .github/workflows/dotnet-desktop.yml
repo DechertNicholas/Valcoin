@@ -107,7 +107,7 @@ jobs:
         # A string to determine the format of the version output
         version_format: "${major}.${minor}.${patch}.${increment}"
         # If this is set to true, *every* commit will be treated as a new version.
-        bump_each_commit: true
+        bump_each_commit: flase
         # If true, the body of commits will also be searched for major/minor patterns to determine the version type.
         search_commit_body: true
     
@@ -115,8 +115,10 @@ jobs:
       run: |
         $file = "Valcoin\Package.appxmanifest"
         $path = Resolve-Path $file
+        Write-Output "Expected Path: $path"
         $doc = Get-Content $path
         $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"$env:version_format`""
+        Write-Output "New manifest:`n$doc"
         $new | Out-File $path
 
     # Create the app package by building and packaging the Windows Application Packaging project
