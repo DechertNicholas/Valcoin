@@ -116,9 +116,9 @@ jobs:
         $file = "Valcoin\Package.appxmanifest"
         $path = Resolve-Path $file
         Write-Output "Expected Path: $path"
-        Write-Output "Version: $version_format"
+        Write-Output "Version: $env:version_format"
         $doc = Get-Content $path
-        $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"$version_format`""
+        $new = $doc -replace 'Version="\d.\d.\d.\d"',"Version=`"$env:version_format`""
         Write-Output "New manifest:`n"
         $new
         $new | Out-File $path
