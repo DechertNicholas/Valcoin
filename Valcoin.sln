@@ -5,7 +5,7 @@ VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Valcoin", "Valcoin\Valcoin.csproj", "{376AE575-C69E-4E86-AC96-5E4B4730E486}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Valcoin.Tests", "Valcoin.Tests\Valcoin.Tests.csproj", "{E875EC53-3D10-4073-A2AF-0FB14460DB1A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Valcoin.Tests", "Valcoin.Tests\Valcoin.Tests.csproj", "{E875EC53-3D10-4073-A2AF-0FB14460DB1A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,9 +17,9 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.Build.0 = Debug|x86
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.Deploy.0 = Debug|x86
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|x64.ActiveCfg = Debug|x64
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|x64.Build.0 = Debug|x64
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|x64.Deploy.0 = Debug|x64
