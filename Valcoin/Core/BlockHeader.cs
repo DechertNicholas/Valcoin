@@ -8,11 +8,11 @@ namespace Valcoin.Core
 {
     public class BlockHeader
     {
-        private string _previousHash;
+        private byte[] _previousHash = new byte[32];
         private ulong _nonce;
         private string _merkleRoot;
 
-        public string PreviousHash
+        public byte[] PreviousHash
         {
             get { return _previousHash; }
             set { _previousHash = value; }
