@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
-    internal class Block
+    internal class ValcoinBlock
     {
         /// <summary>
         /// The number of the block in the blockchain sequence.

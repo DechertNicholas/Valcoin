@@ -10,7 +10,7 @@ namespace Valcoin.Services
 {
     internal class ValcoinContext : DbContext
     {
-        public DbSet<Block> Blocks { get; set; }
+        public DbSet<ValcoinBlock> ValcoinBlocks { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");

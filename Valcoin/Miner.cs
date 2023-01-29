@@ -15,13 +15,13 @@ namespace Valcoin
         private static bool Stop = false;
         private static int Difficulty = 22;
         private static byte[] DifficultyMask = new byte[32];
-        private static readonly ValcoinContext _db = new();
         private static bool Initialized = false;
 
         public static void Initialize()
         {
-            SetupDB();
+            StorageService.SetupDB();
             // SynchronizeChain();
+            Initialized = true;
         }
 
         public static void Mine()
@@ -41,8 +41,8 @@ namespace Valcoin
             while (Stop == false)
             {
                 var hashFound = false;
-                var lastBlock = GetLastBlock();
-                var currentBlock = new Block()
+                var lastBlock = StorageService.GetLastBlock();
+                var currentBlock = new ValcoinBlock()
                 {
                     BlockId = lastBlock.BlockId + 1,
                     PreviousBlockHash = lastBlock.BlockHash,
@@ -67,8 +67,7 @@ namespace Valcoin
                             watch.Stop();
 #endif
                             //Stop = true;
-                            _db.Add(currentBlock);
-                            _db.SaveChanges();
+                            StorageService.Add(currentBlock);
 
                             var str = Convert.ToHexString(currentBlock.BlockHash);
                             Console.WriteLine(str);
@@ -95,42 +94,6 @@ namespace Valcoin
             int toShift = difficulty - (8 * (bytesToShift - 1));
             difficultyMask[^1] = (byte)(0b_1111_1111 >> toShift);
             DifficultyMask = difficultyMask;
-        }
-
-        private static Block BuildGenesisBlock()
-        {
-            var block = new Block();
-            var genesisHash = new byte[32];
-            for (var i = 0; i < genesisHash.Length; i++)
-            {
-                genesisHash[i] = 0x00;
-            }
-            block.PreviousBlockHash = genesisHash;
-            block.BlockId = 0;
-            block.BlockDifficulty = Difficulty;
-            return block;
-        }
-
-        private static void SetupDB()
-        {
-#if DEBUG
-            // delete and remake in debug env
-            _db.Database.EnsureDeleted();
-#endif
-            // create the database
-            _db.Database.EnsureCreated();
-
-            Initialized = true;
-        }
-
-        private static Block GetLastBlock()
-        {
-            uint? lastId = _db.Blocks.Max(b => (uint?)b.BlockId);
-            if (lastId == null)
-            {
-                return BuildGenesisBlock();
-            }
-            return _db.Blocks.First(b => b.BlockId == lastId);
         }
     }
 }
