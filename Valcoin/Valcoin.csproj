@@ -20,9 +20,9 @@
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
     <Title>Valcoin</Title>
     <AppxPackageDir>AppPackages\</AppxPackageDir>
-    <PackageCertificateKeyFile>Valcoin_TemporaryKey.pfx</PackageCertificateKeyFile>
     <Platform>x64</Platform>
-    <AppxBundlePlatforms>x64</AppxBundlePlatforms>
+    <AppxBundlePlatforms>neutral</AppxBundlePlatforms>
+    <PackageCertificateThumbprint>4DBDBD59E1C4A2B9840EBF0D52CFBD954D12FE6A</PackageCertificateThumbprint>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(FullVersion)'!=''">
@@ -36,6 +36,10 @@
     <FileVersion>0.0.0.0</FileVersion>
     <Version>0.0.0.0</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Views\MiningView.xaml" />
+  </ItemGroup>
 
   <ItemGroup>
     <Content Include="Assets\SplashScreen.scale-200.png" />
@@ -62,6 +66,11 @@
   -->
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\MiningView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
   <!-- 
