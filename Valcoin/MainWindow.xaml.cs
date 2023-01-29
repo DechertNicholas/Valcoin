@@ -15,7 +15,6 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
-using Valcoin.Core;
 using Microsoft.UI.Xaml.Documents;
 
 // To learn more about WinUI, the WinUI project structure,
