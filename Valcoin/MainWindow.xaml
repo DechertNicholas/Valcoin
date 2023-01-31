@@ -30,13 +30,27 @@
         </Grid>
 
         <NavigationView Grid.Row="1"
+                        x:Name="NavView"
                         IsBackButtonVisible="Collapsed"
-                        IsSettingsVisible="False">
-            <!--<StackPanel>
-                <TextBlock Text="Content" 
-                           Style="{ThemeResource TitleTextBlockStyle}"
-                           Margin="32,0,0,0"/>
-            </StackPanel>-->
+                        IsSettingsVisible="False"
+                        Loaded="NavView_Loaded">
+            <NavigationView.MenuItems>
+                
+                <NavigationViewItem Content="Wallet" Tag="Wallet">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE825;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem Content="Miner" Tag="MinerPage">
+                    <NavigationViewItem.Icon>
+                        <!--image: Flaticon.com-->
+                        <BitmapIcon UriSource="ms-appx:///Assets/pickaxe-24.png"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+            </NavigationView.MenuItems>
+            <Frame x:Name="ContentFrame"/>
         </NavigationView>
     </Grid>
 </Window>

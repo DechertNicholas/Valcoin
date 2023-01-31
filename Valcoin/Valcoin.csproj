@@ -38,7 +38,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Views\MiningView.xaml" />
+    <None Remove="Pages\MiningPage.xaml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -68,7 +68,7 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
-    <Page Update="Views\MiningView.xaml">
+    <Page Update="Pages\MiningPage.xaml">
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>

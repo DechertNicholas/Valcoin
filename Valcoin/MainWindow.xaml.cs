@@ -3,6 +3,7 @@
 
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;
+using Valcoin.Pages;
 using WinRT; // required to support Window.As<ICompositionSupportsSystemBackdrop>()
 
 // To learn more about WinUI, the WinUI project structure,
@@ -92,6 +93,11 @@ namespace Valcoin
                 case ElementTheme.Light: m_configurationSource.Theme = SystemBackdropTheme.Light; break;
                 case ElementTheme.Default: m_configurationSource.Theme = SystemBackdropTheme.Default; break;
             }
+        }
+
+        private void NavView_Loaded(object sender, RoutedEventArgs e)
+        {
+            ContentFrame.Navigate(typeof(MiningPage));
         }
     }
 }
