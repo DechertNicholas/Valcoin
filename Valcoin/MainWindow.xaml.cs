@@ -3,7 +3,11 @@
 
 using Microsoft.UI.Composition.SystemBackdrops;
 using Microsoft.UI.Xaml;
-using Valcoin.Pages;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Animation;
+using System.Linq;
+using System.Reflection;
+using Valcoin.Views;
 using WinRT; // required to support Window.As<ICompositionSupportsSystemBackdrop>()
 
 // To learn more about WinUI, the WinUI project structure,
@@ -97,7 +101,42 @@ namespace Valcoin
 
         private void NavView_Loaded(object sender, RoutedEventArgs e)
         {
-            ContentFrame.Navigate(typeof(MiningPage));
+            // select the miner page by default
+            var items = NavView.MenuItems.ToList();
+            foreach (var item in items)
+            {
+                var viewItem = item as NavigationViewItem;
+                if (viewItem.Tag as string == typeof(MiningPage).Name)
+                {
+                    NavView.SelectedItem = viewItem;
+                    NavigateToView(typeof(MiningPage).Name);
+                    break;
+                }
+            }
+        }
+
+        // https://blogs.msmvps.com/bsonnino/2019/02/13/navigationview-in-uwp/
+        private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
+        {
+            var item = args.InvokedItemContainer as NavigationViewItem;
+            if (item == null)
+                return;
+            var clickedView = item.Tag?.ToString();
+            if (!NavigateToView(clickedView)) return;
+        }
+
+        private bool NavigateToView(string clickedView)
+        {
+            var view = Assembly.GetExecutingAssembly()
+                .GetType($"Valcoin.Views.{clickedView}");
+
+            if (string.IsNullOrWhiteSpace(clickedView) || view == null)
+            {
+                return false;
+            }
+
+            ContentFrame.Navigate(view, null, new EntranceNavigationTransitionInfo());
+            return true;
         }
     }
 }

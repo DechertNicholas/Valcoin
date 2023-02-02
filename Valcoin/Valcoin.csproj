@@ -38,7 +38,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Pages\MiningPage.xaml" />
+    <None Remove="Views\MiningPage.xaml" />
   </ItemGroup>
 
   <ItemGroup>

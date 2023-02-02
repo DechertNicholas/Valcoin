@@ -31,9 +31,10 @@
 
         <NavigationView Grid.Row="1"
                         x:Name="NavView"
-                        IsBackButtonVisible="Collapsed"
+                        IsBackEnabled="False"
                         IsSettingsVisible="False"
-                        Loaded="NavView_Loaded">
+                        Loaded="NavView_Loaded"
+                        ItemInvoked="NavView_ItemInvoked">
             <NavigationView.MenuItems>
                 
                 <NavigationViewItem Content="Wallet" Tag="Wallet">
@@ -42,7 +43,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 
-                <NavigationViewItem Content="Miner" Tag="MinerPage">
+                <NavigationViewItem Content="Miner" Tag="MiningPage">
                     <NavigationViewItem.Icon>
                         <!--image: Flaticon.com-->
                         <BitmapIcon UriSource="ms-appx:///Assets/pickaxe-24.png"/>
