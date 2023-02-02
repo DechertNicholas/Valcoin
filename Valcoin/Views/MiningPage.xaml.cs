@@ -37,15 +37,23 @@ namespace Valcoin.Views
             MinerWorker.DoWork += BeginMining;
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void ButtonStart_Click(object sender, RoutedEventArgs e)
         {
-            // TODO: Start a BackgroundWorker to begin the Miner, and let the miner check on each hash if the backgroundworker has a stop requested
+            if (MinerWorker.IsBusy)
+                return;
+            MinerWorker.RunWorkerAsync();
+        }
+
+        private void ButtonStop_Click(object sender, RoutedEventArgs e)
+        {
+            Miner.Stop = true;
+            MinerWorker.CancelAsync();
         }
 
         private void BeginMining(object sender, DoWorkEventArgs e)
         {
             Miner.Stop = false;
-
+            Miner.Mine();
         }
 
         private void TextBox_TextChanged(object sender, TextChangedEventArgs e)

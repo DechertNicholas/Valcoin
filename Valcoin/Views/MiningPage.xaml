@@ -16,9 +16,10 @@
         <TextBlock Text="Mining Page" Margin="5"/>
         
         <Button Content="Start"
-                Click="Button_Click" Margin="5"/>
+                Click="ButtonStart_Click" Margin="5"/>
         
-        <Button Content="Stop" Margin="5"/>
+        <Button Content="Stop" Margin="5"
+                Click="ButtonStop_Click"/>
         <TextBox x:Name="TestTextBox" TextChanged="TextBox_TextChanged"/>
         <TextBlock x:Name="TestTextBlock"/>
     </StackPanel>

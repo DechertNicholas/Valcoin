@@ -51,7 +51,8 @@ namespace Valcoin
                 };
                 // TODO: select transactions, condense the root
 
-                while (!hashFound)
+                // check on each hash if a stop has been requested
+                while (!hashFound && Stop == false)
                 {
                     currentBlock.BlockHash = currentBlock.ComputeHash();
                     for (int i = 0; i < DifficultyMask.Length; i++)
