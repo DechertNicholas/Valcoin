@@ -12,10 +12,11 @@ namespace Valcoin
 {
     public static class Miner
     {
-        private static bool Stop = false;
+        internal static bool Stop = false;
         private static int Difficulty = 22;
         private static byte[] DifficultyMask = new byte[32];
         private static bool Initialized = false;
+
 
         public static void Initialize()
         {

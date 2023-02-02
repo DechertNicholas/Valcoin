@@ -10,6 +10,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -26,14 +27,30 @@ namespace Valcoin.Views
     /// </summary>
     public sealed partial class MiningPage : Page
     {
+        internal BackgroundWorker MinerWorker { get; set; } = new();
+
         public MiningPage()
         {
             this.InitializeComponent();
+            MinerWorker.WorkerReportsProgress = false;
+            MinerWorker.WorkerSupportsCancellation = true;
+            MinerWorker.DoWork += BeginMining;
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             // TODO: Start a BackgroundWorker to begin the Miner, and let the miner check on each hash if the backgroundworker has a stop requested
+        }
+
+        private void BeginMining(object sender, DoWorkEventArgs e)
+        {
+            Miner.Stop = false;
+
+        }
+
+        private void TextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            TestTextBlock.Text = TestTextBox.Text;
         }
     }
 }

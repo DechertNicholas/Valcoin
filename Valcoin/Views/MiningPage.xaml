@@ -9,12 +9,17 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    NavigationCacheMode="Required">
 
-    <Grid>
-        <TextBlock Text="Mining Page"/>
+    <StackPanel Margin="10">
+        <TextBlock Text="Mining Page" Margin="5"/>
+        
         <Button Content="Start"
-                Click="Button_Click"/>
-        <Button Content="Stop"/>
-    </Grid>
+                Click="Button_Click" Margin="5"/>
+        
+        <Button Content="Stop" Margin="5"/>
+        <TextBox x:Name="TestTextBox" TextChanged="TextBox_TextChanged"/>
+        <TextBlock x:Name="TestTextBlock"/>
+    </StackPanel>
 </Page>
