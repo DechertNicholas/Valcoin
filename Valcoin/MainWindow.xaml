@@ -43,7 +43,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 
-                <NavigationViewItem Content="Miner" Tag="MiningPage">
+                <NavigationViewItem Content="Miner" Tag="MiningView">
                     <NavigationViewItem.Icon>
                         <!--image: Flaticon.com-->
                         <BitmapIcon UriSource="ms-appx:///Assets/pickaxe-24.png"/>

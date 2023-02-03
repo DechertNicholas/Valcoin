@@ -1,0 +1,38 @@
+<!-- Copyright (c) Microsoft Corporation and Contributors. -->
+<!-- Licensed under the MIT License. -->
+
+<Page
+    x:Class="Valcoin.Views.MiningView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Valcoin.Views"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:viewModels="using:Valcoin.ViewModels" 
+    d:DataContext="{d:DesignInstance Type=viewModels:MiningViewModel}"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    NavigationCacheMode="Required">
+
+    <Page.DataContext>
+        <viewModels:MiningViewModel x:Name="ViewModel"/>
+    </Page.DataContext>
+
+
+    <StackPanel Margin="10">
+        <TextBlock Text="Mining Page" Margin="5"/>
+        
+        <Button Content="Start"
+                Margin="5"
+                Command="{x:Bind ViewModel.InvokeMinerCommand}"/>
+
+        <Button Content="Stop" 
+                Margin="5"
+                Command="{x:Bind ViewModel.InvokeMinerStopCommand}"/>
+        <StackPanel Orientation="Horizontal"
+                    Margin="5">
+            <TextBlock Text="Hash speed:"/>
+            <TextBlock Text="{x:Bind ViewModel.HashSpeed}"/>
+        </StackPanel>
+    </StackPanel>
+</Page>
