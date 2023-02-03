@@ -11,6 +11,7 @@ namespace Valcoin.ViewModels
     {
         internal BackgroundWorker MinerWorker { get; set; } = new();
 
+        [ObservableProperty]
         private string hashSpeed = "0";
 
         public MiningViewModel()
@@ -21,11 +22,12 @@ namespace Valcoin.ViewModels
         }
 
         [RelayCommand]
-        public void InvokeMiner()
+        public async void InvokeMiner()
         {
             if (MinerWorker.IsBusy)
                 return;
             MinerWorker.RunWorkerAsync();
+            await InvokeUpdateHashSpeedRoutine();
         }
 
         [RelayCommand]
@@ -38,14 +40,18 @@ namespace Valcoin.ViewModels
         private void BeginMining(object sender, DoWorkEventArgs e)
         {
             Miner.Stop = false;
-            Miner.SpeedCalculated += UpdateHashSpeed;
             Miner.Mine();
         }
 
-        private void UpdateHashSpeed(object sender, EventArgs e)
+        private async Task InvokeUpdateHashSpeedRoutine()
         {
-            var temp = Miner.HashSpeed.ToString();
-            HashSpeed = temp;
+            while (MinerWorker.IsBusy)
+            {
+                await Task.Delay(1000);
+                HashSpeed = Miner.HashSpeed.ToString();
+            }
+            // cleanup on stop so that we have nice fresh metrics when started again
+            HashSpeed = "0";
         }
     }
 }

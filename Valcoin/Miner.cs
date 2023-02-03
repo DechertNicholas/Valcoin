@@ -16,14 +16,14 @@ namespace Valcoin
     public static class Miner
     {
         internal static bool Stop = false;
-        private static int Difficulty = 22;
+        private static readonly int Difficulty = 22;
         private static byte[] DifficultyMask = new byte[32];
         private static bool Initialized = false;
-        private static Stopwatch Stopwatch = new();
-        private static TimeSpan HashInterval = new TimeSpan(0, 0, 10);
+        private static readonly Stopwatch Stopwatch = new();
+        private static readonly TimeSpan HashInterval = new TimeSpan(0, 0, 10);
         private static int HashCount = 0;
-        public static int HashSpeed = 0;
-        public static event EventHandler SpeedCalculated;
+
+        public static int HashSpeed { get; set; } = 0;
 
         public static void Initialize()
         {
@@ -82,12 +82,13 @@ namespace Valcoin
                     }
                 }
             }
+            // cleanup on stop so that we have nice fresh metrics when started again
+            HashSpeed = 0;
         }
 
         private static void ComputeHashSpeed()
         {
             HashSpeed = HashCount / HashInterval.Seconds;
-            SpeedCalculated?.Invoke(null, EventArgs.Empty);
 
             // reset metrics
             HashCount = 0;
