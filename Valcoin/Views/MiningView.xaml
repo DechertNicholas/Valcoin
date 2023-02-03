@@ -31,8 +31,7 @@
                 Command="{x:Bind ViewModel.InvokeMinerStopCommand}"/>
         <StackPanel Orientation="Horizontal"
                     Margin="5">
-            <!--&#160; is a "non breaking whitespace character. XAML doens't keep whitespace, so this adds a "space" character-->
-            <TextBlock Text="Hash speed:&#160;"/>
+            <TextBlock Text="Hash speed:"/>
             <TextBlock Text="{x:Bind ViewModel.HashSpeed, Mode=OneWay}"
                        Margin="5,0,0,0"/>
         </StackPanel>
