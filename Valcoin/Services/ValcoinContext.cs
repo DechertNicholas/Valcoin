@@ -11,6 +11,7 @@ namespace Valcoin.Services
     internal class ValcoinContext : DbContext
     {
         public DbSet<ValcoinBlock> ValcoinBlocks { get; set; }
+        public DbSet<Wallet> Wallets { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");
