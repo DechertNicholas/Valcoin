@@ -47,6 +47,7 @@ namespace Valcoin.ViewModels
         {
             while (MinerWorker.IsBusy)
             {
+                // check the current hash speed every second
                 await Task.Delay(1000);
                 HashSpeed = Miner.HashSpeed.ToString();
             }
