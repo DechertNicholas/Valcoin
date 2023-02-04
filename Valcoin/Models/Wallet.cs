@@ -45,7 +45,7 @@ namespace Valcoin.Models
 
         public string GetAddressAsString()
         {
-            return Convert.ToHexString(AddressBytes);
+            return "0x" + Convert.ToHexString(AddressBytes);
         }
     }
 }

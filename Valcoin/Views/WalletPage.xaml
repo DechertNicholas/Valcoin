@@ -19,6 +19,10 @@
 
     <StackPanel>
         <TextBlock Text="Wallet Page"/>
-        <TextBlock Text="{x:Bind ViewModel.MyWallet.Address}"/>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="My address:"/>
+            <TextBlock Text="{x:Bind ViewModel.MyWallet.Address}"
+                       Margin="5,0,0,0"/>
+        </StackPanel>
     </StackPanel>
 </Page>
