@@ -18,24 +18,13 @@ namespace Valcoin
         internal static bool Stop = false;
         private static readonly int Difficulty = 22;
         private static byte[] DifficultyMask = new byte[32];
-        private static bool Initialized = false;
         private static readonly Stopwatch Stopwatch = new();
-        private static readonly TimeSpan HashInterval = new TimeSpan(0, 0, 10);
+        private static readonly TimeSpan HashInterval = new(0, 0, 10);
         private static int HashCount = 0;
-
         public static int HashSpeed { get; set; } = 0;
-
-        public static void Initialize()
-        {
-            StorageService.SetupDB();
-            // SynchronizeChain();
-            Initialized = true;
-        }
 
         public static void Mine()
         {
-            if (!Initialized) { Initialize(); }
-
             // how many 0 bits need to lead the SHA256 hash. 256 is max, which would be impossible.
             // a difficulty of 6 means the has must be "000000xxxxxx..."
             SetDifficultyMask(Difficulty); // TODO: get this from the network
@@ -73,7 +62,7 @@ namespace Valcoin
                         }
                         else if (i == DifficultyMask.Length - 1)
                         {
-                            StorageService.Add(currentBlock);
+                            StorageService.AddBlock(currentBlock);
 
                             var str = Convert.ToHexString(currentBlock.BlockHash);
                             Console.WriteLine(str);

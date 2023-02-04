@@ -37,13 +37,13 @@
                         ItemInvoked="NavView_ItemInvoked">
             <NavigationView.MenuItems>
                 
-                <NavigationViewItem Content="Wallet" Tag="Wallet">
+                <NavigationViewItem Content="Wallet" Tag="WalletPage">
                     <NavigationViewItem.Icon>
                         <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE825;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
                 
-                <NavigationViewItem Content="Miner" Tag="MiningView">
+                <NavigationViewItem Content="Miner" Tag="MiningPage">
                     <NavigationViewItem.Icon>
                         <!--image: Flaticon.com-->
                         <BitmapIcon UriSource="ms-appx:///Assets/pickaxe-24.png"/>

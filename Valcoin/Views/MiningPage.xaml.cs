@@ -25,9 +25,9 @@ namespace Valcoin.Views
     /// <summary>
     /// The page dedicated to controlling the <see cref="Miner"/> and viewing related mining status.
     /// </summary>
-    public sealed partial class MiningView : Page
+    public sealed partial class MiningPage : Page
     {
-        public MiningView()
+        public MiningPage()
         {
             this.InitializeComponent();
         }

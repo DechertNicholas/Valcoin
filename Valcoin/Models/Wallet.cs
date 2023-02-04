@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -9,22 +11,41 @@ namespace Valcoin.Models
 {
     internal class Wallet
     {
-        public byte[] Address { get; set; } = new byte[32];
+        public int Id { get; set; }
+
+        public string Address
+        {
+            get => GetAddressAsString();
+        }
+
+        public byte[] AddressBytes { get; set; }
 
         public byte[] PublicKey { get; set; }
+        
+        public byte[] PrivateKey { get; set; }
 
-        private readonly RSA _rsa;
+        [NotMapped]
+        private RSA _rsa;
 
-        public Wallet()
+        public void Initialize()
         {
-            _rsa = RSA.Create(); // load this from the DB instead
-            PublicKey = _rsa.ExportRSAPublicKey();
-            Address = SHA256.Create().ComputeHash(PublicKey);
+            _rsa = RSA.Create();
+            if (PublicKey != null)
+            {
+                _rsa.ImportRSAPublicKey(PublicKey, out _);
+                _rsa.ImportRSAPrivateKey(PrivateKey, out _);
+            }
+            else
+            {
+                PublicKey = _rsa.ExportRSAPublicKey();
+                PrivateKey = _rsa.ExportRSAPrivateKey(); // TODO: Decide if this will be encrypted
+                AddressBytes = SHA256.Create().ComputeHash(PublicKey);
+            }
         }
 
         public string GetAddressAsString()
         {
-            return Encoding.UTF8.GetString(Address);
+            return Convert.ToHexString(AddressBytes);
         }
     }
 }
