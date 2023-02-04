@@ -10,7 +10,48 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Button x:Name="myButton" Click="myButton_Click">Click Me</Button>
-    </StackPanel>
+    <!--Title bar example source: https://learn.microsoft.com/en-us/windows/apps/develop/title-bar?tabs=winui3#full-customization-example-->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="32"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <Grid x:Name="AppTitleBar">
+            <Image Source="Assets/Square44x44Logo.targetsize-24_altform-unplated.png"
+                   HorizontalAlignment="Left" 
+                   Width="16" Height="16" 
+                   Margin="8,0"/>
+            <TextBlock x:Name="AppTitleTextBlock" Text="Valcoin"
+                       TextWrapping="NoWrap"
+                       Style="{StaticResource CaptionTextBlockStyle}" 
+                       VerticalAlignment="Center"
+                       Margin="28,0,0,0"/>
+        </Grid>
+
+        <NavigationView Grid.Row="1"
+                        x:Name="NavView"
+                        IsBackEnabled="False"
+                        IsSettingsVisible="False"
+                        Loaded="NavView_Loaded"
+                        ItemInvoked="NavView_ItemInvoked">
+            <NavigationView.MenuItems>
+                
+                <NavigationViewItem Content="Wallet" Tag="Wallet">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE825;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+                <NavigationViewItem Content="Miner" Tag="MiningView">
+                    <NavigationViewItem.Icon>
+                        <!--image: Flaticon.com-->
+                        <BitmapIcon UriSource="ms-appx:///Assets/pickaxe-24.png"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                
+            </NavigationView.MenuItems>
+            <Frame x:Name="ContentFrame"/>
+        </NavigationView>
+    </Grid>
 </Window>

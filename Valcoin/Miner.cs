@@ -1,5 +1,8 @@
-﻿using System;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
@@ -12,10 +15,15 @@ namespace Valcoin
 {
     public static class Miner
     {
-        private static bool Stop = false;
-        private static int Difficulty = 22;
+        internal static bool Stop = false;
+        private static readonly int Difficulty = 22;
         private static byte[] DifficultyMask = new byte[32];
         private static bool Initialized = false;
+        private static readonly Stopwatch Stopwatch = new();
+        private static readonly TimeSpan HashInterval = new TimeSpan(0, 0, 10);
+        private static int HashCount = 0;
+
+        public static int HashSpeed { get; set; } = 0;
 
         public static void Initialize()
         {
@@ -32,12 +40,8 @@ namespace Valcoin
             // a difficulty of 6 means the has must be "000000xxxxxx..."
             SetDifficultyMask(Difficulty); // TODO: get this from the network
 
-
-#if DEBUG
-            // useful for determining starting difficulty by using time-to-mine
-            var watch = new System.Diagnostics.Stopwatch();
-            watch.Start();
-#endif
+            // used to calculate hash speed
+            Stopwatch.Start();
             while (Stop == false)
             {
                 var hashFound = false;
@@ -50,9 +54,15 @@ namespace Valcoin
                 };
                 // TODO: select transactions, condense the root
 
-                while (!hashFound)
+                // check on each hash if a stop has been requested
+                while (!hashFound && Stop == false)
                 {
+                    // update every 10 seconds
+                    if (Stopwatch.Elapsed >= HashInterval)
+                        ComputeHashSpeed();
+
                     currentBlock.BlockHash = currentBlock.ComputeHash();
+                    HashCount++;
                     for (int i = 0; i < DifficultyMask.Length; i++)
                     {
                         if (currentBlock.BlockHash[i] > DifficultyMask[i])
@@ -63,10 +73,6 @@ namespace Valcoin
                         }
                         else if (i == DifficultyMask.Length - 1)
                         {
-#if DEBUG
-                            watch.Stop();
-#endif
-                            //Stop = true;
                             StorageService.Add(currentBlock);
 
                             var str = Convert.ToHexString(currentBlock.BlockHash);
@@ -76,6 +82,17 @@ namespace Valcoin
                     }
                 }
             }
+            // cleanup on stop so that we have nice fresh metrics when started again
+            HashSpeed = 0;
+        }
+
+        private static void ComputeHashSpeed()
+        {
+            HashSpeed = HashCount / HashInterval.Seconds;
+
+            // reset metrics
+            HashCount = 0;
+            Stopwatch.Restart();
         }
 
         public static void SetDifficultyMask(int difficulty)
