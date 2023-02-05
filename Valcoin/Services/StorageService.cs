@@ -1,27 +1,11 @@
-﻿using Microsoft.UI.Xaml.Documents;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using Valcoin.Models;
-using Windows.ApplicationModel.Appointments.AppointmentsProvider;
 
 namespace Valcoin.Services
 {
     internal static class StorageService
     {
         public static ValcoinContext Db { get; private set; } = new ValcoinContext();
-
-        public static void SetupDB()
-        {
-#if DEBUG
-            // delete and remake in debug env
-            Db.Database.EnsureDeleted();
-#endif
-            // create the database
-            Db.Database.EnsureCreated();
-        }
 
         public static ValcoinBlock GetLastBlock()
         {
@@ -48,10 +32,21 @@ namespace Valcoin.Services
             return block;
         }
 
-        public static void Add(ValcoinBlock block)
+        public static void AddBlock(ValcoinBlock block)
         {
             Db.Add(block);
             Db.SaveChanges();
+        }
+
+        public static void AddWallet(Wallet wallet)
+        {
+            Db.Add(wallet);
+            Db.SaveChanges();
+        }
+
+        public static Wallet GetMyWallet()
+        {
+            return Db.Wallets.FirstOrDefault(w => w.PrivateKey != null);
         }
     }
 }

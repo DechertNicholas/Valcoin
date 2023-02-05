@@ -38,7 +38,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Views\MiningView.xaml" />
+    <None Remove="Views\MiningPage.xaml" />
+    <None Remove="Views\WalletPage.xaml" />
   </ItemGroup>
 
   <ItemGroup>
@@ -66,6 +67,11 @@
   -->
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\WalletPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Pages\MiningPage.xaml">
