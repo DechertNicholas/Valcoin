@@ -20,7 +20,13 @@ namespace Valcoin.UnitTests
                 UnlockSignature = wallet.SignData(wallet.PublicKey)
             };
 
-            var tx = new Transaction(50, wallet.GetAddressAsString(), new TxInput[] { input });
+            var output1 = new TxOutput
+            {
+                Amount = 50,
+                LockSignature = wallet.AddressBytes
+            };
+
+            var tx = new Transaction(new TxInput[] { input }, new TxOutput[] { output1 });
         }
     }
 }

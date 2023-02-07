@@ -53,35 +53,42 @@ namespace Valcoin.Models
 
         public Transaction() { }
 
-        public Transaction(int amount, string receiverAddress, TxInput[] inputs)
+        public Transaction(TxInput[] inputs, TxOutput[] outputs)
         {
-            if (receiverAddress[..2] != "0x" && receiverAddress.Length != 34)
-            {
-                throw new InvalidRecipientAddressException($"The address {receiverAddress} is not valid. It must start with '0x' and be 66 characters in length.");
-            }
+            Inputs = inputs;
+            Outputs = outputs;
+        }
+
+        public Transaction(int amount, string receiverAddress, TxInput[] inputs, TxOutput[] outputs)
+        {
+            //if (receiverAddress[..2] != "0x" && receiverAddress.Length != 34)
+            //{
+            //    throw new InvalidRecipientAddressException($"The address {receiverAddress} is not valid. It must start with '0x' and be 66 characters in length.");
+            //}
 
             Inputs = inputs;
+            Outputs = outputs;
 
             // verify the amount attempting to be sent
-            var totalInputValue = Inputs.Sum(i => i.);
-            if (totalInputValue < amount)
-                throw new InvalidSendingAmountException($"The sum of all inputs ({totalInputValue}) is less than the amount attempting to be sent ({amount}).");
+            //var totalInputValue = Inputs.Sum(i => i.);
+            //if (totalInputValue < amount)
+            //    throw new InvalidSendingAmountException($"The sum of all inputs ({totalInputValue}) is less than the amount attempting to be sent ({amount}).");
 
-            // build the outputs for this transaction
-            var receiverOutput = new TxOutput
-            {
-                Amount = amount,
-                LockSignature = Convert.FromHexString(receiverAddress)
-            };
+            //// build the outputs for this transaction
+            //var receiverOutput = new TxOutput
+            //{
+            //    Amount = amount,
+            //    LockSignature = Convert.FromHexString(receiverAddress)
+            //};
 
-            if (totalInputValue > amount)
-            {
-                var changeAmount = new TxOutput
-                {
-                    Amount = totalInputValue - amount,
-                    LockSignature = Inputs[0].PreviousOutput.LockSignature
-                };
-            }
+            //if (totalInputValue > amount)
+            //{
+            //    var changeAmount = new TxOutput
+            //    {
+            //        Amount = totalInputValue - amount,
+            //        LockSignature = Inputs[0].PreviousOutput.LockSignature
+            //    };
+            //}
         }
 
         public string GetTxIdAsString()
