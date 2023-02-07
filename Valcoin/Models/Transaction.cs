@@ -18,6 +18,9 @@ namespace Valcoin.Models
         /// </summary>
         public int Version { get; set; } = 1;
 
+        /// <summary>
+        /// The hash of the transaction in hex string format.
+        /// </summary>
         public string TxId
         {
             get => GetTxIdAsString();
