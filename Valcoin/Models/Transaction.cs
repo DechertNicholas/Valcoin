@@ -13,6 +13,11 @@ namespace Valcoin.Models
 {
     internal class Transaction
     {
+        /// <summary>
+        /// The version of transaction data formatting being used.
+        /// </summary>
+        public int Version { get; set; } = 1;
+
         public string TxId
         {
             get => GetTxIdAsString();

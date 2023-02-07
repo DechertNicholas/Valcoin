@@ -13,7 +13,7 @@ namespace Valcoin.Models
         /// <summary>
         /// The selected output of the previous transaction to be used as an input in this transaction.
         /// </summary>
-        public uint PreviousOutputIndex { get; set; }
+        public int PreviousOutputIndex { get; set; }
 
         /// <summary>
         /// Public key which, when hashed, matches the <see cref="TxOutput.LockSignature"/> of this selected <see cref="TxOutput"/>.

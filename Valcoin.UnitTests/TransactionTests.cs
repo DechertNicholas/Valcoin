@@ -22,7 +22,7 @@ namespace Valcoin.UnitTests
             var input = new TxInput
             {
                 PreviousTransactionId = "0000000000000000000000000000000000000000000000000000000000000000", // coinbase
-                PreviousOutputIndex = UInt32.MaxValue,
+                PreviousOutputIndex = -1, // FF FF FF FF
                 UnlockerPublicKey = wallet.PublicKey,
                 UnlockSignature = wallet.SignData(wallet.PublicKey)
             };
