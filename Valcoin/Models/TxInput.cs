@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
-    internal struct TxInput
+    public struct TxInput
     {
         public string PreviousTransactionId { get; set; }
 

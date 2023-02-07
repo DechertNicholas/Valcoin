@@ -12,10 +12,9 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Valcoin.Exceptions.TransactionExceptions;
 
-[assembly: InternalsVisibleTo("Valcoin.UnitTests")]
 namespace Valcoin.Models
 {
-    internal class Transaction
+    public class Transaction
     {
         //public int TransactionId { get; private set; }
 

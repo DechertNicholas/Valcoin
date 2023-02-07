@@ -8,7 +8,7 @@ using Windows.Devices.Bluetooth.Advertisement;
 
 namespace Valcoin.Models
 {
-    internal struct TransactionStruct
+    public struct TransactionStruct
     {
         public TxInput[] Inputs { get; set; }
 

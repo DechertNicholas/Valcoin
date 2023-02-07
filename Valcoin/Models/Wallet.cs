@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
-    internal class Wallet
+    public class Wallet
     {
 
         /// <summary>
@@ -90,6 +90,11 @@ namespace Valcoin.Models
         public byte[] SignData(byte[] data)
         {
             return _rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        }
+
+        public bool VerifyData(byte[] data, byte[] signature)
+        {
+            return _rsa.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         }
     }
 }

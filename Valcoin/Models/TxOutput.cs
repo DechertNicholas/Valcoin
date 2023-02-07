@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
-    internal struct TxOutput
+    public struct TxOutput
     {
         /// <summary>
         /// The amount of Valcoin to send.

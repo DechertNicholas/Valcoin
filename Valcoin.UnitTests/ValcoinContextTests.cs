@@ -10,9 +10,10 @@ namespace Valcoin.UnitTests
     public class ValcoinContextTests
     {
         [Fact]
-        public  void ValcoinContextTestsBuildDB()
+        public void ValcoinContextTestsBuildDB()
         {
             var Db = new ValcoinContext();
+            Assert.NotNull(Db);
         }
     }
 }

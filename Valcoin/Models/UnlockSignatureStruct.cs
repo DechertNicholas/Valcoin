@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
-    internal struct UnlockSignatureStruct
+    public struct UnlockSignatureStruct
     {
         public ulong BlockId { get; set; }
         public byte[] PublicKey { get; set; }
