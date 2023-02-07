@@ -1,10 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Valcoin.Models;
 
 namespace Valcoin.Services
@@ -19,9 +13,9 @@ namespace Valcoin.Services
 
         public ValcoinContext()
         {
-#if DEBUG
+#if !DEBUG___PERSIST_DB
             // delete and remake in debug env
-            //this.Database.EnsureDeleted();
+            this.Database.EnsureDeleted();
 #endif
             // create the database
             this.Database.EnsureCreated();
