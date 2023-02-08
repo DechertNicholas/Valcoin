@@ -1,27 +1,22 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Valcoin.Models;
 
 namespace Valcoin.Services
 {
-    internal class ValcoinContext : DbContext
+    public class ValcoinContext : DbContext
     {
         public DbSet<ValcoinBlock> ValcoinBlocks { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");
 
         public ValcoinContext()
         {
-#if DEBUG
+#if !DEBUG___PERSIST_DB && !RELEASE
             // delete and remake in debug env
-            //this.Database.EnsureDeleted();
+            this.Database.EnsureDeleted();
 #endif
             // create the database
             this.Database.EnsureCreated();

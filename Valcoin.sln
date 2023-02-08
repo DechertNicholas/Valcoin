@@ -5,8 +5,13 @@ VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Valcoin", "Valcoin\Valcoin.csproj", "{376AE575-C69E-4E86-AC96-5E4B4730E486}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Valcoin.UnitTests", "Valcoin.UnitTests\Valcoin.UnitTests.csproj", "{17F4BFF2-E5FD-45DC-8277-211567C9146E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug - Persist DB|Any CPU = Debug - Persist DB|Any CPU
+		Debug - Persist DB|x64 = Debug - Persist DB|x64
+		Debug - Persist DB|x86 = Debug - Persist DB|x86
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
@@ -15,6 +20,15 @@ Global
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|Any CPU.ActiveCfg = Debug - Persist DB|x86
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|Any CPU.Build.0 = Debug - Persist DB|x86
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|Any CPU.Deploy.0 = Debug - Persist DB|x86
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|x64.ActiveCfg = Debug - Persist DB|x64
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|x64.Build.0 = Debug - Persist DB|x64
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|x64.Deploy.0 = Debug - Persist DB|x64
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|x86.ActiveCfg = Debug - Persist DB|x86
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|x86.Build.0 = Debug - Persist DB|x86
+		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug - Persist DB|x86.Deploy.0 = Debug - Persist DB|x86
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.ActiveCfg = Debug|x86
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.Build.0 = Debug|x86
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Debug|Any CPU.Deploy.0 = Debug|x86
@@ -33,6 +47,24 @@ Global
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Release|x86.ActiveCfg = Release|x86
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Release|x86.Build.0 = Release|x86
 		{376AE575-C69E-4E86-AC96-5E4B4730E486}.Release|x86.Deploy.0 = Release|x86
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug - Persist DB|Any CPU.ActiveCfg = Debug - Persist DB|x86
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug - Persist DB|Any CPU.Build.0 = Debug - Persist DB|x86
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug - Persist DB|x64.ActiveCfg = Debug - Persist DB|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug - Persist DB|x64.Build.0 = Debug - Persist DB|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug - Persist DB|x86.ActiveCfg = Debug - Persist DB|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug - Persist DB|x86.Build.0 = Debug - Persist DB|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug|Any CPU.Build.0 = Debug|x86
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug|x64.Build.0 = Debug|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Debug|x86.Build.0 = Debug|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Release|x64.ActiveCfg = Release|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Release|x64.Build.0 = Release|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Release|x86.ActiveCfg = Release|Any CPU
+		{17F4BFF2-E5FD-45DC-8277-211567C9146E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

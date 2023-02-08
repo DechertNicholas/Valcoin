@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
-    internal class ValcoinBlock
+    public class ValcoinBlock
     {
         /// <summary>
         /// The number of the block in the blockchain sequence.
@@ -18,24 +19,51 @@ namespace Valcoin.Models
         [Required]
         [Key]
         public ulong BlockId { get; set; } = 0;
+
         /// <summary>
-        /// The hash of the current block. Assigned once the nonce which results in a valid hash is found.
+        /// The hash of the current block data that is in the block header.
         /// </summary>
         public byte[] BlockHash { get; set; } = new byte[32];
-        /// <summary>
-        /// Header for the block, which is what actually gets hashed. 
-        /// </summary>
 
+        /// <summary>
+        /// Hash of the previous block.
+        /// </summary>
         public byte[] PreviousBlockHash { get; set; } = new byte[32];
 
+        /// <summary>
+        /// An array of transactions for this block to process.
+        /// </summary>
+        [NotMapped]
+        public Transaction[] Transactions { get; set; }
+
+        /// <summary>
+        /// <see cref="Transactions"/> in JOSN format for database storage, as SQLite can only store primitive types.
+        /// </summary>
+        public string JsonTransactions { get; set; }
+
+        /// <summary>
+        /// The random value assigned to the block header for changing the hash. Critical for proof-of-work.
+        /// </summary>
         public ulong Nonce { get; set; } = 0;
 
+        /// <summary>
+        /// The time of the block being hashed.
+        /// </summary>
         public DateTime TimeUTC { get; set; } = DateTime.UtcNow;
 
-        public int BlockDifficulty { get; set; } = 0; // for knowing the difficulty at the time this block was hashed
+        /// <summary>
+        /// The difficulty on the blockchain at the time this block was hashed.
+        /// </summary>
+        public int BlockDifficulty { get; set; } = 0;
 
-        public byte[] MerkleRoot { get; set; } = new byte[32]; // blocks can be processed with no transactions, and thus no root
+        /// <summary>
+        /// The hash root of all the transactions in the block.
+        /// </summary>
+        public byte[] MerkleRoot { get; set; } = new byte[32];
 
+        /// <summary>
+        /// The version of this block, in case it ever changes.
+        /// </summary>
         public int Version { get; set; } = 1;
 
         /// <summary>

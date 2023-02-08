@@ -12,7 +12,7 @@ namespace Valcoin.Models
     /// <summary>
     /// Helper struct for <see cref="Block"/>, holding the data which will be hashed without needing to store it outside the <see cref="Block"/>.
     /// </summary>
-    internal struct BlockHeader
+    public struct BlockHeader
     {
         public byte[] PreviousBlockHash { get; set; }
         public ulong Nonce { get; set; }
