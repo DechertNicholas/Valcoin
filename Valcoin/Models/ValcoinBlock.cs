@@ -34,7 +34,7 @@ namespace Valcoin.Models
         /// An array of transactions for this block to process.
         /// </summary>
         [NotMapped]
-        public Transaction[] Transactions { get; set; }
+        public List<Transaction> Transactions { get; set; }
 
         /// <summary>
         /// <see cref="Transactions"/> in JOSN format for database storage, as SQLite can only store primitive types.
@@ -65,6 +65,23 @@ namespace Valcoin.Models
         /// The version of this block, in case it ever changes.
         /// </summary>
         public int Version { get; set; } = 1;
+
+        public ValcoinBlock() { }
+
+        public ValcoinBlock(ulong blockId, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
+        {
+            BlockId = blockId;
+            PreviousBlockHash = previousBlockHash;
+            Nonce = nonce;
+            TimeUTC = timeUTC;
+            BlockDifficulty = blockDifficulty;
+        }
+
+        public void AddTx(Transaction tx)
+        {
+            Transactions.Add(tx);
+            JsonTransactions = JsonSerializer.Serialize(Transactions);
+        }
 
         /// <summary>
         /// Computes the hash for the current block.
