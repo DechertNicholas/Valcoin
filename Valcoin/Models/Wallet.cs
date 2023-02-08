@@ -46,9 +46,16 @@ namespace Valcoin.Models
         /// RSA implementation object that does not need to be re-created each time it is used.
         /// </summary>
         [NotMapped]
-        private RSA _rsa;
+        private readonly RSA _rsa;
 
-        public Wallet() { }
+        public Wallet()
+        {
+            _rsa = RSA.Create();
+            
+            PublicKey = _rsa.ExportRSAPublicKey();
+            PrivateKey = _rsa.ExportRSAPrivateKey(); // TODO: Decide if this will be encrypted
+            AddressBytes = SHA256.Create().ComputeHash(PublicKey);
+        }
 
         public Wallet(byte[] publicKey, byte[] privateKey)
         {
@@ -58,28 +65,6 @@ namespace Valcoin.Models
             _rsa.ImportRSAPublicKey(publicKey, out _);
             _rsa.ImportRSAPrivateKey(privateKey, out _);
             AddressBytes = SHA256.Create().ComputeHash(publicKey);
-        }
-
-        /// <summary>
-        /// This will become obsolete, use constructors instead
-        /// </summary>
-        [Obsolete]
-        public void Initialize()
-        {
-            _rsa = RSA.Create();
-            if (PublicKey != null)
-            {
-                _rsa.ImportRSAPublicKey(PublicKey, out _);
-                _rsa.ImportRSAPrivateKey(PrivateKey, out _);
-            }
-            else
-            {
-                PublicKey = _rsa.ExportRSAPublicKey();
-                PrivateKey = _rsa.ExportRSAPrivateKey(); // TODO: Decide if this will be encrypted
-                AddressBytes = SHA256.Create().ComputeHash(PublicKey);
-            }
-            // testing
-            var temp = _rsa.ExportParameters(true);
         }
 
         public string GetAddressAsString()
