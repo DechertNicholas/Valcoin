@@ -5,6 +5,7 @@ using Valcoin.Services;
 
 namespace Valcoin.UnitTests
 {
+    [CollectionDefinition("RequiresDB", DisableParallelization = true)]
     public class TransactionTests
     {
         public Wallet Wallet { get; set; }
@@ -128,12 +129,13 @@ namespace Valcoin.UnitTests
             var tx = new Transaction(new TxInput[] { input }, new TxOutput[] { output });
 
             var db = new ValcoinContext();
-            db.Database.EnsureDeleted();
-            db.Database.EnsureCreated();
+
             db.Add(tx);
+            db.SaveChanges();
 
             var txVerify = db.Transactions.FirstOrDefault(t => t.TxId == tx.TxId);
             Assert.NotNull(txVerify);
+            db.Dispose();
         }
     }
 }

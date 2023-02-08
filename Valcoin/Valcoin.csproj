@@ -40,6 +40,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Packages\**" />
+    <EmbeddedResource Remove="Packages\**" />
+    <None Remove="Packages\**" />
+    <Page Remove="Packages\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Views\MiningPage.xaml" />
     <None Remove="Views\WalletPage.xaml" />
   </ItemGroup>
@@ -89,4 +96,7 @@
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
+  <ItemGroup>
+    <PRIResource Remove="Packages\**" />
+  </ItemGroup>
 </Project>

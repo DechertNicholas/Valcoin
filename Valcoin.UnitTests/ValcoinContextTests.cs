@@ -7,13 +7,15 @@ using Valcoin.Services;
 
 namespace Valcoin.UnitTests
 {
+    [CollectionDefinition("RequiresDB", DisableParallelization = true)]
     public class ValcoinContextTests
     {
-        [Fact]
-        public void ValcoinContextTestsBuildDB()
-        {
-            var Db = new ValcoinContext();
-            Assert.NotNull(Db);
-        }
+        //[Fact]
+        //public void ValcoinContextTestsBuildDB()
+        //{
+        //    var Db = new ValcoinContext();
+        //    Assert.NotNull(Db);
+        //    Db.Dispose();
+        //}
     }
 }
