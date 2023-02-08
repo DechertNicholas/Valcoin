@@ -8,19 +8,12 @@ using Valcoin.Models;
 
 namespace Valcoin.IntegrationTests
 {
-    /// <summary>
-    /// Tests for all wallet operations
-    /// </summary>
-    //[Collection(nameof(DatabaseCollection))]
     public class TransactionTests
     {
-        //readonly DatabaseFixture fixture;
         readonly Wallet wallet;
 
-        public TransactionTests()//DatabaseFixture fixture)
+        public TransactionTests()
         {
-            //this.fixture = fixture;
-
             // Create the test wallet with static data
             // this is a random public/private keyset that was generated. Not in use.
             var D = "A2ED2801588AD588FF87E18117C94CA53371A3BEE1F574F08553502CDC846A11DAF1173D9337D0C23C84C59F2C5FF9726C54EEBF1EDCF5EACE6E99FFE4F9A96B20DD205B0BE86A302DE1E113C6D616555198C3447B0419CD1DC691D3034267CB61FC710FE4104F180EDAF433E3C71F9D05A1DFCF06EEFAC7E940B90C74F6692F59B2B1C14ACFA89F2EE864BB1F71B58F43B463B05A2C21F0457D3F0BA6ECA1BC9B9250D3E03694C7E9ACF05FABBECA9E1509307DECF531B7D36C85DED5059F0BD7DF88BFA82E26BC143F9ECAF6CC43972DC74109478008FB7269E403FAFEA35E99226C7460613BBAAE54022994F14C839BDE2F0009DFCB17927863A4E09632D9";
