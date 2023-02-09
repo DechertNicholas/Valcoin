@@ -84,7 +84,7 @@ namespace Valcoin.IntegrationTests
             ulong blockId = 10; // this tx is part of block 10
             var input = new TxInput
             {
-                PreviousTransactionId = "0000000000000000000000000000000000000000000000000000000000000000", // coinbase
+                PreviousTransactionId = new string('0', 64), // coinbase
                 PreviousOutputIndex = -1, // 0xffffffff
                 UnlockerPublicKey = wallet.PublicKey, // this doesn't matter for the coinbase transaction
                 UnlockSignature = wallet.SignData(new UnlockSignatureStruct { BlockId = blockId, PublicKey = wallet.PublicKey }) // neither does this
