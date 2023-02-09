@@ -169,7 +169,7 @@ namespace Valcoin.Models
                 }
                 j += nSize;
             }
-            MerkleRoot = merkleTree.SingleOrDefault();
+            MerkleRoot = merkleTree.LastOrDefault();
         }
     }
 }
