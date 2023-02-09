@@ -54,6 +54,8 @@ namespace Valcoin.Models
         [NotMapped]
         public TxOutput[] Outputs { get; private set; }
 
+        public static implicit operator byte[](Transaction t) => JsonSerializer.SerializeToUtf8Bytes(t);
+
         //public Transaction() { }
 
         public Transaction(TxInput[] inputs, TxOutput[] outputs)

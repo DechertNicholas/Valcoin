@@ -50,7 +50,7 @@ namespace Valcoin
                     if (Stopwatch.Elapsed >= HashInterval)
                         ComputeHashSpeed();
 
-                    currentBlock.BlockHash = currentBlock.ComputeHash();
+                    currentBlock.ComputeAndSetHash();
                     HashCount++;
                     for (int i = 0; i < DifficultyMask.Length; i++)
                     {
