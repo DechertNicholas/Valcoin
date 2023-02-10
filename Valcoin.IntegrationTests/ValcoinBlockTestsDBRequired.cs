@@ -43,11 +43,15 @@ namespace Valcoin.IntegrationTests
                 LockSignature = fixture.Wallet.AddressBytes
             };
 
+            var txs = new List<Transaction>();
+
             // add multiple transactions
             for (var i = 0; i < 5; i++)
             {
-                block.AddTx(new(new TxInput[] { input }, new TxOutput[] { output }));
+                txs.Add(new Transaction(new TxInput[] { input }, new TxOutput[] { output }));
             }
+
+            block.AddTx(txs);
 
             block.ComputeAndSetHash();
             fixture.Context.Add(block);

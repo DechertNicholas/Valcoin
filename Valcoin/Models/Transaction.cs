@@ -33,6 +33,7 @@ namespace Valcoin.Models
         /// JSON representations of <see cref="Inputs"/>. Entity Framework Core can only store primitive types, so a JSON string will let us store a string
         /// while also allowing us to populate <see cref="Inputs"/> with the data from that string.
         /// </summary>
+        [JsonIgnore]
         public string JsonInputs { get; private set; }
 
         /// <summary>
@@ -46,6 +47,7 @@ namespace Valcoin.Models
         /// JSON representations of <see cref="Outputs"/>. Entity Framework Core can only store primitive types, so a JSON string will let us store a string
         /// while also allowing us to populate <see cref="Outputs"/> with the data from that string.
         /// </summary>
+        [JsonIgnore]
         public string JsonOutputs { get; private set; }
 
         /// <summary>
