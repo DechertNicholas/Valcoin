@@ -42,15 +42,23 @@ namespace Valcoin.IntegrationTests
                 Amount = 50,
                 LockSignature = fixture.Wallet.AddressBytes
             };
-            
-            tx = new(new TxInput[] { input }, new TxOutput[] { output });
-            block.AddTx(tx);
+
+            // add multiple transactions
+            for (var i = 0; i < 5; i++)
+            {
+                block.AddTx(new(new TxInput[] { input }, new TxOutput[] { output }));
+            }
+
             block.ComputeAndSetHash();
             fixture.Context.Add(block);
             fixture.Context.SaveChanges();
 
             var verify = fixture.Context.ValcoinBlocks.FirstOrDefault(b => b.BlockId == block.BlockId);
-            Assert.Equal(verify.BlockId, block.BlockId);
+            Assert.NotNull(verify);
+            if (null != verify)
+            {
+                Assert.Equal(verify.BlockId, block.BlockId);
+            }
         }
     }
 }
