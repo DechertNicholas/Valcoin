@@ -163,8 +163,8 @@ namespace Valcoin.Models
                 for (int i = 0; i < nSize; i += 2)
                 {
                     int i2 = Math.Min(i + 1, nSize - 1);
-                    merkleTree.Add(h.ComputeHash(( (byte[])Transactions[j + i] )
-                        .Concat( (byte[])Transactions[j + i2] )
+                    merkleTree.Add(h.ComputeHash(( merkleTree[j + i] )
+                        .Concat( merkleTree[j + i2] )
                         .ToArray()));
                 }
                 j += nSize;
