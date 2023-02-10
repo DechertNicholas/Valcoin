@@ -84,6 +84,16 @@ namespace Valcoin.Models
             ComputeMerkleRoot();
         }
 
+        public void AddTx(IEnumerable<Transaction> txs)
+        {
+            foreach (Transaction tx in txs)
+            {
+                Transactions.Add(tx);
+            }
+            JsonTransactions = JsonSerializer.Serialize(Transactions);
+            ComputeMerkleRoot();
+        }
+
         /// <summary>
         /// Computes the hash for the current block.
         /// </summary>
