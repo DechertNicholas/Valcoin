@@ -7,6 +7,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Valcoin.Models
@@ -39,6 +40,7 @@ namespace Valcoin.Models
         /// <summary>
         /// <see cref="Transactions"/> in JOSN format for database storage, as SQLite can only store primitive types.
         /// </summary>
+        [JsonIgnore]
         public string JsonTransactions { get; set; }
 
         /// <summary>
