@@ -39,7 +39,7 @@ namespace Valcoin.IntegrationTests
                                                     // of this hashed public key
             };
 
-            var tx = new Transaction(new TxInput[] { input }, new TxOutput[] { output });
+            var tx = new Transaction(blockId, new TxInput[] { input }, new TxOutput[] { output });
 
             fixture.Context.Add(tx);
             fixture.Context.SaveChanges();

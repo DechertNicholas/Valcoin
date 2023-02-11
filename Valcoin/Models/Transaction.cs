@@ -1,23 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using Valcoin.Exceptions.TransactionExceptions;
 
 namespace Valcoin.Models
 {
     public class Transaction
     {
-        //public int TransactionId { get; private set; }
-
         /// <summary>
         /// The version of transaction data formatting being used.
         /// </summary>
@@ -27,6 +18,7 @@ namespace Valcoin.Models
         /// The hash of the transaction in hex string format.
         /// </summary>
         [Key]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] // don't serialize this when computing the TxId, as it cannot be a part of itself
         public string TxId { get; private set; }
 
         /// <summary>
@@ -56,20 +48,28 @@ namespace Valcoin.Models
         [NotMapped]
         public TxOutput[] Outputs { get; private set; }
 
+        /// <summary>
+        /// The block in which this transaction was in. Not part of hashing
+        /// </summary>
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+        public ulong BlockNumber { get; set; }
+
         public static implicit operator byte[](Transaction t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
-        //public Transaction() { }
-
-        public Transaction(TxInput[] inputs, TxOutput[] outputs)
+        public Transaction(ulong blockNumber, TxInput[] inputs, TxOutput[] outputs)
         {
             Inputs = inputs;
             JsonInputs = JsonSerializer.Serialize(Inputs);
             Outputs = outputs;
             JsonOutputs = JsonSerializer.Serialize(Outputs);
+            BlockNumber = blockNumber;
             TxId = GetTxIdAsString();
         }
 
-        public Transaction(int version, string txId, string jsonInputs, string jsonOutputs)
+        /// <summary>
+        /// For loading from the database
+        /// </summary>
+        public Transaction(int version, string txId, string jsonInputs, string jsonOutputs, ulong blockNumber)
         {
             Version = version;
             TxId = txId;
@@ -77,17 +77,24 @@ namespace Valcoin.Models
             JsonInputs = JsonSerializer.Serialize(Inputs);
             Outputs = JsonSerializer.Deserialize<TxOutput[]>(jsonOutputs);
             JsonOutputs = JsonSerializer.Serialize(Outputs);
+            BlockNumber = blockNumber;
         }
 
         public string GetTxIdAsString()
         {
-            return Convert.ToHexString(
-                SHA256.Create().ComputeHash(new TransactionStruct
-                {
-                    Inputs = Inputs,
-                    Outputs = Outputs
-                })
+            // block number doesn't need to be part of the hash, but is needed for database operations
+            // neither is the hash itself
+            var holdBlockNumber = BlockNumber;
+            var holdTxId = TxId;
+            BlockNumber = 0;
+            TxId = null;
+            var temp = JsonSerializer.Serialize(this);
+            var txId = Convert.ToHexString(
+                SHA256.Create().ComputeHash(this)
             );
+            BlockNumber = holdBlockNumber;
+            TxId = holdTxId;
+            return txId;
         }
     }
 }

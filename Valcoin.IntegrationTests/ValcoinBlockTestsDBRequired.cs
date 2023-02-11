@@ -22,7 +22,6 @@ namespace Valcoin.IntegrationTests
         [Fact]
         public void VerifyReadWriteToDB()
         {
-            Transaction tx;
             TxInput input;
             TxOutput output;
             ValcoinBlock block;
@@ -48,7 +47,7 @@ namespace Valcoin.IntegrationTests
             // add multiple transactions
             for (var i = 0; i < 5; i++)
             {
-                txs.Add(new Transaction(new TxInput[] { input }, new TxOutput[] { output }));
+                txs.Add(new Transaction(block.BlockId, new TxInput[] { input }, new TxOutput[] { output }));
             }
 
             block.AddTx(txs);

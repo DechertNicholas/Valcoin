@@ -14,6 +14,6 @@ namespace Valcoin.Models
 
         public TxOutput[] Outputs { get; set; }
 
-        public static implicit operator byte[](TransactionStruct t) => JsonSerializer.SerializeToUtf8Bytes(t);
+        //public static implicit operator byte[](TransactionStruct t) => JsonSerializer.SerializeToUtf8Bytes(t);
     }
 }

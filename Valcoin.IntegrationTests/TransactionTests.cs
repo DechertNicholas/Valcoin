@@ -61,7 +61,7 @@ namespace Valcoin.IntegrationTests
                                                     // of this hashed public key
             };
 
-            var tx = new Transaction(new TxInput[] { input }, new TxOutput[] { output });
+            var tx = new Transaction(blockId, new TxInput[] { input }, new TxOutput[] { output });
 
             // assert on field that are generated and not statically assigned in the test
             Assert.NotNull(tx.TxId);

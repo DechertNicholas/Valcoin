@@ -113,7 +113,6 @@ namespace Valcoin.Models
             });
         }
 
-        
         public void ComputeMerkleRoot()
         {
             // it was very difficult to do this elegantly and without introducing new functions.
