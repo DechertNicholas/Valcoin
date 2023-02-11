@@ -10,10 +10,11 @@ namespace Valcoin.Models
 {
     public struct TransactionStruct
     {
+        public int Version { get; set; }
         public TxInput[] Inputs { get; set; }
 
         public TxOutput[] Outputs { get; set; }
 
-        //public static implicit operator byte[](TransactionStruct t) => JsonSerializer.SerializeToUtf8Bytes(t);
+        public static implicit operator byte[](TransactionStruct t) => JsonSerializer.SerializeToUtf8Bytes(t);
     }
 }
