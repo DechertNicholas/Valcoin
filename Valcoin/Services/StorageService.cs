@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using Valcoin.Models;
 
 namespace Valcoin.Services
@@ -10,31 +12,21 @@ namespace Valcoin.Services
         public static ValcoinBlock GetLastBlock()
         {
             uint? lastId = Db.ValcoinBlocks.Max(b => (uint?)b.BlockId);
-            if (lastId == null)
-            {
-                return BuildGenesisBlock();
-            }
-            return Db.ValcoinBlocks.First(b => b.BlockId == lastId);
-        }
-
-        public static ValcoinBlock BuildGenesisBlock()
-        {
-            var difficulty = 22; // starting difficulty
-            var block = new ValcoinBlock();
-            var genesisHash = new byte[32];
-            for (var i = 0; i < genesisHash.Length; i++)
-            {
-                genesisHash[i] = 0x00; //TODO: hash this to something other than straight 0's
-            }
-            block.PreviousBlockHash = genesisHash;
-            block.BlockId = 0;
-            block.BlockDifficulty = difficulty;
-            return block;
+            return Db.ValcoinBlocks.FirstOrDefault(b => b.BlockId == lastId);
         }
 
         public static void AddBlock(ValcoinBlock block)
         {
             Db.Add(block);
+            Db.SaveChanges();
+        }
+
+        public static void AddTxs(IEnumerable<Transaction> txs)
+        {
+            foreach (Transaction tx in txs)
+            {
+                Db.Add(tx);
+            }
             Db.SaveChanges();
         }
 

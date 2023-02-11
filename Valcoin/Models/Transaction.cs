@@ -21,6 +21,8 @@ namespace Valcoin.Models
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] // don't serialize this when computing the TxId, as it cannot be a part of itself
         public string TxId { get; private set; }
 
+        // TODO: txid as string should be for DB only, use bytes for actual transactions
+
         /// <summary>
         /// JSON representations of <see cref="Inputs"/>. Entity Framework Core can only store primitive types, so a JSON string will let us store a string
         /// while also allowing us to populate <see cref="Inputs"/> with the data from that string.
@@ -51,8 +53,8 @@ namespace Valcoin.Models
         /// <summary>
         /// The block in which this transaction was in. Not part of hashing
         /// </summary>
-        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-        public ulong BlockNumber { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] // TODO: Fix this
+        public ulong BlockNumber { get; set; }// = null; // validate this is not null during tx validation
 
         public static implicit operator byte[](Transaction t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
@@ -88,7 +90,7 @@ namespace Valcoin.Models
             var holdTxId = TxId;
             BlockNumber = 0;
             TxId = null;
-            var temp = JsonSerializer.Serialize(this);
+            var temp = JsonSerializer.Serialize(this); // for IDE inspector verification
             var txId = Convert.ToHexString(
                 SHA256.Create().ComputeHash(this)
             );

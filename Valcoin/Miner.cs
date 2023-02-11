@@ -21,10 +21,19 @@ namespace Valcoin
         private static readonly Stopwatch Stopwatch = new();
         private static readonly TimeSpan HashInterval = new(0, 0, 10);
         private static int HashCount = 0;
+        private static List<Transaction> TransactionPool = new();
+        private static ValcoinBlock CandidateBlock = new();
+        private static Wallet MyWallet;
+
         public static int HashSpeed { get; set; } = 0;
 
         public static void Mine()
         {
+            // setup wallet info
+            PopulateWalletInfo();
+
+            //SynchronizeChain();
+
             // how many 0 bits need to lead the SHA256 hash. 256 is max, which would be impossible.
             // a difficulty of 6 means the has must be "000000xxxxxx..."
             SetDifficultyMask(Difficulty); // TODO: get this from the network
@@ -35,13 +44,18 @@ namespace Valcoin
             {
                 var hashFound = false;
                 var lastBlock = StorageService.GetLastBlock();
-                var currentBlock = new ValcoinBlock()
+                if (null == lastBlock)
                 {
-                    BlockId = lastBlock.BlockId + 1,
-                    PreviousBlockHash = lastBlock.BlockHash,
-                    BlockDifficulty = Difficulty
-                };
+                    // no blocks are in the database after sync, start a new chain
+                    CandidateBlock = BuildGenesisBlock();
+                }
+                else
+                {
+                    CandidateBlock = new ValcoinBlock(lastBlock.BlockId++, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
+                }
+                
                 // TODO: select transactions, condense the root
+                CandidateBlock.AddTx(AssembleCoinbaseTransaction());
 
                 // check on each hash if a stop has been requested
                 while (!hashFound && Stop == false)
@@ -50,21 +64,22 @@ namespace Valcoin
                     if (Stopwatch.Elapsed >= HashInterval)
                         ComputeHashSpeed();
 
-                    currentBlock.ComputeAndSetHash();
+                    CandidateBlock.ComputeAndSetHash();
                     HashCount++;
                     for (int i = 0; i < DifficultyMask.Length; i++)
                     {
-                        if (currentBlock.BlockHash[i] > DifficultyMask[i])
+                        if (CandidateBlock.BlockHash[i] > DifficultyMask[i])
                         {
                             // didn't get the hash, try new nonce
-                            currentBlock.Nonce++;
+                            CandidateBlock.Nonce++;
                             break;
                         }
                         else if (i == DifficultyMask.Length - 1)
                         {
-                            StorageService.AddBlock(currentBlock);
+                            StorageService.AddBlock(CandidateBlock);
+                            StorageService.AddTxs(CandidateBlock.Transactions);
 
-                            var str = Convert.ToHexString(currentBlock.BlockHash);
+                            var str = Convert.ToHexString(CandidateBlock.BlockHash);
                             Console.WriteLine(str);
                             hashFound = true;
                         }
@@ -73,6 +88,11 @@ namespace Valcoin
             }
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
+        }
+
+        private static void PopulateWalletInfo()
+        {
+            MyWallet = StorageService.GetMyWallet();
         }
 
         private static void ComputeHashSpeed()
@@ -100,6 +120,35 @@ namespace Valcoin
             int toShift = difficulty - (8 * (bytesToShift - 1));
             difficultyMask[^1] = (byte)(0b_1111_1111 >> toShift);
             DifficultyMask = difficultyMask;
+        }
+
+        private static ValcoinBlock BuildGenesisBlock()
+        {
+            var genesisHash = new byte[32];
+            for (var i = 0; i < genesisHash.Length; i++)
+            {
+                genesisHash[i] = 0x00; //TODO: hash this to something other than straight 0's
+            }
+            return new ValcoinBlock(0, genesisHash, 0, DateTime.UtcNow, Difficulty);
+        }
+
+        public static Transaction AssembleCoinbaseTransaction()
+        {
+            var input = new TxInput()
+            {
+                PreviousTransactionId = new string('0', 64),
+                PreviousOutputIndex = -1, //0xFFFFFFFF
+                UnlockerPublicKey = MyWallet.PublicKey,
+                UnlockSignature = MyWallet.SignData(new UnlockSignatureStruct { BlockId = CandidateBlock.BlockId, PublicKey = MyWallet.PublicKey })
+            };
+
+            var output = new TxOutput()
+            {
+                Amount = 50,
+                LockSignature = MyWallet.AddressBytes
+            };
+
+            return new Transaction(CandidateBlock.BlockId, new TxInput[] { input }, new TxOutput[] { output });
         }
     }
 }

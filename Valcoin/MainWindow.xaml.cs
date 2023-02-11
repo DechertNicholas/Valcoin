@@ -106,10 +106,10 @@ namespace Valcoin
             foreach (var item in items)
             {
                 var viewItem = item as NavigationViewItem;
-                if (viewItem.Tag as string == typeof(MiningPage).Name)
+                if (viewItem.Tag as string == typeof(WalletPage).Name)
                 {
                     NavView.SelectedItem = viewItem;
-                    NavigateToView(typeof(MiningPage).Name);
+                    NavigateToView(typeof(WalletPage).Name);
                     break;
                 }
             }
