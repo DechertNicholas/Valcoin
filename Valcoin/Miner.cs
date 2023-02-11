@@ -35,7 +35,7 @@ namespace Valcoin
             //SynchronizeChain();
 
             // how many 0 bits need to lead the SHA256 hash. 256 is max, which would be impossible.
-            // a difficulty of 6 means the has must be "000000xxxxxx..."
+            // a difficulty of 6 means the hash bits must start with "000000xxxxxx..."
             SetDifficultyMask(Difficulty); // TODO: get this from the network
 
             // used to calculate hash speed
@@ -51,7 +51,7 @@ namespace Valcoin
                 }
                 else
                 {
-                    CandidateBlock = new ValcoinBlock(lastBlock.BlockId++, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
+                    CandidateBlock = new ValcoinBlock(lastBlock.BlockNumber++, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
                 }
                 
                 // TODO: select transactions, condense the root
@@ -139,7 +139,7 @@ namespace Valcoin
                 PreviousTransactionId = new string('0', 64),
                 PreviousOutputIndex = -1, //0xFFFFFFFF
                 UnlockerPublicKey = MyWallet.PublicKey,
-                UnlockSignature = MyWallet.SignData(new UnlockSignatureStruct { BlockId = CandidateBlock.BlockId, PublicKey = MyWallet.PublicKey })
+                UnlockSignature = MyWallet.SignData(new UnlockSignatureStruct { BlockNumber = CandidateBlock.BlockNumber, PublicKey = MyWallet.PublicKey })
             };
 
             var output = new TxOutput()
@@ -148,7 +148,7 @@ namespace Valcoin
                 LockSignature = MyWallet.AddressBytes
             };
 
-            return new Transaction(CandidateBlock.BlockId, new TxInput[] { input }, new TxOutput[] { output });
+            return new Transaction(CandidateBlock.BlockNumber, new TxInput[] { input }, new TxOutput[] { output });
         }
     }
 }
