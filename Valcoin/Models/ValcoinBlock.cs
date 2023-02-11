@@ -19,7 +19,7 @@ namespace Valcoin.Models
         /// </summary>
         [Required]
         [Key]
-        public ulong BlockId { get; set; } = 0;
+        public ulong BlockNumber { get; set; } = 0;
 
         /// <summary>
         /// The hash of the current block data that is in the block header.
@@ -41,6 +41,7 @@ namespace Valcoin.Models
         /// <see cref="Transactions"/> in JOSN format for database storage, as SQLite can only store primitive types.
         /// </summary>
         [JsonIgnore]
+        [NotMapped] // The transaction object in the database is linked to a block via the transactions BlockNumber.
         public string JsonTransactions { get; set; }
 
         /// <summary>
@@ -72,7 +73,7 @@ namespace Valcoin.Models
 
         public ValcoinBlock(ulong blockId, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
         {
-            BlockId = blockId;
+            BlockNumber = blockId;
             PreviousBlockHash = previousBlockHash;
             Nonce = nonce;
             TimeUTC = timeUTC;

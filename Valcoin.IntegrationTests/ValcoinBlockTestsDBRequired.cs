@@ -33,7 +33,7 @@ namespace Valcoin.IntegrationTests
                 PreviousTransactionId = new string('0', 64),
                 PreviousOutputIndex = 0,
                 UnlockerPublicKey = fixture.Wallet.PublicKey,
-                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct { BlockId = block.BlockId, PublicKey = fixture.Wallet.PublicKey })
+                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct { BlockNumber = block.BlockNumber, PublicKey = fixture.Wallet.PublicKey })
             };
 
             output = new()
@@ -47,7 +47,7 @@ namespace Valcoin.IntegrationTests
             // add multiple transactions
             for (var i = 0; i < 5; i++)
             {
-                txs.Add(new Transaction(block.BlockId, new TxInput[] { input }, new TxOutput[] { output }));
+                txs.Add(new Transaction(block.BlockNumber, new TxInput[] { input }, new TxOutput[] { output }));
             }
 
             block.AddTx(txs);
@@ -56,11 +56,11 @@ namespace Valcoin.IntegrationTests
             fixture.Context.Add(block);
             fixture.Context.SaveChanges();
 
-            var verify = fixture.Context.ValcoinBlocks.FirstOrDefault(b => b.BlockId == block.BlockId);
+            var verify = fixture.Context.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == block.BlockNumber);
             Assert.NotNull(verify);
             if (null != verify)
             {
-                Assert.Equal(verify.BlockId, block.BlockId);
+                Assert.Equal(verify.BlockNumber, block.BlockNumber);
             }
         }
     }

@@ -11,8 +11,8 @@ namespace Valcoin.Services
 
         public static ValcoinBlock GetLastBlock()
         {
-            uint? lastId = Db.ValcoinBlocks.Max(b => (uint?)b.BlockId);
-            return Db.ValcoinBlocks.FirstOrDefault(b => b.BlockId == lastId);
+            uint? lastId = Db.ValcoinBlocks.Max(b => (uint?)b.BlockNumber);
+            return Db.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == lastId);
         }
 
         public static void AddBlock(ValcoinBlock block)
@@ -28,7 +28,7 @@ namespace Valcoin.Services
                 Db.Add(tx);
             }
             Db.SaveChanges();
-        }
+       }
 
         public static void AddWallet(Wallet wallet)
         {

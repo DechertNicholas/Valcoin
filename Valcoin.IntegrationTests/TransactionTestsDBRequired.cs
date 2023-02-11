@@ -29,7 +29,7 @@ namespace Valcoin.IntegrationTests
                 PreviousTransactionId = new string('0', 64), // coinbase
                 PreviousOutputIndex = -1, // 0xffffffff
                 UnlockerPublicKey = fixture.Wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct { BlockId = blockId, PublicKey = fixture.Wallet.PublicKey }) // neither does this
+                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = fixture.Wallet.PublicKey }) // neither does this
             };
 
             var output = new TxOutput

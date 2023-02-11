@@ -9,7 +9,7 @@ namespace Valcoin.Models
 {
     public struct UnlockSignatureStruct
     {
-        public ulong BlockId { get; set; }
+        public ulong BlockNumber { get; set; }
         public byte[] PublicKey { get; set; }
 
         public static implicit operator byte[](UnlockSignatureStruct u) => JsonSerializer.SerializeToUtf8Bytes(u);
