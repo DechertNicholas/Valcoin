@@ -42,49 +42,8 @@ namespace Valcoin
             Stopwatch.Start();
             while (Stop == false)
             {
-                var hashFound = false;
-                var lastBlock = StorageService.GetLastBlock();
-                if (null == lastBlock)
-                {
-                    // no blocks are in the database after sync, start a new chain
-                    CandidateBlock = BuildGenesisBlock();
-                }
-                else
-                {
-                    CandidateBlock = new ValcoinBlock(lastBlock.BlockNumber++, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
-                }
-                
-                // TODO: select transactions, condense the root
-                CandidateBlock.AddTx(AssembleCoinbaseTransaction());
-
-                // check on each hash if a stop has been requested
-                while (!hashFound && Stop == false)
-                {
-                    // update every 10 seconds
-                    if (Stopwatch.Elapsed >= HashInterval)
-                        ComputeHashSpeed();
-
-                    CandidateBlock.ComputeAndSetHash();
-                    HashCount++;
-                    for (int i = 0; i < DifficultyMask.Length; i++)
-                    {
-                        if (CandidateBlock.BlockHash[i] > DifficultyMask[i])
-                        {
-                            // didn't get the hash, try new nonce
-                            CandidateBlock.Nonce++;
-                            break;
-                        }
-                        else if (i == DifficultyMask.Length - 1)
-                        {
-                            StorageService.AddBlock(CandidateBlock);
-                            StorageService.AddTxs(CandidateBlock.Transactions);
-
-                            var str = Convert.ToHexString(CandidateBlock.BlockHash);
-                            Console.WriteLine(str);
-                            hashFound = true;
-                        }
-                    }
-                }
+                AssembleCandidateBlock();
+                FindValidHash();
             }
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
@@ -104,7 +63,7 @@ namespace Valcoin
             Stopwatch.Restart();
         }
 
-        public static void SetDifficultyMask(int difficulty)
+        private static void SetDifficultyMask(int difficulty)
         {
             int bytesToShift = Convert.ToInt32(Math.Ceiling(difficulty / 8d)); // 8 bits in a byte
 
@@ -132,7 +91,7 @@ namespace Valcoin
             return new ValcoinBlock(0, genesisHash, 0, DateTime.UtcNow, Difficulty);
         }
 
-        public static Transaction AssembleCoinbaseTransaction()
+        private static Transaction AssembleCoinbaseTransaction()
         {
             var input = new TxInput()
             {
@@ -149,6 +108,58 @@ namespace Valcoin
             };
 
             return new Transaction(CandidateBlock.BlockNumber, new TxInput[] { input }, new TxOutput[] { output });
+        }
+
+        private static void AssembleCandidateBlock()
+        {
+            var lastBlock = StorageService.GetLastBlock();
+            if (null == lastBlock)
+            {
+                // no blocks are in the database after sync, start a new chain
+                CandidateBlock = BuildGenesisBlock();
+            }
+            else
+            {
+                CandidateBlock = new ValcoinBlock(lastBlock.BlockNumber++, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
+            }
+
+            // TODO: select transactions, condense the root
+            CandidateBlock.AddTx(AssembleCoinbaseTransaction());
+        }
+
+        private static void FindValidHash()
+        {
+            var hashFound = false;
+            // check on each hash if a stop has been requested
+            while (!hashFound && Stop == false)
+            {
+                // update every 10 seconds
+                if (Stopwatch.Elapsed >= HashInterval)
+                    ComputeHashSpeed();
+
+                CandidateBlock.ComputeAndSetHash();
+                HashCount++;
+                for (int i = 0; i < DifficultyMask.Length; i++)
+                {
+                    if (CandidateBlock.BlockHash[i] > DifficultyMask[i])
+                    {
+                        // didn't get the hash, try new nonce
+                        CandidateBlock.Nonce++;
+                        break;
+                    }
+                    else if (i == DifficultyMask.Length - 1)
+                    {
+                        SaveBlock();
+                        hashFound = true;
+                    }
+                }
+            }
+        }
+
+        private static void SaveBlock()
+        {
+            StorageService.AddBlock(CandidateBlock);
+            StorageService.AddTxs(CandidateBlock.Transactions);
         }
     }
 }
