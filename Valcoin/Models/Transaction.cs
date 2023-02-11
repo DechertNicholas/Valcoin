@@ -1,23 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Threading.Tasks;
-using Valcoin.Exceptions.TransactionExceptions;
 
 namespace Valcoin.Models
 {
     public class Transaction
     {
-        //public int TransactionId { get; private set; }
-
         /// <summary>
         /// The version of transaction data formatting being used.
         /// </summary>
@@ -33,6 +24,7 @@ namespace Valcoin.Models
         /// JSON representations of <see cref="Inputs"/>. Entity Framework Core can only store primitive types, so a JSON string will let us store a string
         /// while also allowing us to populate <see cref="Inputs"/> with the data from that string.
         /// </summary>
+        [JsonIgnore]
         public string JsonInputs { get; private set; }
 
         /// <summary>
@@ -46,6 +38,7 @@ namespace Valcoin.Models
         /// JSON representations of <see cref="Outputs"/>. Entity Framework Core can only store primitive types, so a JSON string will let us store a string
         /// while also allowing us to populate <see cref="Outputs"/> with the data from that string.
         /// </summary>
+        [JsonIgnore]
         public string JsonOutputs { get; private set; }
 
         /// <summary>
@@ -54,18 +47,37 @@ namespace Valcoin.Models
         [NotMapped]
         public TxOutput[] Outputs { get; private set; }
 
-        //public Transaction() { }
+        /// <summary>
+        /// The block in which this transaction was in. Not part of hashing, used only for DB operations
+        /// </summary>
+        public ulong BlockNumber { get; set; }
 
-        public Transaction(TxInput[] inputs, TxOutput[] outputs)
+        /// <summary>
+        /// Byte[] serializer used for transferring this transaction over the network.
+        /// </summary>
+        /// <param name="t"></param>
+        public static implicit operator byte[](Transaction t) => JsonSerializer.SerializeToUtf8Bytes(t);
+
+        /// <summary>
+        /// The constructor used by other classes to build a new transaction.
+        /// </summary>
+        /// <param name="blockNumber">The BlockNumber this transaction is in. Used for DB relations.</param>
+        /// <param name="inputs">The group of inputs for this transaction.</param>
+        /// <param name="outputs">The group of outputs for this transaction.</param>
+        public Transaction(ulong blockNumber, TxInput[] inputs, TxOutput[] outputs)
         {
             Inputs = inputs;
             JsonInputs = JsonSerializer.Serialize(Inputs);
             Outputs = outputs;
             JsonOutputs = JsonSerializer.Serialize(Outputs);
+            BlockNumber = blockNumber;
             TxId = GetTxIdAsString();
         }
 
-        public Transaction(int version, string txId, string jsonInputs, string jsonOutputs)
+        /// <summary>
+        /// For loading from the database.
+        /// </summary>
+        public Transaction(int version, string txId, string jsonInputs, string jsonOutputs, ulong blockNumber)
         {
             Version = version;
             TxId = txId;
@@ -73,6 +85,7 @@ namespace Valcoin.Models
             JsonInputs = JsonSerializer.Serialize(Inputs);
             Outputs = JsonSerializer.Deserialize<TxOutput[]>(jsonOutputs);
             JsonOutputs = JsonSerializer.Serialize(Outputs);
+            BlockNumber = blockNumber;
         }
 
         public string GetTxIdAsString()
@@ -80,6 +93,7 @@ namespace Valcoin.Models
             return Convert.ToHexString(
                 SHA256.Create().ComputeHash(new TransactionStruct
                 {
+                    Version = Version,
                     Inputs = Inputs,
                     Outputs = Outputs
                 })

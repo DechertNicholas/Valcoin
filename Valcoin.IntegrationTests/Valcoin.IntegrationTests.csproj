@@ -7,11 +7,11 @@
 
     <IsPackable>false</IsPackable>
 
-	  <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
+    <ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>None</ResolveAssemblyWarnOrErrorOnTargetArchitectureMismatch>
 
-	  <Configurations>Debug;Release;Debug - Persist DB</Configurations>
+    <Configurations>Debug;Release;Debug - Persist DB</Configurations>
 
-	  <Platforms>AnyCPU;x86</Platforms>
+    <Platforms>AnyCPU;x86</Platforms>
   </PropertyGroup>
 
   <ItemGroup>

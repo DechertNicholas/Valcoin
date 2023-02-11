@@ -1,14 +1,16 @@
-using Microsoft.UI.Xaml.Documents;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
+using System.Text;
+using System.Threading.Tasks;
 using Valcoin.Models;
-using Valcoin.Services;
 
-namespace Valcoin.UnitTests
+namespace Valcoin.IntegrationTests
 {
-    [CollectionDefinition("RequiresDB", DisableParallelization = true)]
     public class TransactionTests
     {
-        public Wallet Wallet { get; set; }
+        readonly Wallet wallet;
 
         public TransactionTests()
         {
@@ -36,7 +38,7 @@ namespace Valcoin.UnitTests
             };
 
             var rsa = RSA.Create(rsaParams);
-            Wallet = new Wallet(rsa.ExportRSAPublicKey(), rsa.ExportRSAPrivateKey());
+            wallet = new Wallet(rsa.ExportRSAPublicKey(), rsa.ExportRSAPrivateKey());
         }
 
         [Fact]
@@ -48,18 +50,18 @@ namespace Valcoin.UnitTests
             {
                 PreviousTransactionId = "0000000000000000000000000000000000000000000000000000000000000000", // coinbase
                 PreviousOutputIndex = -1, // 0xffffffff
-                UnlockerPublicKey = Wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = Wallet.SignData(new UnlockSignatureStruct { BlockId = blockId, PublicKey = Wallet.PublicKey}) // neither does this
+                UnlockerPublicKey = wallet.PublicKey, // this doesn't matter for the coinbase transaction
+                UnlockSignature = wallet.SignData(new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = wallet.PublicKey }) // neither does this
             };
 
             var output = new TxOutput
             {
                 Amount = 50,
-                LockSignature = Wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
+                LockSignature = wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
                                                     // of this hashed public key
             };
 
-            var tx = new Transaction(new TxInput[] { input }, new TxOutput[] { output });
+            var tx = new Transaction(blockId, new TxInput[] { input }, new TxOutput[] { output });
 
             // assert on field that are generated and not statically assigned in the test
             Assert.NotNull(tx.TxId);
@@ -77,65 +79,30 @@ namespace Valcoin.UnitTests
         {
             // first, assert this configuration even worked
             var publicKey = "3082010A0282010100B6A18C735A42F307A1D89D51AF2E680BFAF36511C69FC78F407A8E216BACF9ADAFBE81689033DC359E098E04050162033AFE9EFF1668FC2C0CE594D28DE4329153D108156BDC431E34383782B38387A7D4F9E1EA65AC879A2B4B5AABA5795841206467FC196596C1DBC699DC01F98D50E55D4C0AFE5A8A2AAA54B144D96FDD903A4A3AED7DDCF447C28868763AD3988F712816A6B8D39919D5BC6CC433B0EB19992DCDAD4A0E1638A55F38B3EAFA02DECE49E60C13A0C8A3930EEC5D4DD3AFED166BC86A63AAF88E0F80A74EEEC1905A028D140B2000ED62F40D8F70BCE0DC903348999292BCD0A840C57A9FDF70133D42F7DA4752CAA912399F614A5A139A050203010001";
-            Assert.Equal(Convert.ToHexString(Wallet.PublicKey), publicKey);
+            Assert.Equal(Convert.ToHexString(wallet.PublicKey), publicKey);
 
             ulong blockId = 10; // this tx is part of block 10
             var input = new TxInput
             {
-                PreviousTransactionId = "0000000000000000000000000000000000000000000000000000000000000000", // coinbase
+                PreviousTransactionId = new string('0', 64), // coinbase
                 PreviousOutputIndex = -1, // 0xffffffff
-                UnlockerPublicKey = Wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = Wallet.SignData(new UnlockSignatureStruct { BlockId = blockId, PublicKey = Wallet.PublicKey }) // neither does this
+                UnlockerPublicKey = wallet.PublicKey, // this doesn't matter for the coinbase transaction
+                UnlockSignature = wallet.SignData(new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = wallet.PublicKey }) // neither does this
             };
 
             var output = new TxOutput
             {
                 Amount = 50,
-                LockSignature = Wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
+                LockSignature = wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
                                                     // of this hashed public key
             };
 
-            Assert.Equal(output.LockSignature, Wallet.AddressBytes);
-            Assert.Equal(input.UnlockerPublicKey, Wallet.PublicKey);
-            Assert.True(Wallet.VerifyData(
-                new UnlockSignatureStruct { BlockId = blockId, PublicKey = Wallet.PublicKey },
+            Assert.Equal(output.LockSignature, wallet.AddressBytes);
+            Assert.Equal(input.UnlockerPublicKey, wallet.PublicKey);
+            Assert.True(wallet.VerifyData(
+                new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = wallet.PublicKey },
                 input.UnlockSignature)
             );
-        }
-
-        /// <summary>
-        /// This is actually an integration test, move it to there later
-        /// </summary>
-        [Fact]
-        public void VerifyDataReadWriteToDB()
-        {
-            ulong blockId = 10; // this tx is part of block 10
-
-            var input = new TxInput
-            {
-                PreviousTransactionId = "0000000000000000000000000000000000000000000000000000000000000000", // coinbase
-                PreviousOutputIndex = -1, // 0xffffffff
-                UnlockerPublicKey = Wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = Wallet.SignData(new UnlockSignatureStruct { BlockId = blockId, PublicKey = Wallet.PublicKey }) // neither does this
-            };
-
-            var output = new TxOutput
-            {
-                Amount = 50,
-                LockSignature = Wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
-                                                    // of this hashed public key
-            };
-
-            var tx = new Transaction(new TxInput[] { input }, new TxOutput[] { output });
-
-            var db = new ValcoinContext();
-
-            db.Add(tx);
-            db.SaveChanges();
-
-            var txVerify = db.Transactions.FirstOrDefault(t => t.TxId == tx.TxId);
-            Assert.NotNull(txVerify);
-            db.Dispose();
         }
     }
 }

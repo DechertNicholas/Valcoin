@@ -18,10 +18,8 @@ namespace Valcoin.ViewModels
             if ((MyWallet = StorageService.GetMyWallet()) == null)
             {
                 MyWallet = new();
-                MyWallet.Initialize();
                 StorageService.AddWallet(MyWallet);
             }
-            MyWallet.Initialize();
         }
     }
 }
