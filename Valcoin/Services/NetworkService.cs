@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Buffers.Text;
 using System.Collections;
 using Valcoin.Models;
+using System.Threading;
 
 namespace Valcoin.Services
 {
@@ -19,39 +20,20 @@ namespace Valcoin.Services
         public static bool ClientIsListening { get; private set; } = false;
         private const int listenPort = 2106;
 
-        public static async void StartListener()
+        public static void StartListener()
         {
-            //var groupEP = new IPEndPoint(IPAddress.Any, listenPort);
+            Thread.CurrentThread.Name = "UDP Listener";
+            var groupEP = new IPEndPoint(IPAddress.Any, listenPort);
 
             try
             {
                 while (true)
                 {
                     ClientIsListening = true;
-                    var result = await Client.ReceiveAsync();
-                    try
-                    {
-                        var data = JsonDocument.Parse(result.Buffer);
 
-                        if (data.RootElement.ToString().Contains("TxId"))
-                        {
-                            var tx = data.Deserialize<Transaction>();
-                            Miner.TransactionPool.Add(tx);
-                        }
-                        else if (data.RootElement.ToString().Contains("BlockHash"))
-                        {
-                            var block = data.Deserialize<ValcoinBlock>();
-                        }
-                        ClientIsListening = false;
-                    }
-                    catch (Exception ex)
-                    {
-                        if (!ex.Message.Contains("is an invalid start of a value"))
-                        {
-                            // this exception IS NOT a Json formatting exception.
-                            throw;
-                        }
-                    }
+                    var result = Client.Receive(ref groupEP);
+                    Task.Run(() => ParseData(result));
+                    
                 }
             }
             finally
@@ -67,7 +49,37 @@ namespace Valcoin.Services
 
         public static async Task SendData(byte[] data)
         {
+            // address is test value, will change to have a real param
             await Client.SendAsync(data, "10.11.5.255", listenPort);
+        }
+
+        public static void ParseData(byte[] result)
+        {
+            try
+            {
+                // try to parse the raw data as json, catching if the data isn't json
+                var data = JsonDocument.Parse(result);
+
+                // TxId and BlockHash are exclusive to these two classes, so they can be sorted by these terms
+                if (data.RootElement.ToString().Contains("TxId"))
+                {
+                    var tx = data.Deserialize<Transaction>();
+                    Miner.TransactionPool.Add(tx);
+                }
+                else if (data.RootElement.ToString().Contains("BlockHash"))
+                {
+                    var block = data.Deserialize<ValcoinBlock>();
+                }
+                ClientIsListening = false;
+            }
+            catch (Exception ex)
+            {
+                if (!ex.Message.Contains("is an invalid start of a value"))
+                {
+                    // this exception IS NOT a Json formatting exception.
+                    throw;
+                }
+            }
         }
     }
 }

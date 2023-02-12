@@ -129,7 +129,7 @@ namespace Valcoin
 
             if (!TransactionPool.IsEmpty)
             {
-                for (var i = 0; i < Math.Min(32, TransactionPool.Count - 1); i++)
+                for (var i = 0; i < Math.Min(32, TransactionPool.Count); i++)
                 {
                     if (TransactionPool.TryTake(out Transaction tx))
                     {

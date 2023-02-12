@@ -39,7 +39,7 @@ namespace Valcoin.UnitTests
             //await NetworkService.SendData(new byte[] {0,1,2,3,4,5,6,7,8,9});
             await NetworkService.SendData(tx);
 
-            t.Wait();
+            //t.Wait();
         }
     }
 }

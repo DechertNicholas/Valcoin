@@ -2,6 +2,8 @@
 // Licensed under the MIT License.
 
 using Microsoft.UI.Xaml;
+using System.Threading.Tasks;
+using Valcoin.Services;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -13,6 +15,11 @@ namespace Valcoin
     /// </summary>
     public partial class App : Application
     {
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0052:Remove unread private member",
+            Justification = "This thread needs to keep listening, but never needs to be accessed." +
+            "There is probably a better way to do this, but this is easy and works for this application.")]
+        private static Task UDPListener;
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
@@ -20,6 +27,7 @@ namespace Valcoin
         public App()
         {
             this.InitializeComponent();
+            UDPListener = Task.Run(() => NetworkService.StartListener());
         }
 
         /// <summary>
