@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -21,11 +22,11 @@ namespace Valcoin
         private static readonly Stopwatch Stopwatch = new();
         private static readonly TimeSpan HashInterval = new(0, 0, 10);
         private static int HashCount = 0;
-        private static List<Transaction> TransactionPool = new();
         private static ValcoinBlock CandidateBlock = new();
         private static Wallet MyWallet;
 
         public static int HashSpeed { get; set; } = 0;
+        public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
         public static void Mine()
         {
@@ -125,6 +126,18 @@ namespace Valcoin
 
             // TODO: select transactions, condense the root
             CandidateBlock.AddTx(AssembleCoinbaseTransaction());
+
+            if (!TransactionPool.IsEmpty)
+            {
+                for (var i = 0; i < Math.Min(32, TransactionPool.Count - 1); i++)
+                {
+                    if (TransactionPool.TryTake(out Transaction tx))
+                    {
+                        CandidateBlock.AddTx(tx);
+                    }
+                }
+            }
+            
         }
 
         private static void FindValidHash()
