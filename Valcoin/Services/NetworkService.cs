@@ -17,7 +17,6 @@ namespace Valcoin.Services
     public static class NetworkService
     {
         public static UdpClient Client { get; private set; } = new(listenPort);
-        public static bool ClientIsListening { get; private set; } = false;
         private const int listenPort = 2106;
 
         public static void StartListener()
@@ -29,11 +28,9 @@ namespace Valcoin.Services
             {
                 while (true)
                 {
-                    ClientIsListening = true;
-
                     var result = Client.Receive(ref groupEP);
+                    // utilize a task here so that the listener thread can get back to listening ASAP
                     Task.Run(() => ParseData(result));
-                    
                 }
             }
             finally
@@ -70,7 +67,6 @@ namespace Valcoin.Services
                 {
                     var block = data.Deserialize<ValcoinBlock>();
                 }
-                ClientIsListening = false;
             }
             catch (Exception ex)
             {
