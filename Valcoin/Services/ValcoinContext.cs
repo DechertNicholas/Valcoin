@@ -11,10 +11,7 @@ namespace Valcoin.Services
         public DbSet<Client> Clients { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
-        {
-            options.UseSqlite($"Filename=valcoin.db");
-            options.EnableSensitiveDataLogging();
-        }
+            => options.UseSqlite($"Filename=valcoin.db");
 
         public ValcoinContext()
         {
