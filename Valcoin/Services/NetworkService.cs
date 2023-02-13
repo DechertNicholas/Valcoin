@@ -18,6 +18,7 @@ namespace Valcoin.Services
     {
         public static UdpClient Client { get; private set; } = new(listenPort);
         private const int listenPort = 2106;
+        private static List<Client> clients = new();
 
         public static void StartListener()
         {
@@ -44,10 +45,30 @@ namespace Valcoin.Services
             Client.Close();
         }
 
-        public static async Task SendData(byte[] data)
+        /// <summary>
+        /// Relay data to all clients on the network.
+        /// </summary>
+        /// <param name="data">The data to send (a <see cref="ValcoinBlock"/>, <see cref="Transaction"/>, etc).</param>
+        /// <returns></returns>
+        public static async Task RelayData(byte[] data)
+        {
+            Thread.Sleep(1000); //debug
+            foreach (var client in clients)
+            {
+                await SendData(data, client);
+            }
+        }
+
+        /// <summary>
+        /// Send data to an individual client.
+        /// </summary>
+        /// <param name="data">The data to send (a <see cref="ValcoinBlock"/>, <see cref="Transaction"/>, etc).</param>
+        /// <param name="client">The client to send to.</param>
+        /// <returns></returns>
+        public static async Task SendData(byte[] data, Client client)
         {
             // address is test value, will change to have a real param
-            await Client.SendAsync(data, "10.11.5.255", listenPort);
+            await Client.SendAsync(data, client.Address.ToString(), listenPort);
         }
 
         public static void ParseData(byte[] result)
@@ -60,12 +81,14 @@ namespace Valcoin.Services
                 // TxId and BlockHash are exclusive to these two classes, so they can be sorted by these terms
                 if (data.RootElement.ToString().Contains("TxId"))
                 {
+                    // got a new transaction. Send it to the miner for validation
                     var tx = data.Deserialize<Transaction>();
                     Miner.TransactionPool.Add(tx);
                 }
                 else if (data.RootElement.ToString().Contains("BlockHash"))
                 {
                     var block = data.Deserialize<ValcoinBlock>();
+                    // TODO: validate and save the block
                 }
             }
             catch (Exception ex)
@@ -73,6 +96,8 @@ namespace Valcoin.Services
                 if (!ex.Message.Contains("is an invalid start of a value"))
                 {
                     // this exception IS NOT a Json formatting exception.
+                    // essentially, we don't care if invalid JSON is sent to us as the data it carried is probably invalid anyway
+                    // (since this Valcoin client is the only one that exists), or accidentally sent to us by another program.
                     throw;
                 }
             }

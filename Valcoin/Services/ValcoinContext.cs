@@ -8,9 +8,13 @@ namespace Valcoin.Services
         public DbSet<ValcoinBlock> ValcoinBlocks { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Client> Clients { get; set; }
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
-            => options.UseSqlite($"Filename=valcoin.db");
+        {
+            options.UseSqlite($"Filename=valcoin.db");
+            options.EnableSensitiveDataLogging();
+        }
 
         public ValcoinContext()
         {

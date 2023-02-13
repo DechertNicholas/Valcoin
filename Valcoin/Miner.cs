@@ -23,6 +23,10 @@ namespace Valcoin
         private static readonly TimeSpan HashInterval = new(0, 0, 10);
         private static int HashCount = 0;
         private static ValcoinBlock CandidateBlock = new();
+        // LastBlock is mainly here to avoid EFCore from tracking the same object twice:
+        // once while being loaded by GetLastBlock(), and once while being sent to the network
+        // with Relay()
+        private static ValcoinBlock LastBlock;
         private static Wallet MyWallet;
 
         public static int HashSpeed { get; set; } = 0;
@@ -89,7 +93,7 @@ namespace Valcoin
             {
                 genesisHash[i] = 0x00; //TODO: hash this to something other than straight 0's
             }
-            return new ValcoinBlock(0, genesisHash, 0, DateTime.UtcNow, Difficulty);
+            return new ValcoinBlock(1, genesisHash, 0, DateTime.UtcNow, Difficulty);
         }
 
         private static Transaction AssembleCoinbaseTransaction()
@@ -113,15 +117,16 @@ namespace Valcoin
 
         private static void AssembleCandidateBlock()
         {
-            var lastBlock = StorageService.GetLastBlock();
-            if (null == lastBlock)
+            // on first run, LastBlock will be null regardless. However it can also be null if the DB is new, so we check twice
+            LastBlock ??= StorageService.GetLastBlock();
+            if (LastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
                 CandidateBlock = BuildGenesisBlock();
             }
             else
             {
-                CandidateBlock = new ValcoinBlock(lastBlock.BlockNumber++, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
+                CandidateBlock = new ValcoinBlock(LastBlock.BlockNumber + 1, LastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
             }
 
             // TODO: select transactions, condense the root
@@ -162,17 +167,18 @@ namespace Valcoin
                     }
                     else if (i == DifficultyMask.Length - 1)
                     {
-                        SaveBlock();
+                        CommitBlock();
                         hashFound = true;
                     }
                 }
             }
         }
 
-        private static void SaveBlock()
+        private static void CommitBlock()
         {
             StorageService.AddBlock(CandidateBlock);
             StorageService.AddTxs(CandidateBlock.Transactions);
+            Task.Run(() => NetworkService.RelayData(CandidateBlock));
         }
     }
 }

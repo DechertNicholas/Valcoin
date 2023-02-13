@@ -15,7 +15,7 @@ namespace Valcoin.Models
     public class ValcoinBlock
     {
         /// <summary>
-        /// The number of the block in the blockchain sequence.
+        /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid (due to SQLite not storing starting at 0).
         /// </summary>
         [Required]
         [Key]
@@ -68,6 +68,8 @@ namespace Valcoin.Models
         /// The version of this block, in case it ever changes.
         /// </summary>
         public int Version { get; set; } = 1;
+
+        public static implicit operator byte[](ValcoinBlock b) => JsonSerializer.SerializeToUtf8Bytes(b);
 
         public ValcoinBlock() { }
 

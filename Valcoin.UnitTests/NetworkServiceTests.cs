@@ -13,7 +13,7 @@ namespace Valcoin.UnitTests
     public class NetworkServiceTests
     {
         [Fact]
-        public async void SendData()
+        public void SendData()
         {
             var wallet = new Wallet();
             ulong blockId = 10; // this tx is part of block 10
@@ -37,7 +37,7 @@ namespace Valcoin.UnitTests
 
             var t = Task.Run(() => NetworkService.StartListener());
             //await NetworkService.SendData(new byte[] {0,1,2,3,4,5,6,7,8,9});
-            await NetworkService.SendData(tx);
+            //await NetworkService.SendData(tx);
 
             //t.Wait();
         }
