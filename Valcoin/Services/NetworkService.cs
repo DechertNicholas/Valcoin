@@ -19,6 +19,9 @@ namespace Valcoin.Services
         public static UdpClient Client { get; private set; } = new(listenPort);
         private const int listenPort = 2106;
         private static List<Client> clients = new();
+//#if !RELEASE
+//        private static string localIP;
+//#endif
 
         public static async void StartListener()
         {
@@ -28,7 +31,14 @@ namespace Valcoin.Services
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
-            clients.Add(new Models.Client() { Address = IPAddress.Broadcast.ToString(), Port = listenPort });
+            clients.Add(new Client() { Address = IPAddress.Broadcast.ToString(), Port = listenPort });
+            // we also need to know our IP, so we don't keep re-ingesting our own data
+            //using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+            //{
+            //    socket.Connect("8.8.8.8", 65530);
+            //    IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+            //    localIP = endPoint.Address.ToString();
+            //}
 #endif
             var remoteEP = new IPEndPoint(IPAddress.Any, 0); // get from any IP sending to any port (to our port listenPort)
 
@@ -83,7 +93,7 @@ namespace Valcoin.Services
         /// <param name="result">The bytes returned from the listener.</param>
         /// <param name="clientAddress">The IP address from the listener.</param>
         /// <param name="clientPort">The port from the listener.</param>
-        public static void ParseData(byte[] result, string clientAddress, int clientPort)
+        public static async Task ParseData(byte[] result, string clientAddress, int clientPort)
         {
             var service = new StorageService();
             try
@@ -101,8 +111,10 @@ namespace Valcoin.Services
                 {
                     // got a new transaction. Send it to the miner for validation
                     var tx = data.Deserialize<Transaction>();
-                    Miner.TransactionPool.Add(tx);
+                    // adding tx will be done by the validation service once we know we don't already have one
+                    //Miner.TransactionPool.Add(tx);
                 }
+                await ProcessClient(clientAddress, clientPort, service);
             }
             catch (Exception ex)
             {
@@ -114,7 +126,10 @@ namespace Valcoin.Services
                     throw;
                 }
             }
+        }
 
+        private static async Task ProcessClient(string clientAddress, int clientPort, StorageService service)
+        {
             // if all was successful, add the client to the clients list if not present already
             //var clientEndpoint = new IPEndPoint(clientAddress, clientPort);
             var client = clients.Where(c => c.Address == clientAddress)
@@ -123,14 +138,14 @@ namespace Valcoin.Services
             {
                 // client at this endpoint exists
                 client.LastCommunicationUTC = DateTime.UtcNow;
-                service.UpdateClient(client);
+                await service.UpdateClient(client);
             }
             else
             {
                 // this is a new connection
                 client = new() { Address = clientAddress, Port = clientPort, LastCommunicationUTC = DateTime.UtcNow };
                 clients.Add(client);
-                service.AddClient(client);
+                await service.AddClient(client);
             }
         }
     }

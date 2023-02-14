@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,13 +21,13 @@ namespace Valcoin.Services
             return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockNumber == lastId);
         }
 
-        public async void AddBlock(ValcoinBlock block)
+        public async Task AddBlock(ValcoinBlock block)
         {
             Db.Add(block);
             await Db.SaveChangesAsync();
         }
 
-        public async void AddTxs(IEnumerable<Transaction> txs)
+        public async Task AddTxs(IEnumerable<Transaction> txs)
         {
             foreach (Transaction tx in txs)
             {
@@ -35,7 +36,7 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
        }
 
-        public async void AddWallet(Wallet wallet)
+        public async Task AddWallet(Wallet wallet)
         {
             Db.Add(wallet);
             await Db.SaveChangesAsync();
@@ -46,7 +47,7 @@ namespace Valcoin.Services
             return await Db.Wallets.FirstOrDefaultAsync(w => w.PrivateKey != null);
         }
 
-        public async void AddClient(Client client)
+        public async Task AddClient(Client client)
         {
             Db.Add(client);
             await Db.SaveChangesAsync();
@@ -57,7 +58,7 @@ namespace Valcoin.Services
             return await Db.Clients.ToListAsync();
         }
 
-        public async void UpdateClient(Client client)
+        public async Task UpdateClient(Client client)
         {
             Db.Update(client);
             await Db.SaveChangesAsync();

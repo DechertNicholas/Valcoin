@@ -32,7 +32,7 @@ namespace Valcoin
         public static int HashSpeed { get; set; } = 0;
         public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
-        public static void Mine()
+        public static async void Mine()
         {
             // setup wallet info
             PopulateWalletInfo();
@@ -48,7 +48,7 @@ namespace Valcoin
             while (Stop == false)
             {
                 AssembleCandidateBlock();
-                FindValidHash();
+                await FindValidHash();
             }
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
@@ -144,7 +144,7 @@ namespace Valcoin
             
         }
 
-        private static void FindValidHash()
+        private static async Task FindValidHash()
         {
             var hashFound = false;
             // check on each hash if a stop has been requested
@@ -166,19 +166,19 @@ namespace Valcoin
                     }
                     else if (i == DifficultyMask.Length - 1)
                     {
-                        CommitBlock();
+                        await CommitBlock();
                         hashFound = true;
                     }
                 }
             }
         }
 
-        private static void CommitBlock()
+        private static async Task CommitBlock()
         {
             var service = new StorageService();
-            service.AddBlock(CandidateBlock);
-            service.AddTxs(CandidateBlock.Transactions);
-            Task.Run(() => NetworkService.RelayData(CandidateBlock));
+            await service.AddBlock(CandidateBlock);
+            await service.AddTxs(CandidateBlock.Transactions);
+            await Task.Run(() => NetworkService.RelayData(CandidateBlock));
         }
     }
 }
