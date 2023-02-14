@@ -13,14 +13,18 @@ namespace Valcoin.Services
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");
 
-        public ValcoinContext()
+        /// <summary>
+        /// Static, run-once constructor to initialize the databases and never attempt to re-initialize.
+        /// </summary>
+        static ValcoinContext()
         {
+            var context = new ValcoinContext();
 #if !DEBUG___PERSIST_DB && !RELEASE
             // delete and remake in debug env
-            this.Database.EnsureDeleted();
+            context.Database.EnsureDeleted();
 #endif
             // create the database
-            this.Database.EnsureCreated();
+            context.Database.EnsureCreated();
         }
     }
 }

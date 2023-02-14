@@ -21,10 +21,11 @@ namespace Valcoin.ViewModels
 
         public async void SetWalletAsync()
         {
-            if ((MyWallet = await StorageService.GetMyWallet()) == null)
+            var service = new StorageService();
+            if ((MyWallet = await service.GetMyWallet()) == null)
             {
                 MyWallet = new();
-                StorageService.AddWallet(MyWallet);
+                service.AddWallet(MyWallet);
             }
         }
     }

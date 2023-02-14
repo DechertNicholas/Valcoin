@@ -22,8 +22,9 @@ namespace Valcoin.Services
 
         public static async void StartListener()
         {
+            var service = new StorageService();
             Thread.CurrentThread.Name = "UDP Listener";
-            clients = await StorageService.GetClients();
+            clients = await service.GetClients();
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
@@ -84,6 +85,7 @@ namespace Valcoin.Services
         /// <param name="clientPort">The port from the listener.</param>
         public static void ParseData(byte[] result, string clientAddress, int clientPort)
         {
+            var service = new StorageService();
             try
             {
                 // try to parse the raw data as json, catching if the data isn't json
@@ -121,14 +123,14 @@ namespace Valcoin.Services
             {
                 // client at this endpoint exists
                 client.LastCommunicationUTC = DateTime.UtcNow;
-                StorageService.UpdateClient(client);
+                service.UpdateClient(client);
             }
             else
             {
                 // this is a new connection
                 client = new() { Address = clientAddress, Port = clientPort, LastCommunicationUTC = DateTime.UtcNow };
                 clients.Add(client);
-                StorageService.AddClient(client);
+                service.AddClient(client);
             }
         }
     }

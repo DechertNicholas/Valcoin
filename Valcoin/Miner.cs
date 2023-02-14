@@ -56,7 +56,7 @@ namespace Valcoin
 
         private static async void PopulateWalletInfo()
         {
-            MyWallet = await StorageService.GetMyWallet();
+            MyWallet = await new StorageService().GetMyWallet();
         }
 
         private static void ComputeHashSpeed()
@@ -118,7 +118,7 @@ namespace Valcoin
         private static async void AssembleCandidateBlock()
         {
             // on first run, LastBlock will be null regardless. However it can also be null if the DB is new, so we check twice
-            LastBlock ??= await StorageService.GetLastBlock();
+            LastBlock ??= await new StorageService().GetLastBlock();
             if (LastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
@@ -175,8 +175,9 @@ namespace Valcoin
 
         private static void CommitBlock()
         {
-            StorageService.AddBlock(CandidateBlock);
-            StorageService.AddTxs(CandidateBlock.Transactions);
+            var service = new StorageService();
+            service.AddBlock(CandidateBlock);
+            service.AddTxs(CandidateBlock.Transactions);
             Task.Run(() => NetworkService.RelayData(CandidateBlock));
         }
     }
