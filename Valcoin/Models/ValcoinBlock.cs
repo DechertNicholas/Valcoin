@@ -9,13 +9,14 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Windows.Devices.Bluetooth.Advertisement;
 
 namespace Valcoin.Models
 {
     public class ValcoinBlock
     {
         /// <summary>
-        /// The number of the block in the blockchain sequence.
+        /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid (due to SQLite not storing starting at 0).
         /// </summary>
         [Required]
         [Key]
@@ -69,11 +70,30 @@ namespace Valcoin.Models
         /// </summary>
         public int Version { get; set; } = 1;
 
+        public static implicit operator byte[](ValcoinBlock b) => JsonSerializer.SerializeToUtf8Bytes(b);
+
         public ValcoinBlock() { }
 
-        public ValcoinBlock(ulong blockId, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
+        // make constructor for json
+        [JsonConstructor]
+        public ValcoinBlock (ulong blockNumber, byte[] blockHash, byte[] previousBlockHash, List<Transaction> transactions,
+            ulong nonce, DateTime timeUTC, int blockDifficulty, byte[] merkleRoot)
         {
-            BlockNumber = blockId;
+            BlockNumber = blockNumber;
+            BlockHash = blockHash;
+            PreviousBlockHash = previousBlockHash;
+            Transactions = transactions;
+            Nonce = nonce;
+            TimeUTC = timeUTC;
+            BlockDifficulty = blockDifficulty;
+            MerkleRoot = merkleRoot;
+
+            JsonTransactions = JsonSerializer.Serialize(Transactions);
+        }
+
+        public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
+        {
+            BlockNumber = blockNumber;
             PreviousBlockHash = previousBlockHash;
             Nonce = nonce;
             TimeUTC = timeUTC;

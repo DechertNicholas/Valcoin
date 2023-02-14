@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -16,18 +17,22 @@ namespace Valcoin
     public static class Miner
     {
         internal static bool Stop = false;
-        private static readonly int Difficulty = 22;
+        private static readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private static byte[] DifficultyMask = new byte[32];
         private static readonly Stopwatch Stopwatch = new();
         private static readonly TimeSpan HashInterval = new(0, 0, 10);
         private static int HashCount = 0;
-        private static List<Transaction> TransactionPool = new();
         private static ValcoinBlock CandidateBlock = new();
+        // LastBlock is mainly here to avoid EFCore from tracking the same object twice:
+        // once while being loaded by GetLastBlock(), and once while being sent to the network
+        // with Relay()
+        private static ValcoinBlock LastBlock;
         private static Wallet MyWallet;
 
         public static int HashSpeed { get; set; } = 0;
+        public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
-        public static void Mine()
+        public static async void Mine()
         {
             // setup wallet info
             PopulateWalletInfo();
@@ -36,22 +41,22 @@ namespace Valcoin
 
             // how many 0 bits need to lead the SHA256 hash. 256 is max, which would be impossible.
             // a difficulty of 6 means the hash bits must start with "000000xxxxxx..."
-            SetDifficultyMask(Difficulty); // TODO: get this from the network
+            SetDifficultyMask(Difficulty);
 
             // used to calculate hash speed
             Stopwatch.Start();
             while (Stop == false)
             {
                 AssembleCandidateBlock();
-                FindValidHash();
+                await FindValidHash();
             }
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
         }
 
-        private static void PopulateWalletInfo()
+        private static async void PopulateWalletInfo()
         {
-            MyWallet = StorageService.GetMyWallet();
+            MyWallet = await new StorageService().GetMyWallet();
         }
 
         private static void ComputeHashSpeed()
@@ -88,7 +93,7 @@ namespace Valcoin
             {
                 genesisHash[i] = 0x00; //TODO: hash this to something other than straight 0's
             }
-            return new ValcoinBlock(0, genesisHash, 0, DateTime.UtcNow, Difficulty);
+            return new ValcoinBlock(1, genesisHash, 0, DateTime.UtcNow, Difficulty);
         }
 
         private static Transaction AssembleCoinbaseTransaction()
@@ -110,24 +115,36 @@ namespace Valcoin
             return new Transaction(CandidateBlock.BlockNumber, new TxInput[] { input }, new TxOutput[] { output });
         }
 
-        private static void AssembleCandidateBlock()
+        private static async void AssembleCandidateBlock()
         {
-            var lastBlock = StorageService.GetLastBlock();
-            if (null == lastBlock)
+            // on first run, LastBlock will be null regardless. However it can also be null if the DB is new, so we check twice
+            LastBlock ??= await new StorageService().GetLastBlock();
+            if (LastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
                 CandidateBlock = BuildGenesisBlock();
             }
             else
             {
-                CandidateBlock = new ValcoinBlock(lastBlock.BlockNumber++, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
+                CandidateBlock = new ValcoinBlock(LastBlock.BlockNumber + 1, LastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
             }
 
-            // TODO: select transactions, condense the root
             CandidateBlock.AddTx(AssembleCoinbaseTransaction());
+
+            if (!TransactionPool.IsEmpty)
+            {
+                for (var i = 0; i < Math.Min(32, TransactionPool.Count); i++)
+                {
+                    if (TransactionPool.TryTake(out Transaction tx))
+                    {
+                        CandidateBlock.AddTx(tx);
+                    }
+                }
+            }
+            
         }
 
-        private static void FindValidHash()
+        private static async Task FindValidHash()
         {
             var hashFound = false;
             // check on each hash if a stop has been requested
@@ -149,17 +166,19 @@ namespace Valcoin
                     }
                     else if (i == DifficultyMask.Length - 1)
                     {
-                        SaveBlock();
+                        await CommitBlock();
                         hashFound = true;
                     }
                 }
             }
         }
 
-        private static void SaveBlock()
+        private static async Task CommitBlock()
         {
-            StorageService.AddBlock(CandidateBlock);
-            StorageService.AddTxs(CandidateBlock.Transactions);
+            var service = new StorageService();
+            await service.AddBlock(CandidateBlock);
+            await service.AddTxs(CandidateBlock.Transactions);
+            await Task.Run(() => NetworkService.RelayData(CandidateBlock));
         }
     }
 }

@@ -1,44 +1,67 @@
-﻿using System.Collections;
+﻿using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Valcoin.Models;
 
 namespace Valcoin.Services
 {
-    internal static class StorageService
+    internal class StorageService
     {
-        public static ValcoinContext Db { get; private set; } = new ValcoinContext();
+        // note, don't use AddAsync
+        // https://learn.microsoft.com/en-us/dotnet/api/microsoft.entityframeworkcore.dbset-1.addasync?view=efcore-7.0#remarks
 
-        public static ValcoinBlock GetLastBlock()
+        public ValcoinContext Db { get; private set; } = new ValcoinContext();
+
+        public async Task<ValcoinBlock> GetLastBlock()
         {
-            uint? lastId = Db.ValcoinBlocks.Max(b => (uint?)b.BlockNumber);
-            return Db.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == lastId);
+            uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
+            return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockNumber == lastId);
         }
 
-        public static void AddBlock(ValcoinBlock block)
+        public async Task AddBlock(ValcoinBlock block)
         {
             Db.Add(block);
-            Db.SaveChanges();
+            await Db.SaveChangesAsync();
         }
 
-        public static void AddTxs(IEnumerable<Transaction> txs)
+        public async Task AddTxs(IEnumerable<Transaction> txs)
         {
             foreach (Transaction tx in txs)
             {
                 Db.Add(tx);
             }
-            Db.SaveChanges();
+            await Db.SaveChangesAsync();
        }
 
-        public static void AddWallet(Wallet wallet)
+        public async Task AddWallet(Wallet wallet)
         {
             Db.Add(wallet);
-            Db.SaveChanges();
+            await Db.SaveChangesAsync();
         }
 
-        public static Wallet GetMyWallet()
+        public async Task<Wallet> GetMyWallet()
         {
-            return Db.Wallets.FirstOrDefault(w => w.PrivateKey != null);
+            return await Db.Wallets.FirstOrDefaultAsync(w => w.PrivateKey != null);
+        }
+
+        public async Task AddClient(Client client)
+        {
+            Db.Add(client);
+            await Db.SaveChangesAsync();
+        }
+
+        public async Task<List<Client>> GetClients()
+        {
+            return await Db.Clients.ToListAsync();
+        }
+
+        public async Task UpdateClient(Client client)
+        {
+            Db.Update(client);
+            await Db.SaveChangesAsync();
         }
     }
 }

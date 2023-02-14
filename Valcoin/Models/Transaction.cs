@@ -18,6 +18,7 @@ namespace Valcoin.Models
         /// The hash of the transaction in hex string format.
         /// </summary>
         [Key]
+        [JsonInclude]
         public string TxId { get; private set; }
 
         /// <summary>
@@ -64,6 +65,7 @@ namespace Valcoin.Models
         /// <param name="blockNumber">The BlockNumber this transaction is in. Used for DB relations.</param>
         /// <param name="inputs">The group of inputs for this transaction.</param>
         /// <param name="outputs">The group of outputs for this transaction.</param>
+        [JsonConstructor]
         public Transaction(ulong blockNumber, TxInput[] inputs, TxOutput[] outputs)
         {
             Inputs = inputs;
