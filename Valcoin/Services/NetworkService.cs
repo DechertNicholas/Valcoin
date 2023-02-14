@@ -20,23 +20,24 @@ namespace Valcoin.Services
         private const int listenPort = 2106;
         private static List<Client> clients = new();
 
-        public static void StartListener()
+        public static async void StartListener()
         {
             Thread.CurrentThread.Name = "UDP Listener";
+            clients = await StorageService.GetClients();
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
-            clients.Add(new Models.Client() { Address = IPAddress.Parse("255.255.255.255") });
+            clients.Add(new Models.Client() { Address = IPAddress.Broadcast.ToString(), Port = listenPort });
 #endif
-            var groupEP = new IPEndPoint(IPAddress.Any, listenPort);
+            var remoteEP = new IPEndPoint(IPAddress.Any, 0); // get from any IP sending to any port (to our port listenPort)
 
             try
             {
                 while (true)
                 {
-                    var result = Client.Receive(ref groupEP);
+                    var result = Client.Receive(ref remoteEP);
                     // utilize a task here so that the listener thread can get back to listening ASAP
-                    Task.Run(() => ParseData(result));
+                    await Task.Run(() => ParseData(result, remoteEP.Address.ToString(), remoteEP.Port));
                 }
             }
             finally
@@ -72,10 +73,16 @@ namespace Valcoin.Services
         public static async Task SendData(byte[] data, Client client)
         {
             // address is test value, will change to have a real param
-            await Client.SendAsync(data, client.Address.ToString(), listenPort);
+            await Client.SendAsync(data, client.Address, client.Port);
         }
 
-        public static void ParseData(byte[] result)
+        /// <summary>
+        /// Parses and evaluates the data gotten from the UDP listener. Offloads all work from the listener thread.
+        /// </summary>
+        /// <param name="result">The bytes returned from the listener.</param>
+        /// <param name="clientAddress">The IP address from the listener.</param>
+        /// <param name="clientPort">The port from the listener.</param>
+        public static void ParseData(byte[] result, string clientAddress, int clientPort)
         {
             try
             {
@@ -104,6 +111,24 @@ namespace Valcoin.Services
                     // (since this Valcoin client is the only one that exists), or accidentally sent to us by another program.
                     throw;
                 }
+            }
+
+            // if all was successful, add the client to the clients list if not present already
+            //var clientEndpoint = new IPEndPoint(clientAddress, clientPort);
+            var client = clients.Where(c => c.Address == clientAddress)
+                .FirstOrDefault(c => c.Port == clientPort);
+            if (client != null)
+            {
+                // client at this endpoint exists
+                client.LastCommunicationUTC = DateTime.UtcNow;
+                StorageService.UpdateClient(client);
+            }
+            else
+            {
+                // this is a new connection
+                client = new() { Address = clientAddress, Port = clientPort, LastCommunicationUTC = DateTime.UtcNow };
+                clients.Add(client);
+                StorageService.AddClient(client);
             }
         }
     }

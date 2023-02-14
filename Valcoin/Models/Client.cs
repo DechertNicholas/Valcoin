@@ -17,7 +17,12 @@ namespace Valcoin.Models
         /// <summary>
         /// The internet address the client is reachable at.
         /// </summary>
-        public IPAddress Address { get; set; }
+        public string Address { get; set; }
+
+        /// <summary>
+        /// The port the client is listening on.
+        /// </summary>
+        public int Port { get; set; }
 
         /// <summary>
         /// The last time the client communicated with us. Useful for finding which nodes are active and which are dead.

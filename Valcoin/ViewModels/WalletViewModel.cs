@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Valcoin.Models;
 using Valcoin.Services;
+using Windows.ApplicationModel.Activation;
 using Windows.Devices.Bluetooth.Advertisement;
 
 namespace Valcoin.ViewModels
@@ -15,7 +16,12 @@ namespace Valcoin.ViewModels
 
         public WalletViewModel()
         {
-            if ((MyWallet = StorageService.GetMyWallet()) == null)
+            SetWalletAsync();
+        }
+
+        public async void SetWalletAsync()
+        {
+            if ((MyWallet = await StorageService.GetMyWallet()) == null)
             {
                 MyWallet = new();
                 StorageService.AddWallet(MyWallet);

@@ -17,7 +17,7 @@ namespace Valcoin
     public static class Miner
     {
         internal static bool Stop = false;
-        private static readonly int Difficulty = 22;
+        private static readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private static byte[] DifficultyMask = new byte[32];
         private static readonly Stopwatch Stopwatch = new();
         private static readonly TimeSpan HashInterval = new(0, 0, 10);
@@ -41,7 +41,7 @@ namespace Valcoin
 
             // how many 0 bits need to lead the SHA256 hash. 256 is max, which would be impossible.
             // a difficulty of 6 means the hash bits must start with "000000xxxxxx..."
-            SetDifficultyMask(Difficulty); // TODO: get this from the network
+            SetDifficultyMask(Difficulty);
 
             // used to calculate hash speed
             Stopwatch.Start();
@@ -54,9 +54,9 @@ namespace Valcoin
             HashSpeed = 0;
         }
 
-        private static void PopulateWalletInfo()
+        private static async void PopulateWalletInfo()
         {
-            MyWallet = StorageService.GetMyWallet();
+            MyWallet = await StorageService.GetMyWallet();
         }
 
         private static void ComputeHashSpeed()
@@ -115,10 +115,10 @@ namespace Valcoin
             return new Transaction(CandidateBlock.BlockNumber, new TxInput[] { input }, new TxOutput[] { output });
         }
 
-        private static void AssembleCandidateBlock()
+        private static async void AssembleCandidateBlock()
         {
             // on first run, LastBlock will be null regardless. However it can also be null if the DB is new, so we check twice
-            LastBlock ??= StorageService.GetLastBlock();
+            LastBlock ??= await StorageService.GetLastBlock();
             if (LastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
@@ -129,7 +129,6 @@ namespace Valcoin
                 CandidateBlock = new ValcoinBlock(LastBlock.BlockNumber + 1, LastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
             }
 
-            // TODO: select transactions, condense the root
             CandidateBlock.AddTx(AssembleCoinbaseTransaction());
 
             if (!TransactionPool.IsEmpty)
