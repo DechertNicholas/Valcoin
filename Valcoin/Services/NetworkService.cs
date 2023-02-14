@@ -23,6 +23,11 @@ namespace Valcoin.Services
         public static void StartListener()
         {
             Thread.CurrentThread.Name = "UDP Listener";
+#if !RELEASE
+            // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
+            // useful for debugging, ingest your own data
+            clients.Add(new Models.Client() { Address = IPAddress.Parse("255.255.255.255") });
+#endif
             var groupEP = new IPEndPoint(IPAddress.Any, listenPort);
 
             try
@@ -52,7 +57,6 @@ namespace Valcoin.Services
         /// <returns></returns>
         public static async Task RelayData(byte[] data)
         {
-            Thread.Sleep(1000); //debug
             foreach (var client in clients)
             {
                 await SendData(data, client);
@@ -78,17 +82,17 @@ namespace Valcoin.Services
                 // try to parse the raw data as json, catching if the data isn't json
                 var data = JsonDocument.Parse(result);
 
-                // TxId and BlockHash are exclusive to these two classes, so they can be sorted by these terms
-                if (data.RootElement.ToString().Contains("TxId"))
+                // a block will always contain BlockHash and will have transactions, but if blockhash is missing it must just be a transaction
+                if (data.RootElement.ToString().Contains("BlockHash"))
+                {
+                    var block = data.Deserialize<ValcoinBlock>();
+                    // TODO: validate and save the block
+                }
+                else if (data.RootElement.ToString().Contains("TxId"))
                 {
                     // got a new transaction. Send it to the miner for validation
                     var tx = data.Deserialize<Transaction>();
                     Miner.TransactionPool.Add(tx);
-                }
-                else if (data.RootElement.ToString().Contains("BlockHash"))
-                {
-                    var block = data.Deserialize<ValcoinBlock>();
-                    // TODO: validate and save the block
                 }
             }
             catch (Exception ex)

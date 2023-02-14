@@ -9,6 +9,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Windows.Devices.Bluetooth.Advertisement;
 
 namespace Valcoin.Models
 {
@@ -73,9 +74,26 @@ namespace Valcoin.Models
 
         public ValcoinBlock() { }
 
-        public ValcoinBlock(ulong blockId, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
+        // make constructor for json
+        [JsonConstructor]
+        public ValcoinBlock (ulong blockNumber, byte[] blockHash, byte[] previousBlockHash, List<Transaction> transactions,
+            ulong nonce, DateTime timeUTC, int blockDifficulty, byte[] merkleRoot)
         {
-            BlockNumber = blockId;
+            BlockNumber = blockNumber;
+            BlockHash = blockHash;
+            PreviousBlockHash = previousBlockHash;
+            Transactions = transactions;
+            Nonce = nonce;
+            TimeUTC = timeUTC;
+            BlockDifficulty = blockDifficulty;
+            MerkleRoot = merkleRoot;
+
+            JsonTransactions = JsonSerializer.Serialize(Transactions);
+        }
+
+        public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
+        {
+            BlockNumber = blockNumber;
             PreviousBlockHash = previousBlockHash;
             Nonce = nonce;
             TimeUTC = timeUTC;
