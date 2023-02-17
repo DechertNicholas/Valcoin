@@ -16,76 +16,78 @@ namespace Valcoin.Models
     public class ValcoinBlock
     {
         /// <summary>
+        /// Key for the DB since it can't use a byte[] as the key. Hex string of the <see cref="BlockHash"/>.
+        /// </summary>
+        [Key]
+        public string BlockId { get; set; }
+        /// <summary>
         /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid (due to SQLite not storing starting at 0).
         /// </summary>
         public ulong BlockNumber { get; set; } = 0;
-
         /// <summary>
         /// The hash of the current block data that is in the block header.
         /// </summary>
         public byte[] BlockHash { get; set; } = new byte[32];
-
-        /// <summary>
-        /// Key for the DB since it can't use a byte[] as the key.
-        /// </summary>
-        [Key]
-        public string BlockHashAsString { get; set; }
-
         /// <summary>
         /// Hash of the previous block.
         /// </summary>
         public byte[] PreviousBlockHash { get; set; } = new byte[32];
-
         /// <summary>
-        /// An array of transactions for this block to process.
-        /// </summary>
-        [NotMapped]
-        public List<Transaction> Transactions { get; set; } = new();
-
-        /// <summary>
-        /// <see cref="Transactions"/> in JOSN format for database storage, as SQLite can only store primitive types.
+        /// <see cref="Transactions"/> in JSON format for database storage, as SQLite can only store primitive types.
         /// </summary>
         [JsonIgnore]
         [NotMapped] // The transaction object in the database is linked to a block via the transactions BlockNumber.
         public string JsonTransactions { get; set; }
-
         /// <summary>
         /// The random value assigned to the block header for changing the hash. Critical for proof-of-work.
         /// </summary>
         public ulong Nonce { get; set; } = 0;
-
         /// <summary>
         /// The time of the block being hashed.
         /// </summary>
         public DateTime TimeUTC { get; set; } = DateTime.UtcNow;
-
         /// <summary>
         /// The difficulty on the blockchain at the time this block was hashed.
         /// </summary>
         public int BlockDifficulty { get; set; } = 0;
-
         /// <summary>
         /// The hash root of all the transactions in the block.
         /// </summary>
         public byte[] MerkleRoot { get; set; } = new byte[32];
-
         /// <summary>
         /// The version of this block, in case it ever changes.
         /// </summary>
         public int Version { get; set; } = 1;
 
+        /// <summary>
+        /// An array of transactions for this block to process.
+        /// </summary>
+        //[NotMapped]
+        public virtual List<Transaction> Transactions { get; set; } = new();
+
         public static implicit operator byte[](ValcoinBlock b) => JsonSerializer.SerializeToUtf8Bytes(b);
 
         public ValcoinBlock() { }
 
-        // make constructor for json
+        /// <summary>
+        /// Json constructor. For DB operations, not normal use.
+        /// </summary>
+        /// <param name="blockId"></param>
+        /// <param name="blockNumber"></param>
+        /// <param name="blockHash"></param>
+        /// <param name="previousBlockHash"></param>
+        /// <param name="nonce"></param>
+        /// <param name="timeUTC"></param>
+        /// <param name="blockDifficulty"></param>
+        /// <param name="merkleRoot"></param>
+        /// <param name="transactions"></param>
         [JsonConstructor]
-        public ValcoinBlock (ulong blockNumber, byte[] blockHash, string blockHashAsString, byte[] previousBlockHash, List<Transaction> transactions,
-            ulong nonce, DateTime timeUTC, int blockDifficulty, byte[] merkleRoot)
+        public ValcoinBlock (string blockId, ulong blockNumber, byte[] blockHash, byte[] previousBlockHash,
+            ulong nonce, DateTime timeUTC, int blockDifficulty, byte[] merkleRoot, List<Transaction> transactions)
         {
             BlockNumber = blockNumber;
             BlockHash = blockHash;
-            BlockHashAsString = blockHashAsString;
+            BlockId = blockId;
             PreviousBlockHash = previousBlockHash;
             Transactions = transactions;
             Nonce = nonce;
@@ -138,7 +140,7 @@ namespace Valcoin.Models
                 Version = Version
             });
 
-            BlockHashAsString = Convert.ToHexString(BlockHash);
+            BlockId = Convert.ToHexString(BlockHash);
         }
 
         public void ComputeAndSetMerkleRoot()

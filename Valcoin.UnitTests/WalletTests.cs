@@ -48,45 +48,26 @@ namespace Valcoin.UnitTests
         {
             var coinbase = new Transaction(
                 1,
-                new TxInput[]
+                new List<TxInput>()
                 {
-                    new TxInput()
-                    {
-                        PreviousOutputIndex = -1,
-                        PreviousTransactionId = new string('0', 64),
-                        UnlockerPublicKey = wallet.PublicKey,
-                        UnlockSignature = wallet.SignData(new UnlockSignatureStruct(1, wallet.PublicKey))
-                    },
+                    new TxInput(new string('0', 64), -1, wallet.PublicKey, wallet.SignData(new UnlockSignatureStruct(1, wallet.PublicKey)))
                 },
-                new TxOutput[]
+                new List<TxOutput>()
                 {
-                    new TxOutput()
-                    {
-                        Amount = 50,
-                        LockSignature = wallet.PublicKey
-                    }
+                    new TxOutput("0", 50, wallet.AddressBytes)
                 }
             );
 
             var spend = new Transaction(
                 2,
-                new TxInput[]
+                new List<TxInput>()
                 {
-                    new TxInput()
-                    {
-                        PreviousOutputIndex = 0,
-                        PreviousTransactionId = "795BED3A2BD915B304117228EEDC1F4E6091AB9B865D464A31DC1BEA9004A35A", // not real, random from db
-                        UnlockerPublicKey = wallet.PublicKey,
-                        UnlockSignature = wallet.SignData(new UnlockSignatureStruct(coinbase.BlockNumber, wallet.PublicKey))
-                    },
+                    new TxInput("795BED3A2BD915B304117228EEDC1F4E6091AB9B865D464A31DC1BEA9004A35A", 0, wallet.PublicKey,
+                        wallet.SignData(new UnlockSignatureStruct(coinbase.BlockNumber, wallet.PublicKey)))
                 },
-                new TxOutput[]
+                new List<TxOutput>()
                 {
-                    new TxOutput()
-                    {
-                        Amount = 50,
-                        LockSignature = wallet.PublicKey
-                    }
+                    new TxOutput("0", 50, wallet.AddressBytes)
                 }
             );
 
@@ -110,23 +91,13 @@ namespace Valcoin.UnitTests
 
             var coinbase = new Transaction(
                 block1.BlockNumber,
-                new TxInput[]
+                new List<TxInput>()
                 {
-                    new TxInput()
-                    {
-                        PreviousOutputIndex = -1,
-                        PreviousTransactionId = new string('0', 64),
-                        UnlockerPublicKey = wallet.PublicKey,
-                        UnlockSignature = wallet.SignData(new UnlockSignatureStruct(block1.BlockNumber, wallet.PublicKey))
-                    },
+                    new TxInput(new string('0', 64), -1, wallet.PublicKey, wallet.SignData(new UnlockSignatureStruct(1, wallet.PublicKey)))
                 },
-                new TxOutput[]
+                new List<TxOutput>()
                 {
-                    new TxOutput()
-                    {
-                        Amount = 50,
-                        LockSignature = wallet.PublicKey
-                    }
+                    new TxOutput("0", 50, wallet.AddressBytes)
                 }
             );
 
@@ -143,45 +114,26 @@ namespace Valcoin.UnitTests
 
             var coinbase2 = new Transaction(
                 block2.BlockNumber,
-                new TxInput[]
+                new List<TxInput>()
                 {
-                    new TxInput()
-                    {
-                        PreviousOutputIndex = -1,
-                        PreviousTransactionId = new string('0', 64),
-                        UnlockerPublicKey = wallet.PublicKey,
-                        UnlockSignature = wallet.SignData(new UnlockSignatureStruct(block2.BlockNumber, wallet.PublicKey))
-                    },
+                    new TxInput(new string('0', 64), -1, wallet.PublicKey, wallet.SignData(new UnlockSignatureStruct(block2.BlockNumber, wallet.PublicKey)))
                 },
-                new TxOutput[]
+                new List<TxOutput>()
                 {
-                    new TxOutput()
-                    {
-                        Amount = 50,
-                        LockSignature = wallet.PublicKey
-                    }
+                    new TxOutput("0", 50, wallet.AddressBytes)
                 }
             );
 
             var spend = new Transaction(
                 block2.BlockNumber,
-                new TxInput[]
+                new List<TxInput>()
                 {
-                    new TxInput()
-                    {
-                        PreviousOutputIndex = 0,
-                        PreviousTransactionId = block1.Transactions[0].TxId,
-                        UnlockerPublicKey = wallet.PublicKey,
-                        UnlockSignature = wallet.SignData(new UnlockSignatureStruct(block1.BlockNumber, wallet.PublicKey))
-                    },
+                    new TxInput(block1.Transactions[0].TransactionId, 0, wallet.PublicKey,
+                        wallet.SignData(new UnlockSignatureStruct(block1.BlockNumber, wallet.PublicKey)))
                 },
-                new TxOutput[]
+                new List<TxOutput>()
                 {
-                    new TxOutput()
-                    {
-                        Amount = 50,
-                        LockSignature = wallet.PublicKey
-                    }
+                    new TxOutput("0", 50, wallet.AddressBytes)
                 }
             );
 
@@ -221,23 +173,14 @@ namespace Valcoin.UnitTests
 
             var coinbase = new Transaction(
                 block1.BlockNumber,
-                new TxInput[]
+                new List<TxInput>()
                 {
-                    new TxInput()
-                    {
-                        PreviousOutputIndex = -1,
-                        PreviousTransactionId = new string('0', 64),
-                        UnlockerPublicKey = wallet.PublicKey,
-                        UnlockSignature = wallet.SignData(new UnlockSignatureStruct(block1.BlockNumber, wallet.PublicKey))
-                    },
+                    new TxInput(new string('0', 64), -1, wallet.PublicKey,
+                        wallet.SignData(new UnlockSignatureStruct(block1.BlockNumber, wallet.PublicKey)))
                 },
-                new TxOutput[]
+                new List<TxOutput>()
                 {
-                    new TxOutput()
-                    {
-                        Amount = 50,
-                        LockSignature = wallet.PublicKey
-                    }
+                    new TxOutput("0", 50, wallet.AddressBytes)
                 }
             );
 
@@ -248,7 +191,6 @@ namespace Valcoin.UnitTests
             var block1d = JsonDocument.Parse(block1AsBytes).Deserialize<ValcoinBlock>();
 
             var dataToSign = new UnlockSignatureStruct(block1d.BlockNumber, block1d.Transactions[0].Inputs[0].UnlockerPublicKey);
-            //var signedData = wallet.SignData(dataToSign);
 
             var valid = Wallet.VerifyData(dataToSign, block1d.Transactions[0].Inputs[0].UnlockSignature, block1d.Transactions[0].Inputs[0].UnlockerPublicKey);
             Assert.True(valid);

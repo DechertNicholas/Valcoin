@@ -28,11 +28,11 @@ namespace Valcoin.Services
         /// <summary>
         /// Returns a block with the specified hash if it exists.
         /// </summary>
-        /// <param name="blockHashAsString"></param>
+        /// <param name="blockId"></param>
         /// <returns></returns>
-        public async Task<ValcoinBlock> GetBlock(string blockHashAsString)
+        public async Task<ValcoinBlock> GetBlock(string blockId)
         {
-            return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockHashAsString == blockHashAsString);
+            return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
         }
 
         public async Task AddBlock(ValcoinBlock block)
@@ -41,14 +41,20 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        public async Task<Transaction> GetTx(string txId)
+        public async Task<Transaction> GetTx(string transactionId)
         {
-            return await Db.Transactions.FirstOrDefaultAsync(t => t.TxId == txId);
+            return await Db.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId);
         }
 
-        public async Task AddTxs(IEnumerable<Transaction> txs)
+        public async Task<Transaction> GetTx(string txId, int outputIndex)
         {
-            foreach (Transaction tx in txs)
+            // TODO: Finish this
+            return await Db.Transactions.FirstOrDefaultAsync();
+        }
+
+        public async Task AddTxs(IEnumerable<Transaction> transactions)
+        {
+            foreach (Transaction tx in transactions)
             {
                 Db.Add(tx);
             }

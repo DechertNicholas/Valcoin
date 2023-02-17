@@ -102,21 +102,11 @@ namespace Valcoin
         {
             // debugging serialization
             var unlockBytes = (byte[])new UnlockSignatureStruct(CandidateBlock.BlockNumber, MyWallet.PublicKey);
-            var input = new TxInput()
-            {
-                PreviousTransactionId = new string('0', 64),
-                PreviousOutputIndex = -1, //0xFFFFFFFF
-                UnlockerPublicKey = MyWallet.PublicKey,
-                UnlockSignature = MyWallet.SignData(unlockBytes)
-            };
+            var input = new TxInput(new string('0', 64), -1, MyWallet.PublicKey, MyWallet.SignData(unlockBytes));
 
-            var output = new TxOutput()
-            {
-                Amount = 50,
-                LockSignature = MyWallet.AddressBytes
-            };
+            var output = new TxOutput("0", 50, MyWallet.AddressBytes);
 
-            return new Transaction(CandidateBlock.BlockNumber, new TxInput[] { input }, new TxOutput[] { output });
+            return new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
         }
 
         private static async void AssembleCandidateBlock()
@@ -178,9 +168,9 @@ namespace Valcoin
 
         private static async Task CommitBlock()
         {
-            //var service = new StorageService();
-            //await service.AddBlock(CandidateBlock);
-            //await service.AddTxs(CandidateBlock.Transactions);
+            var service = new StorageService();
+            await service.AddBlock(CandidateBlock);
+            var getBlock = await service.GetBlock(CandidateBlock.BlockId);
             await Task.Run(() => NetworkService.RelayData(CandidateBlock));
         }
     }

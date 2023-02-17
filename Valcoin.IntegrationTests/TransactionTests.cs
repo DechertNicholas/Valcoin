@@ -35,25 +35,14 @@ namespace Valcoin.IntegrationTests
         {
             ulong blockId = 10; // this tx is part of block 10
 
-            var input = new TxInput
-            {
-                PreviousTransactionId = "0000000000000000000000000000000000000000000000000000000000000000", // coinbase
-                PreviousOutputIndex = -1, // 0xffffffff
-                UnlockerPublicKey = wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)) // neither does this
-            };
+            var input = new TxInput(new string('0', 64), -1, wallet.PublicKey, wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)));
 
-            var output = new TxOutput
-            {
-                Amount = 50,
-                LockSignature = wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
-                                                    // of this hashed public key
-            };
+            var output = new TxOutput("0", 50, wallet.AddressBytes);
 
-            var tx = new Transaction(blockId, new TxInput[] { input }, new TxOutput[] { output });
+            var tx = new Transaction(blockId, new List<TxInput> { input }, new List<TxOutput> { output });
 
             // assert on field that are generated and not statically assigned in the test
-            Assert.NotNull(tx.TxId);
+            Assert.NotNull(tx.TransactionId);
             Assert.NotNull(tx.Inputs);
             Assert.NotNull(tx.Outputs);
             Assert.NotNull(tx.JsonInputs);

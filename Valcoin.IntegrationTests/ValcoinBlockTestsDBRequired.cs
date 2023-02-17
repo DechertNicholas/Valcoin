@@ -20,41 +20,29 @@ namespace Valcoin.IntegrationTests
         }
 
         [Fact]
-        public void VerifyReadWriteToDB()
+        public async void VerifyReadWriteToDB()
         {
-            TxInput input;
-            TxOutput output;
             ValcoinBlock block;
 
-            block = new(0, new byte[32], 0, DateTime.UtcNow, 22);
+            block = new(1, new byte[32], 0, DateTime.UtcNow, 22);
 
-            input = new() // coinbase
-            {
-                PreviousTransactionId = new string('0', 64),
-                PreviousOutputIndex = 0,
-                UnlockerPublicKey = fixture.Wallet.PublicKey,
-                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct(block.BlockNumber, fixture.Wallet.PublicKey))
-            };
+            var tx1Inputs = new List<TxInput>() { new TxInput(new string('0', 64), -1, fixture.Wallet.PublicKey,
+                fixture.Wallet.SignData(new UnlockSignatureStruct(block.BlockNumber, fixture.Wallet.PublicKey)))};
+            var tx1Outputs = new List<TxOutput>() { new TxOutput("0", 50, fixture.Wallet.AddressBytes) };
+            var tx1 = new Transaction(block.BlockNumber, tx1Inputs, tx1Outputs);
 
-            output = new()
-            {
-                Amount = 50,
-                LockSignature = fixture.Wallet.AddressBytes
-            };
+            var tx2Inputs = new List<TxInput>() { new TxInput(new string('1', 64), -1, fixture.Wallet.PublicKey,
+                fixture.Wallet.SignData(new UnlockSignatureStruct(block.BlockNumber, fixture.Wallet.PublicKey)))};
+            var tx2Outputs = new List<TxOutput>() { new TxOutput("0", 50, fixture.Wallet.AddressBytes) };
+            var tx2 = new Transaction(block.BlockNumber, tx2Inputs, tx2Outputs);
 
-            var txs = new List<Transaction>();
 
-            // add multiple transactions
-            for (var i = 0; i < 5; i++)
-            {
-                txs.Add(new Transaction(block.BlockNumber, new TxInput[] { input }, new TxOutput[] { output }));
-            }
-
-            block.AddTx(txs);
+            block.AddTx(tx1);
+            block.AddTx(tx2);
 
             block.ComputeAndSetHash();
             fixture.Context.Add(block);
-            fixture.Context.SaveChanges();
+            await fixture.Context.SaveChangesAsync();
 
             var verify = fixture.Context.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == block.BlockNumber);
             Assert.NotNull(verify);

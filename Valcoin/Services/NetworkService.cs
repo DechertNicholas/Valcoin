@@ -122,7 +122,7 @@ namespace Valcoin.Services
                             break;
                     }
                 }
-                else if (data.RootElement.ToString().Contains("TxId"))
+                else if (data.RootElement.ToString().Contains("TransactionId"))
                 {
                     // got a new transaction. Validate it and send it to the miner, if it's active
                     var tx = data.Deserialize<Transaction>();

@@ -28,7 +28,7 @@ namespace Valcoin.Services
         public static async Task<ValidationCode> ValidateBlock(ValcoinBlock block, StorageService service)
         {
             // first, check if we already have this block to avoid extra work
-            if (await service.GetBlock(block.BlockHashAsString) != null)
+            if (await service.GetBlock(block.BlockId) != null)
                 return ValidationCode.Existing;
 
             // if we don't already have it, then validate and add it to the database.
@@ -37,7 +37,7 @@ namespace Valcoin.Services
             // spoil the whole block.
             // and for each transaction to be validated, we need to ensure we have the whole chain up to this block
             if (await service.GetBlock(Convert.ToHexString(block.PreviousBlockHash)) == null &&
-                block.BlockHashAsString != new string('0', 64) &&                               // filter out the genesis hash
+                block.BlockId != new string('0', 64) &&                               // filter out the genesis hash
                 block.BlockNumber != 1)                                                         // filter out the genesis block when paired with the blockhash
             {
                 // we don't have the previous block. Request it.
@@ -104,7 +104,7 @@ namespace Valcoin.Services
         {
             var allValidated = ValidationCode.Valid; // start off as true, then if anything marks as false, it will remain false
             // validate the coinbase transaction
-            if (txs[0].Inputs.Length == 1 &&
+            if (txs[0].Inputs.Count == 1 &&
                 txs[0].Inputs[0].PreviousTransactionId == new string('0', 64) &&
                 txs[0].Inputs[0].PreviousOutputIndex == -1)
             {
@@ -116,8 +116,8 @@ namespace Valcoin.Services
                     coinbase.Inputs[0].UnlockSignature,
                     coinbase.Inputs[0].UnlockerPublicKey);
 
-                var outputValid = coinbase.Outputs.Length == 1 && coinbase.Outputs[0].Amount == 50;
-                var txValid = coinbase.TxId == coinbase.GetTxIdAsString();
+                var outputValid = coinbase.Outputs.Count == 1 && coinbase.Outputs[0].Amount == 50;
+                var txValid = coinbase.TransactionId == coinbase.GetTxIdAsString();
 
                 if (!(inputValid && outputValid && txValid))
                     allValidated = ValidationCode.Invalid;
@@ -141,12 +141,14 @@ namespace Valcoin.Services
             var inputSum = 0;
 
             // validate the hash first since it's simple
-            if (tx.TxId != tx.GetTxIdAsString())
+            if (tx.TransactionId != tx.GetTxIdAsString())
                 return ValidationCode.Invalid;
 
             // validate the inputs
             foreach (var input in tx.Inputs)
             {
+                // first, check if a tx already exists that references the same input
+                //service
                 // get the referenced transaction data
                 var prevTx = await service.GetTx(input.PreviousTransactionId);
                 var prevOutput = prevTx.Outputs[input.PreviousOutputIndex];
