@@ -24,7 +24,7 @@ namespace Valcoin.ViewModels
             var service = new StorageService();
             if ((MyWallet = await service.GetMyWallet()) == null)
             {
-                MyWallet = new();
+                MyWallet = Wallet.Create();
                 await service.AddWallet(MyWallet);
             }
         }

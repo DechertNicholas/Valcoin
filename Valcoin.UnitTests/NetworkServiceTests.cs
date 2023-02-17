@@ -15,7 +15,7 @@ namespace Valcoin.UnitTests
         [Fact]
         public void SendData()
         {
-            var wallet = new Wallet();
+            var wallet = Wallet.Create();
             ulong blockId = 10; // this tx is part of block 10
 
             var input = new TxInput

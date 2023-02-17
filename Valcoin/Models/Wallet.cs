@@ -41,17 +41,41 @@ namespace Valcoin.Models
         private readonly ECDsa _ecdsa;
 
         /// <summary>
-        /// Creates a new wallet with a new key pair.
+        /// Private constructor to get around EFCore's constructor weirdness. Even though a paramaterized constructor exists matching
+        /// the values in the EFCore database, it will ALWAYS call the paramaterless constructor first. If <see cref="Create"/> were a
+        /// constructor, a new <see cref="_ecdsa"/> would be created each call, yet the <see cref="PublicKey"/> and other properties
+        /// would be set to the database values. This creates a mismatch between what is actually being used and what the user and
+        /// developer thinks are being used, because properties are assigned AFTER instantiation - overwriting the generated property
+        /// values. Moving the constructor to a <see cref="Create"/> method is not ideal, but I could not
+        /// get EFCore to play nicely with parameterless and parameterized constructors.
         /// </summary>
-        public Wallet()
+        /// <param name="address">Hashed public key value, converted to hex string.</param>
+        /// <param name="addressBytes">Hashed public key value.</param>
+        /// <param name="publicKey">The public key.</param>
+        /// <param name="privateKey">The private key.</param>
+        private Wallet(string address, byte[] addressBytes, byte[] publicKey, byte[] privateKey)
         {
+            this.Address = address;
+            this.AddressBytes = addressBytes;
+            this.PublicKey = publicKey;
+            this.PrivateKey = privateKey;
+
             _ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            _ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
+            _ecdsa.ImportECPrivateKey(privateKey, out _);
+        }
 
-            PublicKey = _ecdsa.ExportSubjectPublicKeyInfo();
-            PrivateKey = _ecdsa.ExportECPrivateKey();
-
-            AddressBytes = SHA256.Create().ComputeHash(PublicKey);
-            Address = GetAddressAsString();
+        /// <summary>
+        /// Creates a new instance of Wallet. To be used in place of a constructor.
+        /// </summary>
+        /// <returns></returns>
+        public static Wallet Create()
+        {
+            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            var pub = ecdsa.ExportSubjectPublicKeyInfo();
+            var addressBytes = SHA256.Create().ComputeHash(pub);
+            var address = Convert.ToHexString(addressBytes);
+            return new Wallet(address, addressBytes, pub, ecdsa.ExportECPrivateKey());
         }
 
         /// <summary>
