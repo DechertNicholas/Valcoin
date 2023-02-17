@@ -18,14 +18,18 @@ namespace Valcoin.Models
         /// <summary>
         /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid (due to SQLite not storing starting at 0).
         /// </summary>
-        [Required]
-        [Key]
         public ulong BlockNumber { get; set; } = 0;
 
         /// <summary>
         /// The hash of the current block data that is in the block header.
         /// </summary>
         public byte[] BlockHash { get; set; } = new byte[32];
+
+        /// <summary>
+        /// Key for the DB since it can't use a byte[] as the key.
+        /// </summary>
+        [Key]
+        public string BlockHashAsString { get; set; }
 
         /// <summary>
         /// Hash of the previous block.
@@ -76,11 +80,12 @@ namespace Valcoin.Models
 
         // make constructor for json
         [JsonConstructor]
-        public ValcoinBlock (ulong blockNumber, byte[] blockHash, byte[] previousBlockHash, List<Transaction> transactions,
+        public ValcoinBlock (ulong blockNumber, byte[] blockHash, string blockHashAsString, byte[] previousBlockHash, List<Transaction> transactions,
             ulong nonce, DateTime timeUTC, int blockDifficulty, byte[] merkleRoot)
         {
             BlockNumber = blockNumber;
             BlockHash = blockHash;
+            BlockHashAsString = blockHashAsString;
             PreviousBlockHash = previousBlockHash;
             Transactions = transactions;
             Nonce = nonce;
@@ -104,7 +109,7 @@ namespace Valcoin.Models
         {
             Transactions.Add(tx);
             JsonTransactions = JsonSerializer.Serialize(Transactions);
-            ComputeMerkleRoot();
+            ComputeAndSetMerkleRoot();
         }
 
         public void AddTx(IEnumerable<Transaction> txs)
@@ -114,7 +119,7 @@ namespace Valcoin.Models
                 Transactions.Add(tx);
             }
             JsonTransactions = JsonSerializer.Serialize(Transactions);
-            ComputeMerkleRoot();
+            ComputeAndSetMerkleRoot();
         }
 
         /// <summary>
@@ -132,9 +137,11 @@ namespace Valcoin.Models
                 MerkleRoot = MerkleRoot,
                 Version = Version
             });
+
+            BlockHashAsString = Convert.ToHexString(BlockHash);
         }
 
-        public void ComputeMerkleRoot()
+        public void ComputeAndSetMerkleRoot()
         {
             // it was very difficult to do this elegantly and without introducing new functions.
             // to make this easier, I've referenced the original bitcoin code for making the merkle root.

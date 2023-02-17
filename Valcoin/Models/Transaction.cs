@@ -49,9 +49,14 @@ namespace Valcoin.Models
         public TxOutput[] Outputs { get; private set; }
 
         /// <summary>
-        /// The block in which this transaction was in. Not part of hashing, used only for DB operations
+        /// The block in which this transaction was in. Part of the unlock signature.
         /// </summary>
         public ulong BlockNumber { get; set; }
+
+        /// <summary>
+        /// Used to link the transaction back to a block. Only part of DB operations.
+        /// </summary>
+        public string BlockHashAsString { get; set; }
 
         /// <summary>
         /// Byte[] serializer used for transferring this transaction over the network.
@@ -79,7 +84,7 @@ namespace Valcoin.Models
         /// <summary>
         /// For loading from the database.
         /// </summary>
-        public Transaction(int version, string txId, string jsonInputs, string jsonOutputs, ulong blockNumber)
+        public Transaction(ulong blockNumber, int version, string txId, string jsonInputs, string jsonOutputs, string blockHashAsString)
         {
             Version = version;
             TxId = txId;
@@ -88,6 +93,7 @@ namespace Valcoin.Models
             Outputs = JsonSerializer.Deserialize<TxOutput[]>(jsonOutputs);
             JsonOutputs = JsonSerializer.Serialize(Outputs);
             BlockNumber = blockNumber;
+            BlockHashAsString = blockHashAsString;
         }
 
         public string GetTxIdAsString()

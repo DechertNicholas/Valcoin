@@ -22,7 +22,9 @@ namespace Valcoin.Models
         public byte[] UnlockerPublicKey { get; set; }
 
         /// <summary>
-        /// Signed <see cref="TxOutput.LockSignature"/> of the locked output's <see cref="TxOutput.LockSignature"/>.
+        /// Signed combination of this transactions BlockNumber and the unlocker's public key.
+        /// Proves ownership of the public key which the transaction was sent to (by having
+        /// the corresponding private key which signed the data).
         /// </summary>
         public byte[] UnlockSignature { get; set; }
     }

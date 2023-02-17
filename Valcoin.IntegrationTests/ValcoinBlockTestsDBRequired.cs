@@ -33,7 +33,7 @@ namespace Valcoin.IntegrationTests
                 PreviousTransactionId = new string('0', 64),
                 PreviousOutputIndex = 0,
                 UnlockerPublicKey = fixture.Wallet.PublicKey,
-                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct { BlockNumber = block.BlockNumber, PublicKey = fixture.Wallet.PublicKey })
+                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct(block.BlockNumber, fixture.Wallet.PublicKey))
             };
 
             output = new()

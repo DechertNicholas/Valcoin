@@ -38,19 +38,20 @@ namespace Valcoin.Models
         /// RSA implementation object that does not need to be re-created each time it is used.
         /// </summary>
         [NotMapped]
-        private readonly RSA _rsa;
+        private readonly ECDsa _ecdsa;
 
         /// <summary>
         /// Creates a new wallet with a new key pair.
         /// </summary>
         public Wallet()
         {
-            _rsa = RSA.Create();
-            
-            PublicKey = _rsa.ExportRSAPublicKey();
-            PrivateKey = _rsa.ExportRSAPrivateKey(); // TODO: Decide if this will be encrypted
+            _ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+            PublicKey = _ecdsa.ExportSubjectPublicKeyInfo();
+            PrivateKey = _ecdsa.ExportECPrivateKey();
+
             AddressBytes = SHA256.Create().ComputeHash(PublicKey);
-            Address = Convert.ToHexString(AddressBytes);
+            Address = GetAddressAsString();
         }
 
         /// <summary>
@@ -60,12 +61,16 @@ namespace Valcoin.Models
         /// <param name="privateKey"></param>
         public Wallet(byte[] publicKey, byte[] privateKey)
         {
-            _rsa = RSA.Create();
-            PublicKey = publicKey;
-            PrivateKey = privateKey;
-            _rsa.ImportRSAPublicKey(publicKey, out _);
-            _rsa.ImportRSAPrivateKey(privateKey, out _);
+            _ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+            _ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
+            _ecdsa.ImportECPrivateKey(privateKey, out _);
+
+            PublicKey = _ecdsa.ExportSubjectPublicKeyInfo();
+            PrivateKey = _ecdsa.ExportECPrivateKey();
+
             AddressBytes = SHA256.Create().ComputeHash(publicKey);
+            Address = GetAddressAsString();
         }
 
         /// <summary>
@@ -84,7 +89,7 @@ namespace Valcoin.Models
         /// <returns></returns>
         public byte[] SignData(byte[] data)
         {
-            return _rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return _ecdsa.SignData(data, HashAlgorithmName.SHA256);
         }
 
         /// <summary>
@@ -93,10 +98,13 @@ namespace Valcoin.Models
         /// <param name="data"></param>
         /// <param name="signature"></param>
         /// <returns></returns>
-        public bool VerifyData(byte[] data, byte[] signature)
+        public static bool VerifyData(byte[] data, byte[] signature, byte[] publicKey)
         {
             // TODO: Load the public key of the transaction since it won't always be our public key
-            return _rsa.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+            ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
+            return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
         }
     }
 }

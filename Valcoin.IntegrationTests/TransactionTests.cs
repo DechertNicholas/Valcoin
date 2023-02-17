@@ -51,7 +51,7 @@ namespace Valcoin.IntegrationTests
                 PreviousTransactionId = "0000000000000000000000000000000000000000000000000000000000000000", // coinbase
                 PreviousOutputIndex = -1, // 0xffffffff
                 UnlockerPublicKey = wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = wallet.SignData(new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = wallet.PublicKey }) // neither does this
+                UnlockSignature = wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)) // neither does this
             };
 
             var output = new TxOutput
@@ -87,7 +87,7 @@ namespace Valcoin.IntegrationTests
                 PreviousTransactionId = new string('0', 64), // coinbase
                 PreviousOutputIndex = -1, // 0xffffffff
                 UnlockerPublicKey = wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = wallet.SignData(new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = wallet.PublicKey }) // neither does this
+                UnlockSignature = wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)) // neither does this
             };
 
             var output = new TxOutput
@@ -99,9 +99,9 @@ namespace Valcoin.IntegrationTests
 
             Assert.Equal(output.LockSignature, wallet.AddressBytes);
             Assert.Equal(input.UnlockerPublicKey, wallet.PublicKey);
-            Assert.True(wallet.VerifyData(
-                new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = wallet.PublicKey },
-                input.UnlockSignature)
+            Assert.True(Wallet.VerifyData(
+                new UnlockSignatureStruct(blockId, wallet.PublicKey),
+                input.UnlockSignature, input.UnlockerPublicKey)
             );
         }
     }

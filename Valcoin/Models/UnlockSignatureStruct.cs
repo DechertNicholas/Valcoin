@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 
 namespace Valcoin.Models
 {
@@ -13,5 +8,13 @@ namespace Valcoin.Models
         public byte[] PublicKey { get; set; }
 
         public static implicit operator byte[](UnlockSignatureStruct u) => JsonSerializer.SerializeToUtf8Bytes(u);
+
+        public UnlockSignatureStruct(ulong blockNumber, byte[] publicKey)
+        {
+            this.BlockNumber = blockNumber;
+            // use byte copy to avoid referencing the same object
+            PublicKey = new byte[publicKey.Length];
+            publicKey.CopyTo(PublicKey, 0);
+        }
     }
 }
