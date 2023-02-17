@@ -54,15 +54,12 @@ namespace Valcoin.Services
         /// <returns></returns>
         public async Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex)
         {
-            // TODO: Finish this
-            var input = await Db.TxInputs
-                .Where(i => i.PreviousTransactionId == previousTransactionId)
-                .Where(i => i.PreviousOutputIndex == outputIndex)
-                .FirstOrDefaultAsync();
-
             return await Db.Transactions
-                .Where(t => t.TransactionId == input.TransactionId)
-                .FirstOrDefaultAsync();
+                .Where(t => t.Inputs                                                // iterate over transactions where the transaction has an input,
+                    .Where(i => i.PreviousTransactionId == previousTransactionId)   // and that input references the previous txId,
+                    .Where(i => i.PreviousOutputIndex == outputIndex)               // and the same outputIndex,
+                    .FirstOrDefault().TransactionId == t.TransactionId)             // get that Input's transaction id, and match it to the transactions list
+                .FirstOrDefaultAsync();                                             // and return that transaction
         }
 
         public async Task AddTxs(IEnumerable<Transaction> transactions)
