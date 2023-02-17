@@ -45,11 +45,14 @@ namespace Valcoin.IntegrationTests
             await fixture.Context.SaveChangesAsync();
 
             var verify = fixture.Context.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == block.BlockNumber);
-            Assert.NotNull(verify);
-            if (null != verify)
-            {
-                Assert.Equal(verify.BlockNumber, block.BlockNumber);
-            }
+            var h = SHA256.Create();
+            Assert.True(h.ComputeHash(block)
+                .SequenceEqual(h.ComputeHash(verify)));
+
+            // assert equal after re-computing the block's hash
+            verify.ComputeAndSetHash();
+            Assert.True(h.ComputeHash(block)
+                .SequenceEqual(h.ComputeHash(verify)));
         }
     }
 }

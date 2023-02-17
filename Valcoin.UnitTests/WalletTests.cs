@@ -189,6 +189,7 @@ namespace Valcoin.UnitTests
 
             var block1AsBytes = (byte[])block1;
             var block1d = JsonDocument.Parse(block1AsBytes).Deserialize<ValcoinBlock>();
+            block1d.ComputeAndSetHash();
 
             var dataToSign = new UnlockSignatureStruct(block1d.BlockNumber, block1d.Transactions[0].Inputs[0].UnlockerPublicKey);
 

@@ -33,12 +33,6 @@ namespace Valcoin.Models
         /// </summary>
         public byte[] PreviousBlockHash { get; set; } = new byte[32];
         /// <summary>
-        /// <see cref="Transactions"/> in JSON format for database storage, as SQLite can only store primitive types.
-        /// </summary>
-        [JsonIgnore]
-        [NotMapped] // The transaction object in the database is linked to a block via the transactions BlockNumber.
-        public string JsonTransactions { get; set; }
-        /// <summary>
         /// The random value assigned to the block header for changing the hash. Critical for proof-of-work.
         /// </summary>
         public ulong Nonce { get; set; } = 0;
@@ -62,7 +56,6 @@ namespace Valcoin.Models
         /// <summary>
         /// An array of transactions for this block to process.
         /// </summary>
-        //[NotMapped]
         public virtual List<Transaction> Transactions { get; set; } = new();
 
         public static implicit operator byte[](ValcoinBlock b) => JsonSerializer.SerializeToUtf8Bytes(b);
@@ -94,8 +87,6 @@ namespace Valcoin.Models
             TimeUTC = timeUTC;
             BlockDifficulty = blockDifficulty;
             MerkleRoot = merkleRoot;
-
-            JsonTransactions = JsonSerializer.Serialize(Transactions);
         }
 
         public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
@@ -110,7 +101,6 @@ namespace Valcoin.Models
         public void AddTx(Transaction tx)
         {
             Transactions.Add(tx);
-            JsonTransactions = JsonSerializer.Serialize(Transactions);
             ComputeAndSetMerkleRoot();
         }
 
@@ -120,7 +110,6 @@ namespace Valcoin.Models
             {
                 Transactions.Add(tx);
             }
-            JsonTransactions = JsonSerializer.Serialize(Transactions);
             ComputeAndSetMerkleRoot();
         }
 

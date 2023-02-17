@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace Valcoin.Models
@@ -32,9 +34,12 @@ namespace Valcoin.Models
         public byte[] UnlockSignature { get; set; }
 
         /// <summary>
-        /// Database property to uniquely link this input to a transaction, since most coinbase transactions will be identical
+        /// Database property to uniquely link this input to a transaction, since most coinbase transactions will be identical.
         /// </summary>
-        public string TransactionId { get; set; }
+        [JsonIgnore]
+        public string TransactionId { get; set; } // this will be null until it is loaded from the database.
+
+        public static implicit operator byte[](TxInput t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
         public TxInput(string previousTransactionId, int previousOutputIndex, byte[] unlockerPublicKey, byte[] unlockSignature)
         {

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
@@ -12,6 +13,15 @@ namespace Valcoin.Models
     [PrimaryKey("TransactionId", "Index")]
     public class TxOutput
     {
+        /// <summary>
+        /// The amount of Valcoin to send.
+        /// </summary>
+        public int Amount { get; set; }
+        /// <summary>
+        /// The address of the recipient - their hashed public key.
+        /// </summary>
+        public byte[] LockSignature { get; set; }
+
         /// <summary>
         /// The transaction this is a part of. Mostly used for DB operations.
         /// </summary>
@@ -22,14 +32,8 @@ namespace Valcoin.Models
         /// </summary>
         [JsonIgnore]
         public string Index { get; set; }
-        /// <summary>
-        /// The amount of Valcoin to send.
-        /// </summary>
-        public int Amount { get; set; }
-        /// <summary>
-        /// The address of the recipient - their hashed public key.
-        /// </summary>
-        public byte[] LockSignature { get; set; }
+
+        public static implicit operator byte[](TxOutput t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
         public TxOutput(string index, int amount, byte[] lockSignature)
         {
