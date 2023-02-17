@@ -46,10 +46,23 @@ namespace Valcoin.Services
             return await Db.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId);
         }
 
-        public async Task<Transaction> GetTx(string txId, int outputIndex)
+        /// <summary>
+        /// Returns a transaction that spends the output referenced by an input.
+        /// </summary>
+        /// <param name="txId"></param>
+        /// <param name="outputIndex"></param>
+        /// <returns></returns>
+        public async Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex)
         {
             // TODO: Finish this
-            return await Db.Transactions.FirstOrDefaultAsync();
+            var input = await Db.TxInputs
+                .Where(i => i.PreviousTransactionId == previousTransactionId)
+                .Where(i => i.PreviousOutputIndex == outputIndex)
+                .FirstOrDefaultAsync();
+
+            return await Db.Transactions
+                .Where(t => t.TransactionId == input.TransactionId)
+                .FirstOrDefaultAsync();
         }
 
         public async Task AddTxs(IEnumerable<Transaction> transactions)

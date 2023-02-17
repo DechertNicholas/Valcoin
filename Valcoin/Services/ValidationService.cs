@@ -38,7 +38,7 @@ namespace Valcoin.Services
             // and for each transaction to be validated, we need to ensure we have the whole chain up to this block
             if (await service.GetBlock(Convert.ToHexString(block.PreviousBlockHash)) == null &&
                 block.BlockId != new string('0', 64) &&                               // filter out the genesis hash
-                block.BlockNumber != 1)                                                         // filter out the genesis block when paired with the blockhash
+                block.BlockNumber != 1)                                               // filter out the genesis block when paired with the blockhash
             {
                 // we don't have the previous block. Request it.
                 pendingBlocks.Add(block);
@@ -148,7 +148,10 @@ namespace Valcoin.Services
             foreach (var input in tx.Inputs)
             {
                 // first, check if a tx already exists that references the same input
-                //service
+                var spend = await service.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex);
+                if (spend != null)
+                    return ValidationCode.Invalid;
+
                 // get the referenced transaction data
                 var prevTx = await service.GetTx(input.PreviousTransactionId);
                 var prevOutput = prevTx.Outputs[input.PreviousOutputIndex];

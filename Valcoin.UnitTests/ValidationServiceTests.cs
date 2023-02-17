@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Valcoin.Models;
 using Valcoin.Services;
 using Valcoin.UnitTests.SharedData;
 
@@ -15,11 +16,27 @@ namespace Valcoin.UnitTests
         public async void ValidateTx()
         {
             var serviceMock = new Mock<IStorageService>();
-            serviceMock.Setup(s => s.GetTx(It.IsAny<string>())).ReturnsAsync(ValidationServiceShared.ValidCoinbaseOnlyBlock.Transactions[0]);
+            serviceMock
+                .Setup(s => s.GetTx(It.IsAny<string>()))
+                .ReturnsAsync(ValidationServiceShared.ValidCoinbaseOnlyBlock.Transactions[0]);
 
             var result = await ValidationService.ValidateTx(ValidationServiceShared.ValidSpendBlock.Transactions[1], serviceMock.Object);
 
             Assert.Equal(ValidationService.ValidationCode.Valid, result);
+        }
+
+        [Fact]
+        public async void InvalidateAlreadySpentTransaction()
+        {
+            var serviceMock = new Mock<IStorageService>();
+
+            serviceMock
+                .Setup(s => s.GetTxByInput(It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync(ValidationServiceShared.ValidCoinbaseOnlyBlock.Transactions[0]);
+
+            var result = await ValidationService.ValidateTx(ValidationServiceShared.ValidSpendBlock.Transactions[1], serviceMock.Object);
+
+            Assert.Equal(ValidationService.ValidationCode.Invalid, result);
         }
     }
 }
