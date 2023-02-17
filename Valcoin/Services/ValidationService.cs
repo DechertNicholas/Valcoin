@@ -85,7 +85,7 @@ namespace Valcoin.Services
             // find lying around on the network
             block.ComputeAndSetHash();
             block.ComputeAndSetMerkleRoot();
-            if (!(givenHash == block.BlockHash && givenRoot == block.MerkleRoot))
+            if (!(givenHash.SequenceEqual(block.BlockHash) && givenRoot.SequenceEqual(block.MerkleRoot)))
             {
                 return ValidationCode.Invalid;
             }

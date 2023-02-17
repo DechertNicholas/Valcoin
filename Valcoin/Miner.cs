@@ -116,8 +116,6 @@ namespace Valcoin
                 LockSignature = MyWallet.AddressBytes
             };
 
-            var validated = Wallet.VerifyData(unlockBytes, MyWallet.SignData(unlockBytes), MyWallet.PublicKey);
-
             return new Transaction(CandidateBlock.BlockNumber, new TxInput[] { input }, new TxOutput[] { output });
         }
 
