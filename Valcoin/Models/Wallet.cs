@@ -53,36 +53,6 @@ namespace Valcoin.Models
         /// <param name="addressBytes">Hashed public key value.</param>
         /// <param name="publicKey">The public key.</param>
         /// <param name="privateKey">The private key.</param>
-        private Wallet(string address, byte[] addressBytes, byte[] publicKey, byte[] privateKey)
-        {
-            this.Address = address;
-            this.AddressBytes = addressBytes;
-            this.PublicKey = publicKey;
-            this.PrivateKey = privateKey;
-
-            _ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-            _ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
-            _ecdsa.ImportECPrivateKey(privateKey, out _);
-        }
-
-        /// <summary>
-        /// Creates a new instance of Wallet. To be used in place of a constructor.
-        /// </summary>
-        /// <returns></returns>
-        public static Wallet Create()
-        {
-            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-            var pub = ecdsa.ExportSubjectPublicKeyInfo();
-            var addressBytes = SHA256.Create().ComputeHash(pub);
-            var address = Convert.ToHexString(addressBytes);
-            return new Wallet(address, addressBytes, pub, ecdsa.ExportECPrivateKey());
-        }
-
-        /// <summary>
-        /// Creates a wallet with existing key pair. Used for loading from the database.
-        /// </summary>
-        /// <param name="publicKey"></param>
-        /// <param name="privateKey"></param>
         public Wallet(byte[] publicKey, byte[] privateKey)
         {
             _ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -95,6 +65,16 @@ namespace Valcoin.Models
 
             AddressBytes = SHA256.Create().ComputeHash(publicKey);
             Address = GetAddressAsString();
+        }
+
+        /// <summary>
+        /// Creates a new instance of Wallet. To be used in place of a constructor.
+        /// </summary>
+        /// <returns></returns>
+        public static Wallet Create()
+        {
+            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            return new Wallet(ecdsa.ExportSubjectPublicKeyInfo(), ecdsa.ExportECPrivateKey());
         }
 
         /// <summary>
