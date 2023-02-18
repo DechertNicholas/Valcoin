@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.UI.Xaml;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,10 +18,11 @@ namespace Valcoin.ViewModels
         public Wallet MyWallet { get; set; }
         [ObservableProperty]
         private int balance;
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0052:Remove unread private member",
-            Justification = "This thread needs to keep listening, but never needs to be accessed." +
-            "There is probably a better way to do this, but this is easy and works for this application.")]
-        private Task walletUpdater;
+        //[System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0052:Remove unread private member",
+        //    Justification = "This thread needs to keep listening, but never needs to be accessed." +
+        //    "There is probably a better way to do this, but this is easy and works for this application.")]
+        public Task WalletUpdater { get; set; }
+        public Microsoft.UI.Dispatching.DispatcherQueue TheDispatcher { get; set; }
 
         public WalletViewModel()
         {
@@ -35,16 +37,15 @@ namespace Valcoin.ViewModels
                 MyWallet = Wallet.Create();
                 await service.AddWallet(MyWallet);
             }
-            walletUpdater = Task.Run(() => UpdateBalance());
         }
 
-        public void UpdateBalance()
+        public void BalanceScheduler()
         {
             Thread.CurrentThread.Name = "Wallet Balance Updater";
             while (true)
             {
-                Thread.Sleep(1000 * 60); // run each minute
-                Balance = new StorageService().GetMyWallet().Result.Balance;
+                TheDispatcher.TryEnqueue(async () => Balance = (await new StorageService().GetMyWallet()).Balance);
+                Thread.Sleep(1000 * 5); // run every 5 seconds
             }
         }
     }

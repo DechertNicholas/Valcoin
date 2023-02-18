@@ -27,7 +27,7 @@
         </StackPanel>
         <StackPanel Orientation="Horizontal">
             <TextBlock Text="Balance:"/>
-            <TextBlock Text="{x:Bind ViewModel.Balance}"
+            <TextBlock Text="{x:Bind ViewModel.Balance, Mode=OneWay}"
                        Margin="5,0,0,0"/>
         </StackPanel>
     </StackPanel>
