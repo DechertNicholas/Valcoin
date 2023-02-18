@@ -11,7 +11,8 @@
     xmlns:viewModels="using:Valcoin.ViewModels" 
     d:DataContext="{d:DesignInstance Type=viewModels:WalletViewModel}"
     mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+    NavigationCacheMode="Required">
 
     <Page.DataContext>
         <viewModels:WalletViewModel x:Name="ViewModel"/>
@@ -22,6 +23,11 @@
         <StackPanel Orientation="Horizontal">
             <TextBlock Text="My address:"/>
             <TextBlock Text="{x:Bind ViewModel.MyWallet.Address}"
+                       Margin="5,0,0,0"/>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Text="Balance:"/>
+            <TextBlock Text="{x:Bind ViewModel.Balance}"
                        Margin="5,0,0,0"/>
         </StackPanel>
     </StackPanel>

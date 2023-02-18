@@ -25,10 +25,10 @@ namespace Valcoin.Services
         /// </summary>
         private static List<ValcoinBlock> pendingBlocks = new();
 
-        public static async Task<ValidationCode> ValidateBlock(ValcoinBlock block, StorageService service)
+        public static ValidationCode ValidateBlock(ValcoinBlock block, StorageService service)
         {
             // first, check if we already have this block to avoid extra work
-            if (await service.GetBlock(block.BlockId) != null)
+            if (service.GetBlock(block.BlockId).Result != null)
                 return ValidationCode.Existing;
 
             // if we don't already have it, then validate and add it to the database.
@@ -36,7 +36,7 @@ namespace Valcoin.Services
             // before the whole block can be validated however, each transaction must first be validated since one invalid transaction will
             // spoil the whole block.
             // and for each transaction to be validated, we need to ensure we have the whole chain up to this block
-            if (await service.GetBlock(Convert.ToHexString(block.PreviousBlockHash)) == null &&
+            if (service.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
                 block.BlockId != new string('0', 64) &&                               // filter out the genesis hash
                 block.BlockNumber != 1)                                               // filter out the genesis block when paired with the blockhash
             {
@@ -72,14 +72,17 @@ namespace Valcoin.Services
 
 
             // we have the previous block, so all other blocks before that would have been validated as well. Process the transactions
-            var txResults = await ValidateBlockTxs(block.Transactions);
+            var txResults = ValidateBlockTxs(block.Transactions);
             if (txResults != ValidationCode.Valid)
                 return txResults;
 
 
             // lastly, validate the hashes in the block
-            var givenHash = block.BlockHash;
-            var givenRoot = block.MerkleRoot;
+            var givenHash = new byte[block.BlockHash.Length];
+            var givenRoot = new byte[block.MerkleRoot.Length];
+            // use copy to avoid reference assigning (won't replicate changes)
+            block.BlockHash.CopyTo(givenHash, 0);
+            block.MerkleRoot.CopyTo(givenRoot, 0);
 
             // recompute the hashes in the block and ensure they match with what we were given. Don't implicitly trust things you
             // find lying around on the network
@@ -100,7 +103,7 @@ namespace Valcoin.Services
         /// </summary>
         /// <param name="txs">The transactions in a block to validate.</param>
         /// <returns></returns>
-        public static async Task<ValidationCode> ValidateBlockTxs(List<Transaction> txs)
+        public static ValidationCode ValidateBlockTxs(List<Transaction> txs)
         {
             var allValidated = ValidationCode.Valid; // start off as true, then if anything marks as false, it will remain false
             // validate the coinbase transaction
@@ -129,14 +132,14 @@ namespace Valcoin.Services
             // validate the rest as non-coinbase transactions
             foreach (var tx in txs.Where(t => txs.IndexOf(t) != 0))
             {
-                if (await ValidateTx(tx, new StorageService()) == ValidationCode.Invalid)
+                if (ValidateTx(tx, new StorageService()) == ValidationCode.Invalid)
                     return allValidated = ValidationCode.Invalid; // the whole block is bad, exit
             }
 
             return allValidated;
         }
 
-        public static async Task<ValidationCode> ValidateTx(Transaction tx, IStorageService service)
+        public static ValidationCode ValidateTx(Transaction tx, IStorageService service)
         {
             var inputSum = 0;
 
@@ -148,12 +151,12 @@ namespace Valcoin.Services
             foreach (var input in tx.Inputs)
             {
                 // first, check if a tx already exists that references the same input
-                var spend = await service.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex);
+                var spend = service.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
                 if (spend != null)
                     return ValidationCode.Invalid;
 
                 // get the referenced transaction data
-                var prevTx = await service.GetTx(input.PreviousTransactionId);
+                var prevTx = service.GetTx(input.PreviousTransactionId).Result;
                 var prevOutput = prevTx.Outputs[input.PreviousOutputIndex];
 
                 // compute the hashes and signatures

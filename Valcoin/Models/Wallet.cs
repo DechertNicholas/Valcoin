@@ -8,6 +8,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Valcoin.Services;
 
 namespace Valcoin.Models
 {
@@ -33,6 +34,11 @@ namespace Valcoin.Models
         /// The private key for the wallet.
         /// </summary>
         public byte[] PrivateKey { get; set; }
+
+        /// <summary>
+        /// The current balance of this wallet.
+        /// </summary>
+        public int Balance { get; set; }
 
         /// <summary>
         /// RSA implementation object that does not need to be re-created each time it is used.
@@ -109,6 +115,12 @@ namespace Valcoin.Models
 
             ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
             return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
+        }
+
+        public void UpdateBalance()
+        {
+            var service = new StorageService();
+            Balance = service.GetMyBalance();
         }
     }
 }

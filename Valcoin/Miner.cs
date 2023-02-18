@@ -168,10 +168,18 @@ namespace Valcoin
 
         private static async Task CommitBlock()
         {
-            var service = new StorageService();
-            await service.AddBlock(CandidateBlock);
-            var getBlock = await service.GetBlock(CandidateBlock.BlockId);
-            await Task.Run(() => NetworkService.RelayData(CandidateBlock));
+            // run our own block through validations before saving
+            var valid = ValidationService.ValidateBlock(CandidateBlock, new());
+            if (valid == ValidationService.ValidationCode.Valid)
+            {
+                var service = new StorageService();
+                await service.AddBlock(CandidateBlock);
+                await Task.Run(() => NetworkService.RelayData(CandidateBlock));
+            }
+            else
+            {
+                throw new InvalidOperationException($"Validation service returned {valid}");
+            }
         }
     }
 }

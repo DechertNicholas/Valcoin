@@ -14,6 +14,7 @@ namespace Valcoin.Services
         // https://learn.microsoft.com/en-us/dotnet/api/microsoft.entityframeworkcore.dbset-1.addasync?view=efcore-7.0#remarks
 
         protected ValcoinContext Db { get; private set; } = new ValcoinContext();
+        private static byte[] myAddress;
 
         /// <summary>
         /// Gets the last block in the chain. In the event there are two forks with the same blockNumber, it will return the first one it finds.
@@ -38,6 +39,16 @@ namespace Valcoin.Services
         public async Task AddBlock(ValcoinBlock block)
         {
             Db.Add(block);
+
+            // this really shouldn't be here, but there isn't a better spot for it
+            myAddress ??= (await GetMyWallet()).AddressBytes;
+            // add any payments we may have gotten
+            block.Transactions
+                .ForEach(t => t.Outputs
+                    .Where(o => o.LockSignature.SequenceEqual(myAddress) == true)
+                    .ToList()
+                    .ForEach(o => AddToBalance(o.Amount)));
+
             await Db.SaveChangesAsync();
         }
 
@@ -80,6 +91,19 @@ namespace Valcoin.Services
         public async Task<Wallet> GetMyWallet()
         {
             return await Db.Wallets.FirstOrDefaultAsync(w => w.PublicKey != null);
+        }
+
+        public int GetMyBalance()
+        {
+            return Db.Wallets.First().Balance;
+        }
+
+        public void AddToBalance(int payment)
+        {
+            var wallet = GetMyWallet().Result;
+            wallet.Balance += payment;
+            Db.Wallets.Update(wallet);
+            Db.SaveChanges();
         }
 
         public async Task AddClient(Client client)
