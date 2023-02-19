@@ -43,7 +43,7 @@ namespace Valcoin.Models
             get => _outputs;
             set
             {
-                _outputs = value.OrderBy(o => o.LockSignature).ThenBy(o => o.Amount).ToList();
+                _outputs = value.OrderBy(o => Convert.ToHexString(o.LockSignature)).ThenBy(o => o.Amount).ToList();
 
             }
         }
@@ -85,7 +85,7 @@ namespace Valcoin.Models
                 throw new InvalidOperationException("You cannot assign two outputs of the same amount to the same address in the same transaction.");
 
             Inputs = inputs.OrderBy(i => i.PreviousTransactionId).ThenBy(i => i.PreviousOutputIndex).ToList();
-            Outputs = outputs.OrderBy(o => o.LockSignature).ThenBy(o => o.Amount).ToList();
+            Outputs = outputs.OrderBy(o => Convert.ToHexString(o.LockSignature)).ThenBy(o => o.Amount).ToList();
             BlockNumber = blockNumber;
 
             TransactionId = GetTxIdAsString();
