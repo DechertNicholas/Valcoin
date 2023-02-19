@@ -24,7 +24,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, new byte[] { 3 })
+                    new TxOutput(50, new byte[] { 3 })
                 }
             );
 
@@ -38,7 +38,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, new byte[] { 3 })
+                    new TxOutput(50, new byte[] { 3 })
                 }
             );
 
@@ -52,7 +52,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, new byte[] { 3 })
+                    new TxOutput(50, new byte[] { 3 })
                 }
             );
 

@@ -38,7 +38,7 @@ namespace Valcoin.UnitTests
         [Fact]
         public void TxOutputSerialization()
         {
-            var output = new TxOutput("0", 50, new byte[] { 1 })
+            var output = new TxOutput(50, new byte[] { 1 })
             {
                 TransactionId = "test" // both TransactionId and Index should not be considered in a hash or network operation
             };
@@ -56,7 +56,7 @@ namespace Valcoin.UnitTests
             {
                 TransactionId = "test" // assign this as if it were read from the database. Should not be considered in a hash or network operation
             };
-            var output = new TxOutput("0", 50, new byte[] { 1 })
+            var output = new TxOutput(50, new byte[] { 1 })
             {
                 TransactionId = "test" // both TransactionId and Index should not be considered in a hash or network operation
             };
@@ -76,12 +76,12 @@ namespace Valcoin.UnitTests
             {
                 TransactionId = "test" // assign this as if it were read from the database. Should not be considered in a hash or network operation
             };
-            var output = new TxOutput("0", 50, new byte[] { 1 })
+            var output = new TxOutput(50, new byte[] { 1 })
             {
                 TransactionId = "test" // both TransactionId and Index should not be considered in a hash or network operation
             };
             var tx = new Transaction(1, new() { input }, new() { output });
-            var block = new ValcoinBlock(1, new byte[] { 1 }, 11, DateTime.UtcNow, 22);
+            var block = new ValcoinBlock(1, new byte[] { 1 }, 11, DateTime.UtcNow.Ticks, 22);
             block.AddTx(tx);
             block.ComputeAndSetHash();
 

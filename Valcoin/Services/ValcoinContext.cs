@@ -15,6 +15,14 @@ namespace Valcoin.Services
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");
 
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ValcoinBlock>().Navigation(b => b.Transactions).AutoInclude();
+            modelBuilder.Entity<Transaction>().Navigation(t => t.Inputs).AutoInclude();
+            modelBuilder.Entity<Transaction>().Navigation(t => t.Outputs).AutoInclude();
+        }
+
         /// <summary>
         /// Static, run-once constructor to initialize the databases and never attempt to re-initialize.
         /// </summary>

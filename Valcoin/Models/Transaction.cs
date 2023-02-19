@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Valcoin.Helpers;
 
 namespace Valcoin.Models
 {
@@ -24,15 +26,34 @@ namespace Valcoin.Models
         /// <see cref="TxInput"/>s used for this transaction. Can include any number of <see cref="TxInput"/>s so long as the resulting value of all 
         /// <see cref="TxInput"/>s is greater than or equal to the <see cref="TxOutput"/>s for this transaction.
         /// </summary>
-        public List<TxInput> Inputs { get; private set; } = new();
+        public List<TxInput> Inputs
+        {
+            get => _inputs;
+            set
+            {
+                _inputs = value.OrderBy(i => i.PreviousTransactionId).ThenBy(i => i.PreviousOutputIndex).ToList();
+
+            }
+        }
         /// <summary>
         /// The outputs of this transaction. Max 2 - the output sent to the recipient, and any change that goes back to the sender.
         /// </summary>
-        public List<TxOutput> Outputs { get; private set; } = new();
+        public List<TxOutput> Outputs
+        {
+            get => _outputs;
+            set
+            {
+                _outputs = value.OrderBy(o => o.LockSignature).ThenBy(o => o.Amount).ToList();
+
+            }
+        }
         /// <summary>
         /// The block in which this transaction was in. Part of the unlock signature.
         /// </summary>
         public ulong BlockNumber { get; set; }
+
+        private List<TxInput> _inputs = new();
+        private List<TxOutput> _outputs = new();
 
         /// <summary>
         /// Byte[] serializer used for transferring this transaction over the network.
@@ -57,31 +78,18 @@ namespace Valcoin.Models
         /// <param name="blockNumber">The BlockNumber this transaction is in. Used for DB relations.</param>
         /// <param name="inputs">The group of inputs for this transaction.</param>
         /// <param name="outputs">The group of outputs for this transaction.</param>
-        [JsonConstructor]
+        [JsonConstructor] // for serialization over the network
         public Transaction(ulong blockNumber, List<TxInput> inputs, List<TxOutput> outputs)
         {
-            Inputs = inputs;
-            //JsonInputs = JsonSerializer.Serialize(Inputs);
-            Outputs = outputs;
-            //JsonOutputs = JsonSerializer.Serialize(Outputs);
+            if (outputs.Distinct(new TxOutputComparer()).Count() != outputs.Count)
+                throw new InvalidOperationException("You cannot assign two outputs of the same amount to the same address in the same transaction.");
+
+            Inputs = inputs.OrderBy(i => i.PreviousTransactionId).ThenBy(i => i.PreviousOutputIndex).ToList();
+            Outputs = outputs.OrderBy(o => o.LockSignature).ThenBy(o => o.Amount).ToList();
             BlockNumber = blockNumber;
+
             TransactionId = GetTxIdAsString();
         }
-
-        /// <summary>
-        /// For loading from the database.
-        /// </summary>
-        //public Transaction(ulong blockNumber, int version, string transactionId)//, string jsonInputs, string jsonOutputs)//, string blockId)
-        //{
-        //    Version = version;
-        //    TransactionId = transactionId;
-        //    //Inputs = JsonSerializer.Deserialize<List<TxInput>>(jsonInputs);
-        //    //JsonInputs = JsonSerializer.Serialize(Inputs);
-        //    //Outputs = JsonSerializer.Deserialize<List<TxOutput>>(jsonOutputs);
-        //    //JsonOutputs = JsonSerializer.Serialize(Outputs);
-        //    BlockNumber = blockNumber;
-        //    //BlockId = blockId;
-        //}
 
         public string GetTxIdAsString()
         {

@@ -37,7 +37,7 @@ namespace Valcoin.IntegrationTests
 
             var input = new TxInput(new string('0', 64), -1, wallet.PublicKey, wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)));
 
-            var output = new TxOutput("0", 50, wallet.AddressBytes);
+            var output = new TxOutput(50, wallet.AddressBytes);
 
             var tx = new Transaction(blockId, new List<TxInput> { input }, new List<TxOutput> { output });
 

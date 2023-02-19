@@ -37,7 +37,7 @@ namespace Valcoin.Models
         /// Database property to uniquely link this input to a transaction, since most coinbase transactions will be identical.
         /// </summary>
         [JsonIgnore]
-        public string TransactionId { get; set; } // this will be null until it is loaded from the database.
+        public string TransactionId { get; set; } // this will be null until it is loaded from the database, and is only really useful to the database.
 
         public static implicit operator byte[](TxInput t) => JsonSerializer.SerializeToUtf8Bytes(t);
 

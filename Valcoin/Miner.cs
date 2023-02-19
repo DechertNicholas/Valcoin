@@ -95,7 +95,7 @@ namespace Valcoin
             {
                 genesisHash[i] = 0x00; //TODO: hash this to something other than straight 0's
             }
-            return new ValcoinBlock(1, genesisHash, 0, DateTime.UtcNow, Difficulty);
+            return new ValcoinBlock(1, genesisHash, 0, DateTime.UtcNow.Ticks, Difficulty);
         }
 
         private static Transaction AssembleCoinbaseTransaction()
@@ -104,7 +104,7 @@ namespace Valcoin
             var unlockBytes = (byte[])new UnlockSignatureStruct(CandidateBlock.BlockNumber, MyWallet.PublicKey);
             var input = new TxInput(new string('0', 64), -1, MyWallet.PublicKey, MyWallet.SignData(unlockBytes));
 
-            var output = new TxOutput("0", 50, MyWallet.AddressBytes);
+            var output = new TxOutput(50, MyWallet.AddressBytes);
 
             return new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
         }
@@ -112,7 +112,8 @@ namespace Valcoin
         private static async void AssembleCandidateBlock()
         {
             // always get the last block from the db, as the NetworkService may have gotten new information from the network
-            var lastBlock = await new StorageService().GetLastBlock();
+            var service = new StorageService();
+            var lastBlock = await service.GetLastBlock();
             if (lastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
@@ -120,7 +121,7 @@ namespace Valcoin
             }
             else
             {
-                CandidateBlock = new ValcoinBlock(lastBlock.BlockNumber + 1, lastBlock.BlockHash, 0, DateTime.UtcNow, Difficulty);
+                CandidateBlock = new ValcoinBlock(lastBlock.BlockNumber + 1, lastBlock.BlockHash, 0, DateTime.UtcNow.Ticks, Difficulty);
             }
 
             // add our coinbase payout to ourselves, and any other transactions in the transaction pool (max 31 others, 32 tx total per block)

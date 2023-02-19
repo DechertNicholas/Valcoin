@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Text;
@@ -10,7 +11,7 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
-    [PrimaryKey("TransactionId", "Index")]
+    [PrimaryKey(nameof(TransactionId), nameof(Amount), nameof(LockSignature))] // known issue, if you send the same amount twice to the same address, you won't have a unique key. Not supported.
     public class TxOutput
     {
         /// <summary>
@@ -27,18 +28,12 @@ namespace Valcoin.Models
         /// </summary>
         [JsonIgnore]
         public string TransactionId { get; set; }
-        /// <summary>
-        /// The index of this output in the transaction. Ensures the index data is persisted if the DB restores the outputs in reverse order.
-        /// </summary>
-        [JsonIgnore]
-        public string Index { get; set; }
 
         public static implicit operator byte[](TxOutput t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
-        public TxOutput(string index, int amount, byte[] lockSignature)
+        public TxOutput(int amount, byte[] lockSignature)
         {
             // transactionId is not a part of this, because the resulting id will be dependent on this output's data
-            Index = index;
             Amount = amount;
             LockSignature = lockSignature;
         }

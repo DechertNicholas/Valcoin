@@ -54,7 +54,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, wallet.AddressBytes)
+                    new TxOutput(50, wallet.AddressBytes)
                 }
             );
 
@@ -67,7 +67,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, wallet.AddressBytes)
+                    new TxOutput(50, wallet.AddressBytes)
                 }
             );
 
@@ -86,7 +86,7 @@ namespace Valcoin.UnitTests
                 BlockNumber = 1,
                 BlockDifficulty = 1,
                 Nonce = 1111,
-                TimeUTC = DateTime.Parse("2023-02-15T20:17:11.0000000-08:00")
+                TimeUTCTicks = DateTime.Parse("2023-02-15T20:17:11.0000000-08:00").Ticks
             };
 
             var coinbase = new Transaction(
@@ -97,7 +97,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, wallet.AddressBytes)
+                    new TxOutput(50, wallet.AddressBytes)
                 }
             );
 
@@ -109,7 +109,7 @@ namespace Valcoin.UnitTests
                 BlockNumber = 2,
                 BlockDifficulty = 1,
                 Nonce = 1111,
-                TimeUTC = DateTime.Parse("2023-02-15T20:18:11.0000000-08:00")
+                TimeUTCTicks = DateTime.Parse("2023-02-15T20:18:11.0000000-08:00").Ticks
             };
 
             var coinbase2 = new Transaction(
@@ -120,7 +120,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, wallet.AddressBytes)
+                    new TxOutput(50, wallet.AddressBytes)
                 }
             );
 
@@ -133,7 +133,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, wallet.AddressBytes)
+                    new TxOutput(50, wallet.AddressBytes)
                 }
             );
 
@@ -168,7 +168,7 @@ namespace Valcoin.UnitTests
                 BlockNumber = 1,
                 BlockDifficulty = 1,
                 Nonce = 1111,
-                TimeUTC = DateTime.Parse("2023-02-15T20:17:11.0000000-08:00")
+                TimeUTCTicks = DateTime.Parse("2023-02-15T20:17:11.0000000-08:00").Ticks
             };
 
             var coinbase = new Transaction(
@@ -180,7 +180,7 @@ namespace Valcoin.UnitTests
                 },
                 new List<TxOutput>()
                 {
-                    new TxOutput("0", 50, wallet.AddressBytes)
+                    new TxOutput(50, wallet.AddressBytes)
                 }
             );
 

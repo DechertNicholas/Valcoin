@@ -15,6 +15,7 @@ namespace Valcoin.Services
 
         protected ValcoinContext Db { get; private set; } = new ValcoinContext();
         private static byte[] myAddress;
+        private static byte[] myPublicKey;
 
         /// <summary>
         /// Gets the last block in the chain. In the event there are two forks with the same blockNumber, it will return the first one it finds.
@@ -39,9 +40,11 @@ namespace Valcoin.Services
         public async Task AddBlock(ValcoinBlock block)
         {
             Db.Add(block);
+            await Db.SaveChangesAsync();
 
             // this really shouldn't be here, but there isn't a better spot for it
             myAddress ??= (await GetMyWallet()).AddressBytes;
+            myPublicKey ??= (await GetMyWallet()).PublicKey;
             // add any payments we may have gotten
             block.Transactions
                 .ForEach(t => t.Outputs
@@ -49,7 +52,14 @@ namespace Valcoin.Services
                     .ToList()
                     .ForEach(o => AddToBalance(o.Amount)));
 
-            await Db.SaveChangesAsync();
+            // subtract any payments we spent
+            block.Transactions
+                .Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // filter out coinbase (this transaction is verified)
+                .ToList()
+                .ForEach(t => t.Inputs
+                    .Where(i => i.UnlockerPublicKey.SequenceEqual(myPublicKey) == true)
+                    .ToList()
+                    .ForEach(i => SubtractFromBalance(t.Outputs.Sum(o => o.Amount))));
         }
 
         public async Task<Transaction> GetTx(string transactionId)
@@ -102,6 +112,14 @@ namespace Valcoin.Services
         {
             var wallet = GetMyWallet().Result;
             wallet.Balance += payment;
+            Db.Wallets.Update(wallet);
+            Db.SaveChanges();
+        }
+
+        public void SubtractFromBalance(int payment)
+        {
+            var wallet = GetMyWallet().Result;
+            wallet.Balance -= payment;
             Db.Wallets.Update(wallet);
             Db.SaveChanges();
         }

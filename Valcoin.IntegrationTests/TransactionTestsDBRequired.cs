@@ -26,7 +26,7 @@ namespace Valcoin.IntegrationTests
 
             var input = new TxInput(new string('0', 64), -1, fixture.Wallet.PublicKey, fixture.Wallet.SignData(new UnlockSignatureStruct(blockId, fixture.Wallet.PublicKey)));
 
-            var output = new TxOutput("0", 50, fixture.Wallet.AddressBytes);
+            var output = new TxOutput(50, fixture.Wallet.AddressBytes);
 
             var tx = new Transaction(blockId, new List<TxInput> { input }, new List<TxOutput> { output });
 

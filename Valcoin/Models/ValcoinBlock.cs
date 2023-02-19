@@ -39,7 +39,7 @@ namespace Valcoin.Models
         /// <summary>
         /// The time of the block being hashed.
         /// </summary>
-        public DateTime TimeUTC { get; set; } = DateTime.UtcNow;
+        public long TimeUTCTicks { get; set; } = DateTime.UtcNow.Ticks;
         /// <summary>
         /// The difficulty on the blockchain at the time this block was hashed.
         /// </summary>
@@ -56,7 +56,7 @@ namespace Valcoin.Models
         /// <summary>
         /// An array of transactions for this block to process.
         /// </summary>
-        public virtual List<Transaction> Transactions { get; set; } = new();
+        public List<Transaction> Transactions { get; set; } = new();
 
         public static implicit operator byte[](ValcoinBlock b) => JsonSerializer.SerializeToUtf8Bytes(b);
 
@@ -70,13 +70,13 @@ namespace Valcoin.Models
         /// <param name="blockHash"></param>
         /// <param name="previousBlockHash"></param>
         /// <param name="nonce"></param>
-        /// <param name="timeUTC"></param>
+        /// <param name="timeUTCTicks"></param>
         /// <param name="blockDifficulty"></param>
         /// <param name="merkleRoot"></param>
         /// <param name="transactions"></param>
-        [JsonConstructor]
+        [JsonConstructor] // for serialization over the network
         public ValcoinBlock (string blockId, ulong blockNumber, byte[] blockHash, byte[] previousBlockHash,
-            ulong nonce, DateTime timeUTC, int blockDifficulty, byte[] merkleRoot, List<Transaction> transactions)
+            ulong nonce, long timeUTCTicks, int blockDifficulty, byte[] merkleRoot, List<Transaction> transactions)
         {
             BlockNumber = blockNumber;
             BlockHash = blockHash;
@@ -84,17 +84,17 @@ namespace Valcoin.Models
             PreviousBlockHash = previousBlockHash;
             Transactions = transactions;
             Nonce = nonce;
-            TimeUTC = timeUTC;
+            TimeUTCTicks = timeUTCTicks;
             BlockDifficulty = blockDifficulty;
             MerkleRoot = merkleRoot;
         }
 
-        public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
+        public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, long timeUTCTicks, int blockDifficulty)
         {
             BlockNumber = blockNumber;
             PreviousBlockHash = previousBlockHash;
             Nonce = nonce;
-            TimeUTC = timeUTC;
+            TimeUTCTicks = timeUTCTicks;
             BlockDifficulty = blockDifficulty;
         }
 
@@ -123,7 +123,7 @@ namespace Valcoin.Models
             {
                 PreviousBlockHash = PreviousBlockHash,
                 Nonce = Nonce,
-                TimeUTC = TimeUTC,
+                TimeUTCTicks = TimeUTCTicks,
                 BlockDifficulty = BlockDifficulty,
                 MerkleRoot = MerkleRoot,
                 Version = Version
@@ -134,6 +134,12 @@ namespace Valcoin.Models
 
         public void ComputeAndSetMerkleRoot()
         {
+            // first, we sort the transactions. This preserves the order for hashing.
+            // this is needed because when a block is loaded with transactions and inputs and outputs from the database,
+            // EFCore adds those items to their respective collections in an uncontrolled order, resulting in a different
+            // root hash
+            List<Transaction> txs = Transactions.OrderBy(t => t.TransactionId).ToList();
+
             // it was very difficult to do this elegantly and without introducing new functions.
             // to make this easier, I've referenced the original bitcoin code for making the merkle root.
             // to keep the algorithm simple, if there are an odd number of transactions, the last one is duplicated ONLY for computing the root
@@ -143,7 +149,7 @@ namespace Valcoin.Models
             var merkleTree = new List<byte[]>();
 
             // line up hashes of all transactions in a list
-            foreach (var tx in Transactions)
+            foreach (var tx in txs)
                 merkleTree.Add(h.ComputeHash(tx));
 
             /*
@@ -188,7 +194,7 @@ namespace Valcoin.Models
              */
             int j = 0;
 
-            for (int nSize = Transactions.Count; nSize > 1; nSize = (nSize + 1) / 2)
+            for (int nSize = txs.Count; nSize > 1; nSize = (nSize + 1) / 2)
             {
                 for (int i = 0; i < nSize; i += 2)
                 {

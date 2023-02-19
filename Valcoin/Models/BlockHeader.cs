@@ -16,7 +16,7 @@ namespace Valcoin.Models
     {
         public byte[] PreviousBlockHash { get; set; }
         public ulong Nonce { get; set; }
-        public DateTime TimeUTC { get; set; }
+        public long TimeUTCTicks { get; set; }
         public int BlockDifficulty { get; set; }
         public byte[] MerkleRoot { get; set; }
         public int Version { get; set; }
