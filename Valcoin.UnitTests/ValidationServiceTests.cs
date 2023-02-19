@@ -38,5 +38,11 @@ namespace Valcoin.UnitTests
 
             Assert.Equal(ValidationService.ValidationCode.Invalid, result);
         }
+
+        [Fact]
+        public void InvalidatesMalformedTransactionId()
+        {
+            var serviceMock = new Mock<IStorageService>();
+        }
     }
 }
