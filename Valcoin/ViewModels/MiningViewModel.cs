@@ -33,13 +33,13 @@ namespace Valcoin.ViewModels
         [RelayCommand]
         public void InvokeMinerStop()
         {
-            Miner.Stop = true;
+            Miner.MineBlocks = false;
             MinerWorker.CancelAsync();
         }
 
         private void BeginMining(object sender, DoWorkEventArgs e)
         {
-            Miner.Stop = false;
+            Miner.MineBlocks = true;
             Miner.Mine();
         }
 

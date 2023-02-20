@@ -20,31 +20,20 @@ namespace Valcoin.IntegrationTests
         }
 
         [Fact]
-        public void VerifyDataReadWriteToDB()
+        public async void VerifyDataReadWriteToDB()
         {
             ulong blockId = 10; // this tx is part of block 10
 
-            var input = new TxInput
-            {
-                PreviousTransactionId = new string('0', 64), // coinbase
-                PreviousOutputIndex = -1, // 0xffffffff
-                UnlockerPublicKey = fixture.Wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = fixture.Wallet.SignData(new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = fixture.Wallet.PublicKey }) // neither does this
-            };
+            var input = new TxInput(new string('0', 64), -1, fixture.Wallet.PublicKey, fixture.Wallet.SignData(new UnlockSignatureStruct(blockId, fixture.Wallet.PublicKey)));
 
-            var output = new TxOutput
-            {
-                Amount = 50,
-                LockSignature = fixture.Wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
-                                                    // of this hashed public key
-            };
+            var output = new TxOutput(50, fixture.Wallet.AddressBytes);
 
-            var tx = new Transaction(blockId, new TxInput[] { input }, new TxOutput[] { output });
+            var tx = new Transaction(blockId, new List<TxInput> { input }, new List<TxOutput> { output });
 
             fixture.Context.Add(tx);
-            fixture.Context.SaveChanges();
+            await fixture.Context.SaveChangesAsync();
 
-            var txVerify = fixture.Context.Transactions.FirstOrDefault(t => t.TxId == tx.TxId);
+            var txVerify = fixture.Context.Transactions.FirstOrDefault(t => t.TransactionId == tx.TransactionId);
             Assert.NotNull(txVerify);
         }
     }

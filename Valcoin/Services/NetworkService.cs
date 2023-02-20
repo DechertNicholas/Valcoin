@@ -10,6 +10,7 @@ using System.Buffers.Text;
 using System.Collections;
 using Valcoin.Models;
 using System.Threading;
+using static Valcoin.Services.ValidationService;
 
 namespace Valcoin.Services
 {
@@ -32,6 +33,7 @@ namespace Valcoin.Services
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
             clients.Add(new Client() { Address = IPAddress.Broadcast.ToString(), Port = listenPort });
+
             // we also need to know our IP, so we don't keep re-ingesting our own data
             //using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
             //{
@@ -95,25 +97,39 @@ namespace Valcoin.Services
         /// <param name="clientPort">The port from the listener.</param>
         public static async Task ParseData(byte[] result, string clientAddress, int clientPort)
         {
+            Thread.CurrentThread.Name = "Network Data Parser";
             var service = new StorageService();
             try
             {
                 // try to parse the raw data as json, catching if the data isn't json
                 var data = JsonDocument.Parse(result);
 
-                // a block will always contain BlockHash and will have transactions, but if blockhash is missing it must just be a transaction
-                if (data.RootElement.ToString().Contains("BlockHash"))
+                // a block will always contain MerkleRoot and will have transactions, but if MerkleRoot is missing it must just be a transaction
+                if (data.RootElement.ToString().Contains("MerkleRoot"))
                 {
                     var block = data.Deserialize<ValcoinBlock>();
-                    // TODO: validate and save the block
+                    switch (ValidateBlock(block, new()))
+                    {
+                        case ValidationCode.Miss_Prev_Block:
+                            // TODO: Send message to client asking for block.PreviousBlockHash block
+                            // break out of this, as the block will be pending in the validation service and we will handle the requested
+                            // block like normal.
+                            throw new NotImplementedException();
+
+                        case ValidationCode.Valid:
+                            await service.AddBlock(block);
+                            break;
+                    }
                 }
-                else if (data.RootElement.ToString().Contains("TxId"))
+                else if (data.RootElement.ToString().Contains("TransactionId"))
                 {
-                    // got a new transaction. Send it to the miner for validation
+                    // got a new transaction. Validate it and send it to the miner, if it's active
                     var tx = data.Deserialize<Transaction>();
-                    // adding tx will be done by the validation service once we know we don't already have one
-                    //Miner.TransactionPool.Add(tx);
+                    if (ValidateTx(tx, new StorageService()) == ValidationCode.Valid && Miner.MineBlocks == true)
+                        Miner.TransactionPool.Add(tx);
                 }
+
+                // regardless of validation outcome, update the client data
                 await ProcessClient(clientAddress, clientPort, service);
             }
             catch (Exception ex)

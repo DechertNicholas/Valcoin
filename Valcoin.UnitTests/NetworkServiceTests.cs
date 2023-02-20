@@ -15,31 +15,17 @@ namespace Valcoin.UnitTests
         [Fact]
         public void SendData()
         {
-            var wallet = new Wallet();
+            var wallet = Wallet.Create();
             ulong blockId = 10; // this tx is part of block 10
 
-            var input = new TxInput
-            {
-                PreviousTransactionId = new string('0', 64), // coinbase
-                PreviousOutputIndex = -1, // 0xffffffff
-                UnlockerPublicKey = wallet.PublicKey, // this doesn't matter for the coinbase transaction
-                UnlockSignature = wallet.SignData(new UnlockSignatureStruct { BlockNumber = blockId, PublicKey = wallet.PublicKey }) // neither does this
-            };
+            var input = new TxInput(new string('0', 64), -1, wallet.PublicKey,
+                wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)));
 
-            var output = new TxOutput
-            {
-                Amount = 50,
-                LockSignature = wallet.AddressBytes // this does though, as no one should spend these coins other than the owner
-                                                    // of this hashed public key
-            };
+            var output = new TxOutput(50, wallet.AddressBytes);
 
-            var tx = new Transaction(blockId, new TxInput[] { input }, new TxOutput[] { output });
+            var tx = new Transaction(blockId, new List<TxInput> { input }, new List<TxOutput> { output });
 
             var t = Task.Run(() => NetworkService.StartListener());
-            //await NetworkService.SendData(new byte[] {0,1,2,3,4,5,6,7,8,9});
-            //await NetworkService.SendData(tx);
-
-            //t.Wait();
         }
     }
 }

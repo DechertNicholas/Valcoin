@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 
@@ -29,6 +30,8 @@ namespace Valcoin.Views
         public WalletPage()
         {
             this.InitializeComponent();
+            ViewModel.TheDispatcher = this.DispatcherQueue;
+            ViewModel.WalletUpdater = Task.Run(() => ViewModel.BalanceScheduler());
         }
     }
 }

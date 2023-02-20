@@ -8,6 +8,7 @@ using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Valcoin.Services;
 
 namespace Valcoin.Models
 {
@@ -35,37 +36,51 @@ namespace Valcoin.Models
         public byte[] PrivateKey { get; set; }
 
         /// <summary>
+        /// The current balance of this wallet.
+        /// </summary>
+        public int Balance { get; set; }
+
+        /// <summary>
         /// RSA implementation object that does not need to be re-created each time it is used.
         /// </summary>
         [NotMapped]
-        private readonly RSA _rsa;
+        private readonly ECDsa _ecdsa;
 
         /// <summary>
-        /// Creates a new wallet with a new key pair.
+        /// Private constructor to get around EFCore's constructor weirdness. Even though a paramaterized constructor exists matching
+        /// the values in the EFCore database, it will ALWAYS call the paramaterless constructor first. If <see cref="Create"/> were a
+        /// constructor, a new <see cref="_ecdsa"/> would be created each call, yet the <see cref="PublicKey"/> and other properties
+        /// would be set to the database values. This creates a mismatch between what is actually being used and what the user and
+        /// developer thinks are being used, because properties are assigned AFTER instantiation - overwriting the generated property
+        /// values. Moving the constructor to a <see cref="Create"/> method is not ideal, but I could not
+        /// get EFCore to play nicely with parameterless and parameterized constructors.
         /// </summary>
-        public Wallet()
+        /// <param name="address">Hashed public key value, converted to hex string.</param>
+        /// <param name="addressBytes">Hashed public key value.</param>
+        /// <param name="publicKey">The public key.</param>
+        /// <param name="privateKey">The private key.</param>
+        public Wallet(byte[] publicKey, byte[] privateKey)
         {
-            _rsa = RSA.Create();
-            
-            PublicKey = _rsa.ExportRSAPublicKey();
-            PrivateKey = _rsa.ExportRSAPrivateKey(); // TODO: Decide if this will be encrypted
-            AddressBytes = SHA256.Create().ComputeHash(PublicKey);
-            Address = Convert.ToHexString(AddressBytes);
+            _ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+            _ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
+            _ecdsa.ImportECPrivateKey(privateKey, out _);
+
+            PublicKey = _ecdsa.ExportSubjectPublicKeyInfo();
+            PrivateKey = _ecdsa.ExportECPrivateKey();
+
+            AddressBytes = SHA256.Create().ComputeHash(publicKey);
+            Address = GetAddressAsString();
         }
 
         /// <summary>
-        /// Creates a wallet with existing key pair. Used for loading from the database.
+        /// Creates a new instance of Wallet. To be used in place of a constructor.
         /// </summary>
-        /// <param name="publicKey"></param>
-        /// <param name="privateKey"></param>
-        public Wallet(byte[] publicKey, byte[] privateKey)
+        /// <returns></returns>
+        public static Wallet Create()
         {
-            _rsa = RSA.Create();
-            PublicKey = publicKey;
-            PrivateKey = privateKey;
-            _rsa.ImportRSAPublicKey(publicKey, out _);
-            _rsa.ImportRSAPrivateKey(privateKey, out _);
-            AddressBytes = SHA256.Create().ComputeHash(publicKey);
+            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            return new Wallet(ecdsa.ExportSubjectPublicKeyInfo(), ecdsa.ExportECPrivateKey());
         }
 
         /// <summary>
@@ -84,7 +99,7 @@ namespace Valcoin.Models
         /// <returns></returns>
         public byte[] SignData(byte[] data)
         {
-            return _rsa.SignData(data, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            return _ecdsa.SignData(data, HashAlgorithmName.SHA256);
         }
 
         /// <summary>
@@ -93,10 +108,19 @@ namespace Valcoin.Models
         /// <param name="data"></param>
         /// <param name="signature"></param>
         /// <returns></returns>
-        public bool VerifyData(byte[] data, byte[] signature)
+        public static bool VerifyData(byte[] data, byte[] signature, byte[] publicKey)
         {
             // TODO: Load the public key of the transaction since it won't always be our public key
-            return _rsa.VerifyData(data, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+
+            ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
+            return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
+        }
+
+        public void UpdateBalance()
+        {
+            var service = new StorageService();
+            Balance = service.GetMyBalance();
         }
     }
 }

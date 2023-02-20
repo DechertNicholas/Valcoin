@@ -16,95 +16,92 @@ namespace Valcoin.Models
     public class ValcoinBlock
     {
         /// <summary>
+        /// Key for the DB since it can't use a byte[] as the key. Hex string of the <see cref="BlockHash"/>.
+        /// </summary>
+        [Key]
+        public string BlockId { get; set; }
+        /// <summary>
         /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid (due to SQLite not storing starting at 0).
         /// </summary>
-        [Required]
-        [Key]
         public ulong BlockNumber { get; set; } = 0;
-
         /// <summary>
         /// The hash of the current block data that is in the block header.
         /// </summary>
         public byte[] BlockHash { get; set; } = new byte[32];
-
         /// <summary>
         /// Hash of the previous block.
         /// </summary>
         public byte[] PreviousBlockHash { get; set; } = new byte[32];
-
-        /// <summary>
-        /// An array of transactions for this block to process.
-        /// </summary>
-        [NotMapped]
-        public List<Transaction> Transactions { get; set; } = new();
-
-        /// <summary>
-        /// <see cref="Transactions"/> in JOSN format for database storage, as SQLite can only store primitive types.
-        /// </summary>
-        [JsonIgnore]
-        [NotMapped] // The transaction object in the database is linked to a block via the transactions BlockNumber.
-        public string JsonTransactions { get; set; }
-
         /// <summary>
         /// The random value assigned to the block header for changing the hash. Critical for proof-of-work.
         /// </summary>
         public ulong Nonce { get; set; } = 0;
-
         /// <summary>
         /// The time of the block being hashed.
         /// </summary>
-        public DateTime TimeUTC { get; set; } = DateTime.UtcNow;
-
+        public long TimeUTCTicks { get; set; } = DateTime.UtcNow.Ticks;
         /// <summary>
         /// The difficulty on the blockchain at the time this block was hashed.
         /// </summary>
         public int BlockDifficulty { get; set; } = 0;
-
         /// <summary>
         /// The hash root of all the transactions in the block.
         /// </summary>
         public byte[] MerkleRoot { get; set; } = new byte[32];
-
         /// <summary>
         /// The version of this block, in case it ever changes.
         /// </summary>
         public int Version { get; set; } = 1;
 
+        /// <summary>
+        /// An array of transactions for this block to process.
+        /// </summary>
+        public List<Transaction> Transactions { get; set; } = new();
+
         public static implicit operator byte[](ValcoinBlock b) => JsonSerializer.SerializeToUtf8Bytes(b);
 
         public ValcoinBlock() { }
 
-        // make constructor for json
-        [JsonConstructor]
-        public ValcoinBlock (ulong blockNumber, byte[] blockHash, byte[] previousBlockHash, List<Transaction> transactions,
-            ulong nonce, DateTime timeUTC, int blockDifficulty, byte[] merkleRoot)
+        /// <summary>
+        /// Json constructor. For DB operations, not normal use.
+        /// </summary>
+        /// <param name="blockId"></param>
+        /// <param name="blockNumber"></param>
+        /// <param name="blockHash"></param>
+        /// <param name="previousBlockHash"></param>
+        /// <param name="nonce"></param>
+        /// <param name="timeUTCTicks"></param>
+        /// <param name="blockDifficulty"></param>
+        /// <param name="merkleRoot"></param>
+        /// <param name="transactions"></param>
+        [JsonConstructor] // for serialization over the network
+        public ValcoinBlock (string blockId, ulong blockNumber, byte[] blockHash, byte[] previousBlockHash,
+            ulong nonce, long timeUTCTicks, int blockDifficulty, byte[] merkleRoot, List<Transaction> transactions)
         {
             BlockNumber = blockNumber;
             BlockHash = blockHash;
+            BlockId = blockId;
             PreviousBlockHash = previousBlockHash;
             Transactions = transactions;
             Nonce = nonce;
-            TimeUTC = timeUTC;
+            TimeUTCTicks = timeUTCTicks;
             BlockDifficulty = blockDifficulty;
             MerkleRoot = merkleRoot;
-
-            JsonTransactions = JsonSerializer.Serialize(Transactions);
         }
 
-        public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, DateTime timeUTC, int blockDifficulty)
+        public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, long timeUTCTicks, int blockDifficulty)
         {
             BlockNumber = blockNumber;
             PreviousBlockHash = previousBlockHash;
             Nonce = nonce;
-            TimeUTC = timeUTC;
+            TimeUTCTicks = timeUTCTicks;
             BlockDifficulty = blockDifficulty;
         }
 
         public void AddTx(Transaction tx)
         {
             Transactions.Add(tx);
-            JsonTransactions = JsonSerializer.Serialize(Transactions);
-            ComputeMerkleRoot();
+            ComputeAndSetMerkleRoot();
         }
 
         public void AddTx(IEnumerable<Transaction> txs)
@@ -113,8 +110,7 @@ namespace Valcoin.Models
             {
                 Transactions.Add(tx);
             }
-            JsonTransactions = JsonSerializer.Serialize(Transactions);
-            ComputeMerkleRoot();
+            ComputeAndSetMerkleRoot();
         }
 
         /// <summary>
@@ -127,15 +123,23 @@ namespace Valcoin.Models
             {
                 PreviousBlockHash = PreviousBlockHash,
                 Nonce = Nonce,
-                TimeUTC = TimeUTC,
+                TimeUTCTicks = TimeUTCTicks,
                 BlockDifficulty = BlockDifficulty,
                 MerkleRoot = MerkleRoot,
                 Version = Version
             });
+
+            BlockId = Convert.ToHexString(BlockHash);
         }
 
-        public void ComputeMerkleRoot()
+        public void ComputeAndSetMerkleRoot()
         {
+            // first, we sort the transactions. This preserves the order for hashing.
+            // this is needed because when a block is loaded with transactions and inputs and outputs from the database,
+            // EFCore adds those items to their respective collections in an uncontrolled order, resulting in a different
+            // root hash
+            List<Transaction> txs = Transactions.OrderBy(t => t.TransactionId).ToList();
+
             // it was very difficult to do this elegantly and without introducing new functions.
             // to make this easier, I've referenced the original bitcoin code for making the merkle root.
             // to keep the algorithm simple, if there are an odd number of transactions, the last one is duplicated ONLY for computing the root
@@ -145,7 +149,7 @@ namespace Valcoin.Models
             var merkleTree = new List<byte[]>();
 
             // line up hashes of all transactions in a list
-            foreach (var tx in Transactions)
+            foreach (var tx in txs)
                 merkleTree.Add(h.ComputeHash(tx));
 
             /*
@@ -190,7 +194,7 @@ namespace Valcoin.Models
              */
             int j = 0;
 
-            for (int nSize = Transactions.Count; nSize > 1; nSize = (nSize + 1) / 2)
+            for (int nSize = txs.Count; nSize > 1; nSize = (nSize + 1) / 2)
             {
                 for (int i = 0; i < nSize; i += 2)
                 {
