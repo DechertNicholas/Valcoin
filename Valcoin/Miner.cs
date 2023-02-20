@@ -26,11 +26,13 @@ namespace Valcoin
         private static ValcoinBlock CandidateBlock = new();
         private static Wallet MyWallet;
 
+        public static string Status { get; set; } = "Stopped";
         public static int HashSpeed { get; set; } = 0;
         public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
         public static async void Mine()
         {
+            Status = "Mining";
             // setup wallet info
             PopulateWalletInfo();
 
@@ -48,6 +50,7 @@ namespace Valcoin
                 FindValidHash();
                 await CommitBlock();
             }
+            Status = "Stopped";
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
         }

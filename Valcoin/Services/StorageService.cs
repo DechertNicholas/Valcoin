@@ -14,8 +14,7 @@ namespace Valcoin.Services
         // https://learn.microsoft.com/en-us/dotnet/api/microsoft.entityframeworkcore.dbset-1.addasync?view=efcore-7.0#remarks
 
         protected ValcoinContext Db { get; private set; } = new ValcoinContext();
-        private static byte[] myAddress;
-        private static byte[] myPublicKey;
+        
 
         /// <summary>
         /// Gets the last block in the chain. In the event there are two forks with the same blockNumber, it will return the first one it finds.
@@ -41,25 +40,12 @@ namespace Valcoin.Services
         {
             Db.Add(block);
             await Db.SaveChangesAsync();
+        }
 
-            // this really shouldn't be here, but there isn't a better spot for it
-            myAddress ??= (await GetMyWallet()).AddressBytes;
-            myPublicKey ??= (await GetMyWallet()).PublicKey;
-            // add any payments we may have gotten
-            block.Transactions
-                .ForEach(t => t.Outputs
-                    .Where(o => o.LockSignature.SequenceEqual(myAddress) == true)
-                    .ToList()
-                    .ForEach(o => AddToBalance(o.Amount)));
-
-            // subtract any payments we spent
-            block.Transactions
-                .Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // filter out coinbase (this transaction is verified)
-                .ToList()
-                .ForEach(t => t.Inputs
-                    .Where(i => i.UnlockerPublicKey.SequenceEqual(myPublicKey) == true)
-                    .ToList()
-                    .ForEach(i => SubtractFromBalance(t.Outputs.Sum(o => o.Amount))));
+        public async Task UpdateBlock(ValcoinBlock block)
+        {
+            Db.Update(block);
+            await Db.SaveChangesAsync();
         }
 
         public async Task<Transaction> GetTx(string transactionId)
@@ -103,25 +89,15 @@ namespace Valcoin.Services
             return await Db.Wallets.FirstOrDefaultAsync(w => w.PublicKey != null);
         }
 
+        public async Task UpdateWallet(Wallet wallet)
+        {
+            Db.Wallets.Update(wallet);
+            await Db.SaveChangesAsync();
+        }
+
         public int GetMyBalance()
         {
             return Db.Wallets.First().Balance;
-        }
-
-        public void AddToBalance(int payment)
-        {
-            var wallet = GetMyWallet().Result;
-            wallet.Balance += payment;
-            Db.Wallets.Update(wallet);
-            Db.SaveChanges();
-        }
-
-        public void SubtractFromBalance(int payment)
-        {
-            var wallet = GetMyWallet().Result;
-            wallet.Balance -= payment;
-            Db.Wallets.Update(wallet);
-            Db.SaveChanges();
         }
 
         public async Task AddClient(Client client)
