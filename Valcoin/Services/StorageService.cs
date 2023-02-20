@@ -23,7 +23,16 @@ namespace Valcoin.Services
         public async Task<ValcoinBlock> GetLastBlock()
         {
             uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
-            return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockNumber == lastId);
+            if (lastId == 1) // this only happens for the first block after the genesis block
+                return Db.ValcoinBlocks.First(b => b.BlockNumber == lastId);
+
+            var lastMainChainBlock = Db.ValcoinBlocks
+                .Where(b => Db.ValcoinBlocks
+                    .Where(b2 => b2.BlockNumber == lastId - 1)
+                    .FirstOrDefault().NextBlockHash.SequenceEqual(b.BlockHash))
+                .FirstOrDefault();
+
+            return lastMainChainBlock;
         }
 
         /// <summary>
@@ -38,6 +47,12 @@ namespace Valcoin.Services
 
         public async Task AddBlock(ValcoinBlock block)
         {
+            var lastBlock = await GetLastBlock();
+            if (lastBlock != null && lastBlock.BlockNumber != block.BlockNumber) // if we have an orphan incoming, don't update any blocks. Just add and save.
+            {
+                block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
+                Db.Update(lastBlock);
+            }
             Db.Add(block);
             await Db.SaveChangesAsync();
         }

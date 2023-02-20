@@ -64,5 +64,33 @@ namespace Valcoin.UnitTests
             var result = await service.GetTxByInput(doubleSpend.Inputs[0].PreviousTransactionId, doubleSpend.Inputs[0].PreviousOutputIndex);
             Assert.Equal(spend.TransactionId, result.TransactionId);
         }
+
+        [Fact]
+        public async void ReturnsMainChainBlockWhenOrphanExists()
+        {
+            var service = new StorageService();
+
+            var genesis = new ValcoinBlock(1, new byte[32], 11, DateTime.UtcNow.Ticks, 1);
+            genesis.ComputeAndSetMerkleRoot();
+            genesis.ComputeAndSetHash();
+
+            await service.AddBlock(genesis);
+
+            var block2 = new ValcoinBlock(2, genesis.BlockHash, 123, DateTime.UtcNow.Ticks, 1);
+            block2.ComputeAndSetMerkleRoot();
+            block2.ComputeAndSetHash();
+
+            await service.AddBlock(block2);
+
+            var orphan = new ValcoinBlock(2, genesis.BlockHash, 222, DateTime.UtcNow.Ticks, 1);
+            orphan.ComputeAndSetMerkleRoot();
+            orphan.ComputeAndSetHash();
+
+            await service.AddBlock(orphan);
+
+            var lastBlock = await service.GetLastBlock();
+
+            Assert.True(block2.BlockHash.SequenceEqual(lastBlock.BlockHash));
+        }
     }
 }

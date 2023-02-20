@@ -25,7 +25,7 @@ namespace Valcoin.Services
             var lastBlock = await service.GetLastBlock();
 
             // check if this newHighestBlock is part of a longer blockchain
-            if (block.BlockNumber > lastBlock.BlockNumber)
+            if (block.BlockNumber > (lastBlock.BlockNumber + 1))
                 await Reorganize(block);
             else
             {
