@@ -9,7 +9,7 @@ namespace Valcoin.Services
 {
     public interface IStorageService
     {
-        public Task<ValcoinBlock> GetLastBlock();
+        public Task<ValcoinBlock> GetLastMainChainBlock();
 
         public Task<ValcoinBlock> GetBlock(string blockHashAsString);
 

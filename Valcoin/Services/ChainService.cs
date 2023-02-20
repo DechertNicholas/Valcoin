@@ -19,26 +19,42 @@ namespace Valcoin.Services
         private static byte[] myAddress;
         private static byte[] myPublicKey;
 
+        #region ProxyMethods
+        // these are just proxy methods for the storage service to ensure that all chain-related operations can be performed through the chain service
+
+        public static async Task<ValcoinBlock> GetLastMainChainBlock()
+        {
+            return await new StorageService().GetLastMainChainBlock();
+        }
+
+        public static async Task<ValcoinBlock> GetBlock(string blockId)
+        {
+            return await new StorageService().GetBlock(blockId);
+        }
+
+        #endregion
+
         public static async Task AddBlock(ValcoinBlock block)
         {
             var service = new StorageService();
-            var lastBlock = await service.GetLastBlock();
+            var lastBlock = await service.GetLastMainChainBlock();
 
             // check if this newHighestBlock is part of a longer blockchain
             if (block.BlockNumber > (lastBlock.BlockNumber + 1))
                 await Reorganize(block);
-            else
+            else if (lastBlock != null && lastBlock.BlockNumber != block.BlockNumber)
             {
-                await UpdateBalance(block, new());
+                await UpdateBalance(block);
                 // update the next newHighestBlock identifier
-                lastBlock.NextBlockHash = block.BlockHash;
+                block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
                 await service.UpdateBlock(lastBlock);
                 await service.AddBlock(block);
             }
         }
 
-        private static async Task UpdateBalance(ValcoinBlock block, StorageService service)
+        private static async Task UpdateBalance(ValcoinBlock block)
         {
+            var service = new StorageService();
             myAddress ??= (await service.GetMyWallet()).AddressBytes;
             myPublicKey ??= (await service.GetMyWallet()).PublicKey;
             // add any payments we may have gotten

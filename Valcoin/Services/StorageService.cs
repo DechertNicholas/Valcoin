@@ -20,7 +20,7 @@ namespace Valcoin.Services
         /// Gets the last block in the chain. In the event there are two forks with the same blockNumber, it will return the first one it finds.
         /// </summary>
         /// <returns></returns>
-        public async Task<ValcoinBlock> GetLastBlock()
+        public async Task<ValcoinBlock> GetLastMainChainBlock()
         {
             uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
             if (lastId == 1) // this only happens for the first block after the genesis block
@@ -35,6 +35,12 @@ namespace Valcoin.Services
             return lastMainChainBlock;
         }
 
+        public async Task<List<ValcoinBlock>> GetHighestBlock()
+        {
+            uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
+            return Db.ValcoinBlocks.Where(b => b.BlockNumber == lastId).ToList();
+        }
+
         /// <summary>
         /// Returns a block with the specified hash if it exists.
         /// </summary>
@@ -45,14 +51,15 @@ namespace Valcoin.Services
             return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
         }
 
+        [Obsolete("Use ChainService instead of StorageService.")]
         public async Task AddBlock(ValcoinBlock block)
         {
-            var lastBlock = await GetLastBlock();
-            if (lastBlock != null && lastBlock.BlockNumber != block.BlockNumber) // if we have an orphan incoming, don't update any blocks. Just add and save.
-            {
-                block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
-                Db.Update(lastBlock);
-            }
+            //var lastBlock = await GetLastMainChainBlock();
+            //if (lastBlock != null && lastBlock.BlockNumber != block.BlockNumber) // if we have an orphan incoming, don't update any blocks. Just add and save.
+            //{
+            //    block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
+            //    Db.Update(lastBlock);
+            //}
             Db.Add(block);
             await Db.SaveChangesAsync();
         }

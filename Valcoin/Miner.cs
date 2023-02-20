@@ -116,7 +116,7 @@ namespace Valcoin
         {
             // always get the last block from the db, as the NetworkService may have gotten new information from the network
             var service = new StorageService();
-            var lastBlock = await service.GetLastBlock();
+            var lastBlock = await service.GetLastMainChainBlock();
             if (lastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain

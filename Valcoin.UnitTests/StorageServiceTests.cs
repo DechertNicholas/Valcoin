@@ -88,7 +88,7 @@ namespace Valcoin.UnitTests
 
             await service.AddBlock(orphan);
 
-            var lastBlock = await service.GetLastBlock();
+            var lastBlock = await service.GetLastMainChainBlock();
 
             Assert.True(block2.BlockHash.SequenceEqual(lastBlock.BlockHash));
         }
