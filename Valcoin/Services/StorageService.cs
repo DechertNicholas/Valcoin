@@ -51,7 +51,7 @@ namespace Valcoin.Services
             return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
         }
 
-        [Obsolete("Use ChainService instead of StorageService.")]
+        //[Obsolete("Use ChainService instead of StorageService.")]
         public async Task AddBlock(ValcoinBlock block)
         {
             //var lastBlock = await GetLastMainChainBlock();

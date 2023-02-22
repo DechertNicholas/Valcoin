@@ -48,7 +48,7 @@ namespace Valcoin.IntegrationTests
             fixture.Dispose();
             DatabaseFixture fixture2 = new();
 
-            var verify = fixture2.Context.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == block.BlockNumber);
+            var verify = fixture2.Context.ValcoinBlocks.First(b => b.BlockNumber == block.BlockNumber);
             verify.ComputeAndSetMerkleRoot();
             verify.ComputeAndSetHash();
             Assert.True(block.MerkleRoot

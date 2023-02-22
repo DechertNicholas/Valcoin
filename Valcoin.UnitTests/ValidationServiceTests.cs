@@ -20,7 +20,7 @@ namespace Valcoin.UnitTests
                 .Setup(s => s.GetTx(It.IsAny<string>()))
                 .ReturnsAsync(ValidationServiceShared.ValidCoinbaseOnlyBlock.Transactions[0]);
 
-            var result = ValidationService.ValidateTx(ValidationServiceShared.ValidSpendBlock.Transactions[1], serviceMock.Object);
+            var result = ValidationService.ValidateTx(ValidationServiceShared.ValidSpendBlock.Transactions[1]);//, serviceMock.Object);
 
             Assert.Equal(ValidationService.ValidationCode.Valid, result);
         }
@@ -34,7 +34,7 @@ namespace Valcoin.UnitTests
                 .Setup(s => s.GetTxByInput(It.IsAny<string>(), It.IsAny<int>()))
                 .ReturnsAsync(ValidationServiceShared.ValidCoinbaseOnlyBlock.Transactions[0]);
 
-            var result = ValidationService.ValidateTx(ValidationServiceShared.ValidSpendBlock.Transactions[1], serviceMock.Object);
+            var result = ValidationService.ValidateTx(ValidationServiceShared.ValidSpendBlock.Transactions[1]);//, serviceMock.Object);
 
             Assert.Equal(ValidationService.ValidationCode.Invalid, result);
         }

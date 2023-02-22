@@ -15,12 +15,16 @@ namespace Valcoin.Services
 
         public Task AddBlock(ValcoinBlock block);
 
+        public Task UpdateBlock(ValcoinBlock block);
+
         public Task<Transaction> GetTx(string txId);
         public Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex);
 
         public Task AddTxs(IEnumerable<Transaction> txs);
 
         public Task AddWallet(Wallet wallet);
+
+        public Task UpdateWallet(Wallet wallet);
 
         public Task<Wallet> GetMyWallet();
 

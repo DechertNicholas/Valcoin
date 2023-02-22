@@ -25,10 +25,10 @@ namespace Valcoin.Services
         /// </summary>
         private static List<ValcoinBlock> pendingBlocks = new();
 
-        public static ValidationCode ValidateBlock(ValcoinBlock block, StorageService service)
+        public static ValidationCode ValidateBlock(ValcoinBlock block)
         {
             // first, check if we already have this block to avoid extra work
-            if (service.GetBlock(block.BlockId).Result != null)
+            if (ChainService.GetBlock(block.BlockId).Result != null)
                 return ValidationCode.Existing;
 
             // if we don't already have it, then validate and add it to the database.
@@ -36,7 +36,7 @@ namespace Valcoin.Services
             // before the whole block can be validated however, each transaction must first be validated since one invalid transaction will
             // spoil the whole block.
             // and for each transaction to be validated, we need to ensure we have the whole chain up to this block
-            if (service.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
+            if (ChainService.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
                 block.BlockId != new string('0', 64) &&                               // filter out the genesis hash
                 block.BlockNumber != 1)                                               // filter out the genesis block when paired with the blockhash
             {
@@ -132,14 +132,14 @@ namespace Valcoin.Services
             // validate the rest as non-coinbase transactions
             foreach (var tx in txs.Where(t => txs.IndexOf(t) != 0))
             {
-                if (ValidateTx(tx, new StorageService()) == ValidationCode.Invalid)
+                if (ValidateTx(tx) == ValidationCode.Invalid)
                     return allValidated = ValidationCode.Invalid; // the whole block is bad, exit
             }
 
             return allValidated;
         }
 
-        public static ValidationCode ValidateTx(Transaction tx, IStorageService service)
+        public static ValidationCode ValidateTx(Transaction tx)
         {
             var inputSum = 0;
 
@@ -151,12 +151,12 @@ namespace Valcoin.Services
             foreach (var input in tx.Inputs)
             {
                 // first, check if a tx already exists that references the same input
-                var spend = service.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
+                var spend = ChainService.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
                 if (spend != null)
                     return ValidationCode.Invalid;
 
                 // get the referenced transaction data
-                var prevTx = service.GetTx(input.PreviousTransactionId).Result;
+                var prevTx = ChainService.GetTx(input.PreviousTransactionId).Result;
                 var prevOutput = prevTx.Outputs[input.PreviousOutputIndex];
 
                 // compute the hashes and signatures

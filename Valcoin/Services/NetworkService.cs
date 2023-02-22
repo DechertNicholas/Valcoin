@@ -108,7 +108,7 @@ namespace Valcoin.Services
                 if (data.RootElement.ToString().Contains("MerkleRoot"))
                 {
                     var block = data.Deserialize<ValcoinBlock>();
-                    switch (ValidateBlock(block, new()))
+                    switch (ValidateBlock(block))
                     {
                         case ValidationCode.Miss_Prev_Block:
                             // TODO: Send message to client asking for block.PreviousBlockHash block
@@ -117,7 +117,7 @@ namespace Valcoin.Services
                             throw new NotImplementedException();
 
                         case ValidationCode.Valid:
-                            await service.AddBlock(block);
+                            await ChainService.AddBlock(block, new StorageService());
                             break;
                     }
                 }
@@ -125,7 +125,7 @@ namespace Valcoin.Services
                 {
                     // got a new transaction. Validate it and send it to the miner, if it's active
                     var tx = data.Deserialize<Transaction>();
-                    if (ValidateTx(tx, new StorageService()) == ValidationCode.Valid && Miner.MineBlocks == true)
+                    if (ValidateTx(tx) == ValidationCode.Valid && Miner.MineBlocks == true)
                         Miner.TransactionPool.Add(tx);
                 }
 

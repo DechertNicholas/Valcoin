@@ -115,8 +115,7 @@ namespace Valcoin
         private static async void AssembleCandidateBlock()
         {
             // always get the last block from the db, as the NetworkService may have gotten new information from the network
-            var service = new StorageService();
-            var lastBlock = await service.GetLastMainChainBlock();
+            var lastBlock = await ChainService.GetLastMainChainBlock();
             if (lastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
@@ -173,11 +172,10 @@ namespace Valcoin
         private static async Task CommitBlock()
         {
             // run our own block through validations before saving
-            var valid = ValidationService.ValidateBlock(CandidateBlock, new());
+            var valid = ValidationService.ValidateBlock(CandidateBlock);
             if (valid == ValidationService.ValidationCode.Valid)
             {
-                var service = new StorageService();
-                await service.AddBlock(CandidateBlock);
+                await ChainService.AddBlock(CandidateBlock, new StorageService());
                 await Task.Run(() => NetworkService.RelayData(CandidateBlock));
             }
             else
