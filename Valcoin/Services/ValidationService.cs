@@ -1,4 +1,5 @@
-﻿using Microsoft.UI.Xaml.Documents;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml.Documents;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,8 +28,9 @@ namespace Valcoin.Services
 
         public static ValidationCode ValidateBlock(ValcoinBlock block)
         {
+            var chainService = App.Current.Services.GetService<IChainService>();
             // first, check if we already have this block to avoid extra work
-            if (ChainService.GetBlock(block.BlockId).Result != null)
+            if (chainService.GetBlock(block.BlockId).Result != null)
                 return ValidationCode.Existing;
 
             // if we don't already have it, then validate and add it to the database.
@@ -36,7 +38,7 @@ namespace Valcoin.Services
             // before the whole block can be validated however, each transaction must first be validated since one invalid transaction will
             // spoil the whole block.
             // and for each transaction to be validated, we need to ensure we have the whole chain up to this block
-            if (ChainService.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
+            if (chainService.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
                 block.BlockId != new string('0', 64) &&                               // filter out the genesis hash
                 block.BlockNumber != 1)                                               // filter out the genesis block when paired with the blockhash
             {
@@ -141,6 +143,7 @@ namespace Valcoin.Services
 
         public static ValidationCode ValidateTx(Transaction tx)
         {
+            var chainService = App.Current.Services.GetService<IChainService>();
             var inputSum = 0;
 
             // validate the hash first since it's simple
@@ -151,12 +154,12 @@ namespace Valcoin.Services
             foreach (var input in tx.Inputs)
             {
                 // first, check if a tx already exists that references the same input
-                var spend = ChainService.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
+                var spend = chainService.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
                 if (spend != null)
                     return ValidationCode.Invalid;
 
                 // get the referenced transaction data
-                var prevTx = ChainService.GetTx(input.PreviousTransactionId).Result;
+                var prevTx = chainService.GetTx(input.PreviousTransactionId).Result;
                 var prevOutput = prevTx.Outputs[input.PreviousOutputIndex];
 
                 // compute the hashes and signatures

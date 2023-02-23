@@ -58,7 +58,7 @@ namespace Valcoin.UnitTests
 
             var txs = new List<Transaction>() { coinbase, spend };
 
-            var service = new StorageService();
+            var service = new StorageService(new ValcoinContext());
             await service.AddTxs(txs);
 
             var result = await service.GetTxByInput(doubleSpend.Inputs[0].PreviousTransactionId, doubleSpend.Inputs[0].PreviousOutputIndex);
@@ -68,7 +68,7 @@ namespace Valcoin.UnitTests
         [Fact]
         public async void ReturnsMainChainBlockWhenOrphanExists()
         {
-            var service = new StorageService();
+            var service = new StorageService(new ValcoinContext());
 
             var genesis = new ValcoinBlock(1, new byte[32], 11, DateTime.UtcNow.Ticks, 1);
             genesis.ComputeAndSetMerkleRoot();

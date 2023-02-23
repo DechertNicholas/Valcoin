@@ -40,8 +40,8 @@ namespace Valcoin
         public App()
         {
             this.InitializeComponent();
-            UDPListener = Task.Run(() => NetworkService.StartListener());
             Services = ConfigureServices();
+            UDPListener = Task.Run(() => NetworkService.StartListener());
         }
 
         /// <summary>
@@ -52,6 +52,9 @@ namespace Valcoin
             var services = new ServiceCollection();
 
             services.AddSingleton<IMiningService, MiningService>();
+            services.AddDbContext<ValcoinContext>(ServiceLifetime.Transient);
+            services.AddTransient<IStorageService, StorageService>();
+            services.AddTransient<IChainService, ChainService>();
 
             return services.BuildServiceProvider();
         }

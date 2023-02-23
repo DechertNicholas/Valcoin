@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Numerics;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Valcoin.Models;
 
@@ -29,8 +31,11 @@ namespace Valcoin.Services
         public int HashSpeed { get; set; } = 0;
         public ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
+        public MiningService() { }
+
         public async void Mine()
         {
+            Thread.CurrentThread.Name = "Mining Thread";
             Status = "Mining";
             // setup wallet info
             PopulateWalletInfo();
@@ -56,7 +61,7 @@ namespace Valcoin.Services
 
         public async void PopulateWalletInfo()
         {
-            MyWallet = await new StorageService().GetMyWallet();
+            MyWallet = await App.Current.Services.GetService<IStorageService>().GetMyWallet();
             // this should never be called, but exists as a safety.
             // the application should always open to the wallet page first and generate a wallet if none exist
             if (MyWallet == null) { throw new NullReferenceException("A wallet was not found in the database"); }
@@ -114,7 +119,7 @@ namespace Valcoin.Services
         public async void AssembleCandidateBlock()
         {
             // always get the last block from the db, as the NetworkService may have gotten new information from the network
-            var lastBlock = await ChainService.GetLastMainChainBlock();
+            var lastBlock = await App.Current.Services.GetService<IChainService>().GetLastMainChainBlock();
             if (lastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
@@ -174,8 +179,9 @@ namespace Valcoin.Services
             var valid = ValidationService.ValidateBlock(CandidateBlock);
             if (valid == ValidationService.ValidationCode.Valid)
             {
-                await ChainService.AddBlock(CandidateBlock, new StorageService());
-                await Task.Run(() => NetworkService.RelayData(CandidateBlock));
+                await App.Current.Services.GetService<IChainService>().AddBlock(CandidateBlock);
+                // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
+                await NetworkService.RelayData(CandidateBlock);
             }
             else
             {

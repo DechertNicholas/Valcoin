@@ -27,9 +27,8 @@ namespace Valcoin.Services
 
         public static async void StartListener()
         {
-            var service = new StorageService();
             Thread.CurrentThread.Name = "UDP Listener";
-            clients = await service.GetClients();
+            clients = await App.Current.Services.GetService<IStorageService>().GetClients();
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
@@ -99,7 +98,6 @@ namespace Valcoin.Services
         public static async Task ParseData(byte[] result, string clientAddress, int clientPort)
         {
             Thread.CurrentThread.Name = "Network Data Parser";
-            var service = new StorageService();
             try
             {
                 // try to parse the raw data as json, catching if the data isn't json
@@ -118,7 +116,7 @@ namespace Valcoin.Services
                             throw new NotImplementedException();
 
                         case ValidationCode.Valid:
-                            await ChainService.AddBlock(block, new StorageService());
+                            await App.Current.Services.GetService<IChainService>().AddBlock(block);
                             break;
                     }
                 }
@@ -131,7 +129,7 @@ namespace Valcoin.Services
                 }
 
                 // regardless of validation outcome, update the client data
-                await ProcessClient(clientAddress, clientPort, service);
+                await ProcessClient(clientAddress, clientPort);
             }
             catch (Exception ex)
             {
@@ -145,8 +143,9 @@ namespace Valcoin.Services
             }
         }
 
-        private static async Task ProcessClient(string clientAddress, int clientPort, StorageService service)
+        private static async Task ProcessClient(string clientAddress, int clientPort)
         {
+            var service = App.Current.Services.GetService<IStorageService>();
             // if all was successful, add the client to the clients list if not present already
             //var clientEndpoint = new IPEndPoint(clientAddress, clientPort);
             var client = clients.Where(c => c.Address == clientAddress)

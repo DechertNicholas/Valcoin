@@ -13,7 +13,9 @@ namespace Valcoin.Services
         // note, don't use AddAsync
         // https://learn.microsoft.com/en-us/dotnet/api/microsoft.entityframeworkcore.dbset-1.addasync?view=efcore-7.0#remarks
 
-        protected ValcoinContext Db { get; private set; } = new ValcoinContext();
+        protected ValcoinContext Db { get; private set; }
+
+        public StorageService(ValcoinContext context) { Db = context; }
         
 
         /// <summary>
@@ -117,9 +119,9 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        public int GetMyBalance()
+        public async Task<int> GetMyBalance()
         {
-            return Db.Wallets.First().Balance;
+            return (await Db.Wallets.FirstAsync()).Balance;
         }
 
         public async Task AddClient(Client client)
