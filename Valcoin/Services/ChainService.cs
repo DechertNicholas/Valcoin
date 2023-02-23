@@ -150,9 +150,9 @@ namespace Valcoin.Services
              */
 
             // stop the miner, if active
-            var previousMinerStatus = Miner.MineBlocks;
-            Miner.MineBlocks = false;
-            Miner.Status = "Reorganizing Chain";
+            var previousMinerStatus = App.Current.Services.GetService<IMiningService>().MineBlocks;
+            App.Current.Services.GetService<IMiningService>().MineBlocks = false;
+            App.Current.Services.GetService<IMiningService>().Status = "Reorganizing Chain";
 
             var previousOrphan = await service.GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
             // the branch block is the block which had two different block referring back to it (the main chain and the orphan chain)
@@ -178,10 +178,10 @@ namespace Valcoin.Services
                     .ForEach(x => txsToReRelease.Remove(x)));
 
             // add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
-            txsToReRelease.ForEach(t => Miner.TransactionPool
+            txsToReRelease.ForEach(t => App.Current.Services.GetService<IMiningService>().TransactionPool
                 .Where(p => p.TransactionId != t.TransactionId)
                 .ToList()
-                .ForEach(r => Miner.TransactionPool.Add(r)));
+                .ForEach(r => App.Current.Services.GetService<IMiningService>().TransactionPool.Add(r)));
 
             // update our branch block
             await service.UpdateBlock(branchBlock);
@@ -198,8 +198,8 @@ namespace Valcoin.Services
             // restart the miner if it was active
             if (previousMinerStatus)
             {
-                Miner.MineBlocks = previousMinerStatus;
-                Miner.Status = "Mining";
+                App.Current.Services.GetService<IMiningService>().MineBlocks = previousMinerStatus;
+                App.Current.Services.GetService<IMiningService>().Status = "Mining";
             }
         }
     }

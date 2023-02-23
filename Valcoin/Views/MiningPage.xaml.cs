@@ -26,7 +26,7 @@ using Windows.Foundation.Collections;
 namespace Valcoin.Views
 {
     /// <summary>
-    /// The page dedicated to controlling the <see cref="Miner"/> and viewing related mining status.
+    /// The page dedicated to controlling the <see cref="MiningService"/> and viewing related mining status.
     /// </summary>
     public sealed partial class MiningPage : Page
     {

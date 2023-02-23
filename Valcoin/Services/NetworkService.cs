@@ -11,6 +11,7 @@ using System.Collections;
 using Valcoin.Models;
 using System.Threading;
 using static Valcoin.Services.ValidationService;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Valcoin.Services
 {
@@ -125,8 +126,8 @@ namespace Valcoin.Services
                 {
                     // got a new transaction. Validate it and send it to the miner, if it's active
                     var tx = data.Deserialize<Transaction>();
-                    if (ValidateTx(tx) == ValidationCode.Valid && Miner.MineBlocks == true)
-                        Miner.TransactionPool.Add(tx);
+                    if (ValidateTx(tx) == ValidationCode.Valid && App.Current.Services.GetService<IMiningService>().MineBlocks == true)
+                        App.Current.Services.GetService<IMiningService>().TransactionPool.Add(tx);
                 }
 
                 // regardless of validation outcome, update the client data

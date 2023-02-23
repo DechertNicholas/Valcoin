@@ -1,9 +1,11 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
+using Valcoin.Services;
 
 namespace Valcoin.ViewModels
 {
@@ -33,14 +35,14 @@ namespace Valcoin.ViewModels
         [RelayCommand]
         public void InvokeMinerStop()
         {
-            Miner.MineBlocks = false;
+            App.Current.Services.GetService<IMiningService>().MineBlocks = false;
             MinerWorker.CancelAsync();
         }
 
         private void BeginMining(object sender, DoWorkEventArgs e)
         {
-            Miner.MineBlocks = true;
-            Miner.Mine();
+            App.Current.Services.GetService<IMiningService>().MineBlocks = true;
+            App.Current.Services.GetService<IMiningService>().Mine();
         }
 
         private async Task InvokeUpdateHashSpeedRoutine()
@@ -49,7 +51,7 @@ namespace Valcoin.ViewModels
             {
                 // check the current hash speed every second
                 await Task.Delay(1000);
-                HashSpeed = Miner.HashSpeed.ToString();
+                HashSpeed = App.Current.Services.GetService<IMiningService>().HashSpeed.ToString();
             }
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = "0";
