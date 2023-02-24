@@ -22,7 +22,9 @@ namespace Valcoin.Services
         /// Gets the last block in the chain. In the event there are two forks with the same blockNumber, it will return the first one it finds.
         /// </summary>
         /// <returns></returns>
-        public async Task<ValcoinBlock> GetLastMainChainBlock()
+#nullable enable
+        public async Task<ValcoinBlock>? GetLastMainChainBlock()
+#nullable disable
         {
             uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
             if (lastId == 1) // this only happens for the first block after the genesis block

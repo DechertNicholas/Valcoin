@@ -18,31 +18,36 @@ namespace Valcoin.Services
     {
         private byte[] myAddress;
         private byte[] myPublicKey;
-        private IStorageService storageService;
+        private readonly IStorageService storageService;
+        private readonly IMiningService miningService;
 
-        public ChainService(IStorageService storageService) { this.storageService = storageService; }
+        public ChainService(IStorageService storageService, IMiningService miningService)
+        {
+            this.storageService = storageService;
+            this.miningService = miningService;
+        }
 
         #region ProxyMethods
         // these are just proxy methods for the storage service to ensure that all chain-related operations can be performed through the chain service
 
         public async Task<ValcoinBlock> GetLastMainChainBlock()
         {
-            return await App.Current.Services.GetService<IStorageService>().GetLastMainChainBlock();
+            return await storageService.GetLastMainChainBlock();
         }
 
         public async Task<ValcoinBlock> GetBlock(string blockId)
         {
-            return await App.Current.Services.GetService<IStorageService>().GetBlock(blockId);
+            return await storageService.GetBlock(blockId);
         }
 
         public async Task<Transaction> GetTx(string transactionId)
         {
-            return await App.Current.Services.GetService<IStorageService>().GetTx(transactionId);
+            return await storageService.GetTx(transactionId);
         }
 
         public async Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex)
         {
-            return await App.Current.Services.GetService<IStorageService>().GetTxByInput(previousTransactionId, outputIndex);
+            return await storageService.GetTxByInput(previousTransactionId, outputIndex);
         }
 
         #endregion
@@ -153,9 +158,9 @@ namespace Valcoin.Services
              */
 
             // stop the miner, if active
-            var previousMinerStatus = App.Current.Services.GetService<IMiningService>().MineBlocks;
-            App.Current.Services.GetService<IMiningService>().MineBlocks = false;
-            App.Current.Services.GetService<IMiningService>().Status = "Reorganizing Chain";
+            var previousMinerStatus = miningService.MineBlocks;
+            miningService.MineBlocks = false;
+            miningService.Status = "Reorganizing Chain";
 
             var previousOrphan = await storageService.GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
             // the branch block is the block which had two different block referring back to it (the main chain and the orphan chain)
@@ -181,10 +186,10 @@ namespace Valcoin.Services
                     .ForEach(x => txsToReRelease.Remove(x)));
 
             // add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
-            txsToReRelease.ForEach(t => App.Current.Services.GetService<IMiningService>().TransactionPool
+            txsToReRelease.ForEach(t => miningService.TransactionPool
                 .Where(p => p.TransactionId != t.TransactionId)
                 .ToList()
-                .ForEach(r => App.Current.Services.GetService<IMiningService>().TransactionPool.Add(r)));
+                .ForEach(r => miningService.TransactionPool.Add(r)));
 
             // update our branch block
             await storageService.UpdateBlock(branchBlock);
@@ -201,8 +206,8 @@ namespace Valcoin.Services
             // restart the miner if it was active
             if (previousMinerStatus)
             {
-                App.Current.Services.GetService<IMiningService>().MineBlocks = previousMinerStatus;
-                App.Current.Services.GetService<IMiningService>().Status = "Mining";
+                miningService.MineBlocks = previousMinerStatus;
+                miningService.Status = "Mining";
             }
         }
     }
