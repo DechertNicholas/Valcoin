@@ -3,7 +3,7 @@ using Valcoin.Models;
 
 namespace Valcoin.Services
 {
-    public class ValcoinContext : DbContext, IContext
+    public class ValcoinContext : DbContext
     {
         public DbSet<ValcoinBlock> ValcoinBlocks { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
