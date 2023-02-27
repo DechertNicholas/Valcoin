@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,50 +17,72 @@ namespace Valcoin.Services
     /// </summary>
     public class ChainService : IChainService
     {
+        protected ValcoinContext Db { get; private set; }
+
         private byte[] myAddress;
         private byte[] myPublicKey;
-        private readonly IStorageService storageService;
+        //private readonly IStorageService storageService;
         private readonly IMiningService miningService;
 
-        public ChainService(IStorageService storageService, IMiningService miningService)
+        public ChainService(IMiningService miningService, ValcoinContext context)
         {
-            this.storageService = storageService;
+            //this.storageService = storageService;
             this.miningService = miningService;
+            this.Db = context;
         }
 
-        #region ProxyMethods
-        // these are just proxy methods for the storage service to ensure that all chain-related operations can be performed through the chain service
-
-        public async Task<ValcoinBlock> GetLastMainChainBlock()
+        public virtual async Task<ValcoinBlock> GetLastMainChainBlock()
         {
-            return await storageService.GetLastMainChainBlock();
+            uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
+            if (lastId == 1) // this only happens for the first block after the genesis block
+                return Db.ValcoinBlocks.First(b => b.BlockNumber == lastId);
+
+            var lastMainChainBlock = Db.ValcoinBlocks
+                .Where(b => Db.ValcoinBlocks
+                    .Where(b2 => b2.BlockNumber == lastId - 1)
+                    .FirstOrDefault().NextBlockHash.SequenceEqual(b.BlockHash))
+                .FirstOrDefault();
+
+            return lastMainChainBlock;
         }
 
         public async Task<ValcoinBlock> GetBlock(string blockId)
         {
-            return await storageService.GetBlock(blockId);
+            return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
         }
 
         public async Task<Transaction> GetTx(string transactionId)
         {
-            return await storageService.GetTx(transactionId);
+            return await Db.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId);
         }
 
         public async Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex)
         {
-            return await storageService.GetTxByInput(previousTransactionId, outputIndex);
+            return await Db.Transactions
+                .Where(t => t.Inputs                                                // iterate over transactions where the transaction has an input,
+                    .Where(i => i.PreviousTransactionId == previousTransactionId)   // and that input references the previous txId,
+                    .Where(i => i.PreviousOutputIndex == outputIndex)               // and the same outputIndex,
+                    .FirstOrDefault().TransactionId == t.TransactionId)             // get that Input's transaction id, and match it to the transactions list
+                .FirstOrDefaultAsync();                                             // and return that transaction
         }
 
-        #endregion
+        public async Task AddTxs(IEnumerable<Transaction> transactions)
+        {
+            foreach (Transaction tx in transactions)
+            {
+                Db.Add(tx);
+            }
+            await Db.SaveChangesAsync();
+        }
 
         public async Task AddBlock(ValcoinBlock block)
         {
-            var lastBlock = await storageService.GetLastMainChainBlock();
+            var lastBlock = await GetLastMainChainBlock();
 
             if (lastBlock == null)
             {
                 // this is the genesis block being added
-                await storageService.AddBlock(block);
+                await CommitBlock(block);
                 return;
             }
 
@@ -74,20 +97,37 @@ namespace Valcoin.Services
                 await UpdateBalance(block);
                 // update the next newHighestBlock identifier
                 block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
-                await storageService.UpdateBlock(lastBlock);
-                await storageService.AddBlock(block);
+                await UpdateBlock(lastBlock);
+                await CommitBlock(block);
             }
             else
             {
                 // this is some other block from the network, possibly an orphan or some other block we requested
-                await storageService.AddBlock(block);
+                await CommitBlock(block);
             }
+        }
+
+        public async Task UpdateBlock(ValcoinBlock block)
+        {
+            Db.Update(block);
+            await Db.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Saves a block to the database raw, without any additional checking or changes.
+        /// </summary>
+        /// <param name="block"></param>
+        /// <returns></returns>
+        public virtual async Task CommitBlock(ValcoinBlock block)
+        {
+            Db.Add(block);
+            await Db.SaveChangesAsync();
         }
 
         private async Task UpdateBalance(ValcoinBlock block)
         {
-            myAddress ??= (await storageService.GetMyWallet()).AddressBytes;
-            myPublicKey ??= (await storageService.GetMyWallet()).PublicKey;
+            myAddress ??= (await GetMyWallet()).AddressBytes;
+            myPublicKey ??= (await GetMyWallet()).PublicKey;
             // add any payments we may have gotten
             block.Transactions
                 .ForEach(t => t.Outputs
@@ -105,18 +145,57 @@ namespace Valcoin.Services
                     .ForEach(async i => await SubtractFromBalance(t.Outputs.Sum(o => o.Amount))));
         }
 
+        public async Task AddWallet(Wallet wallet)
+        {
+            Db.Add(wallet);
+            await Db.SaveChangesAsync();
+        }
+
+        public async Task<Wallet> GetMyWallet()
+        {
+            return await Db.Wallets.FirstOrDefaultAsync(w => w.PublicKey != null);
+        }
+
+        public async Task UpdateWallet(Wallet wallet)
+        {
+            Db.Wallets.Update(wallet);
+            await Db.SaveChangesAsync();
+        }
+
+        public async Task<int> GetMyBalance()
+        {
+            return (await Db.Wallets.FirstAsync()).Balance;
+        }
+
         private async Task AddToBalance(int payment)
         {
-            var wallet = await storageService.GetMyWallet();
+            var wallet = await GetMyWallet();
             wallet.Balance += payment;
-            await storageService.UpdateWallet(wallet);
+            await UpdateWallet(wallet);
         }
 
         private async Task SubtractFromBalance(int payment)
         {
-            var wallet = await storageService.GetMyWallet();
+            var wallet = await GetMyWallet();
             wallet.Balance -= payment;
-            await storageService.UpdateWallet(wallet);
+            await UpdateWallet(wallet);
+        }
+
+        public async Task AddClient(Client client)
+        {
+            Db.Add(client);
+            await Db.SaveChangesAsync();
+        }
+
+        public async Task<List<Client>> GetClients()
+        {
+            return await Db.Clients.ToListAsync();
+        }
+
+        public async Task UpdateClient(Client client)
+        {
+            Db.Update(client);
+            await Db.SaveChangesAsync();
         }
 
         /// <summary>
@@ -162,11 +241,11 @@ namespace Valcoin.Services
             miningService.MineBlocks = false;
             miningService.Status = "Reorganizing Chain";
 
-            var previousOrphan = await storageService.GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
+            var previousOrphan = await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
             // the branch block is the block which had two different block referring back to it (the main chain and the orphan chain)
-            var branchBlock = await storageService.GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
+            var branchBlock = await GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
             // the new orphan is the block that was previously in the main chain, that we are now disconnecting
-            var newOrphan = await storageService.GetBlock(Convert.ToHexString(branchBlock.NextBlockHash));
+            var newOrphan = await GetBlock(Convert.ToHexString(branchBlock.NextBlockHash));
             var txsToReRelease = newOrphan.Transactions;
 
             // now, reorganize the structure
@@ -192,20 +271,21 @@ namespace Valcoin.Services
                 .ForEach(r => miningService.TransactionPool.Add(r)));
 
             // update our branch block
-            await storageService.UpdateBlock(branchBlock);
+            await UpdateBlock(branchBlock);
 
             // the previous orphan was already in the database, so we only need to update the NextBlockHash property
             previousOrphan.NextBlockHash = newHighestBlock.BlockHash;
-            await storageService.UpdateBlock(previousOrphan);
+            await UpdateBlock(previousOrphan);
             // the new orphan block is now an orphan (because branchBlock does not point to it) and there is no need
             // to perform any operations on it (other than having gotten the list of transactions).
 
             // now add the newHighestBlock
-            await storageService.AddBlock(newHighestBlock);
+            await CommitBlock(newHighestBlock);
 
             // restart the miner if it was active
             if (previousMinerStatus)
             {
+                // TODO: This won't actually restart the miner. Change this.
                 miningService.MineBlocks = previousMinerStatus;
                 miningService.Status = "Mining";
             }

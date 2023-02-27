@@ -61,7 +61,7 @@ namespace Valcoin.Services
 
         public async void PopulateWalletInfo()
         {
-            MyWallet = await App.Current.Services.GetService<IStorageService>().GetMyWallet();
+            MyWallet = await App.Current.Services.GetService<IChainService>().GetMyWallet();
             // this should never be called, but exists as a safety.
             // the application should always open to the wallet page first and generate a wallet if none exist
             if (MyWallet == null) { throw new NullReferenceException("A wallet was not found in the database"); }

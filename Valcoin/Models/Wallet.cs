@@ -120,7 +120,7 @@ namespace Valcoin.Models
 
         public async void UpdateBalance()
         {
-            Balance = await App.Current.Services.GetService<IStorageService>().GetMyBalance();
+            Balance = await App.Current.Services.GetService<IChainService>().GetMyBalance();
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Valcoin.ViewModels
 
         public async void SetWalletAsync()
         {
-            var service = App.Current.Services.GetService<IStorageService>();
+            var service = App.Current.Services.GetService<IChainService>();
             if ((MyWallet = await service.GetMyWallet()) == null)
             {
                 MyWallet = Wallet.Create();
@@ -45,7 +45,7 @@ namespace Valcoin.ViewModels
             Thread.CurrentThread.Name = "Wallet Balance Updater";
             while (true)
             {
-                TheDispatcher.TryEnqueue(async () => Balance = await App.Current.Services.GetService<IStorageService>().GetMyBalance());
+                TheDispatcher.TryEnqueue(async () => Balance = await App.Current.Services.GetService<IChainService>().GetMyBalance());
                 Thread.Sleep(1000 * 5); // run every 5 seconds
             }
         }

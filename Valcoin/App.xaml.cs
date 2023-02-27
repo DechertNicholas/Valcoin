@@ -53,7 +53,7 @@ namespace Valcoin
 
             services.AddSingleton<IMiningService, MiningService>();
             services.AddDbContext<ValcoinContext>(ServiceLifetime.Transient);
-            services.AddTransient<IStorageService, StorageService>();
+            //services.AddTransient<IStorageService, StorageService>();
             services.AddTransient<IChainService, ChainService>();
 
             return services.BuildServiceProvider();

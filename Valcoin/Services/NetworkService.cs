@@ -28,7 +28,7 @@ namespace Valcoin.Services
         public static async void StartListener()
         {
             Thread.CurrentThread.Name = "UDP Listener";
-            clients = await App.Current.Services.GetService<IStorageService>().GetClients();
+            clients = await App.Current.Services.GetService<IChainService>().GetClients();
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
@@ -145,7 +145,7 @@ namespace Valcoin.Services
 
         private static async Task ProcessClient(string clientAddress, int clientPort)
         {
-            var service = App.Current.Services.GetService<IStorageService>();
+            var service = App.Current.Services.GetService<IChainService>();
             // if all was successful, add the client to the clients list if not present already
             //var clientEndpoint = new IPEndPoint(clientAddress, clientPort);
             var client = clients.Where(c => c.Address == clientAddress)

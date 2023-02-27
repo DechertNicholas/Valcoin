@@ -1,7 +1,9 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
+using Moq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using Valcoin.Models;
@@ -11,13 +13,17 @@ namespace Valcoin.UnitTests
 {
     public class ChainServiceTests
     {
-        private readonly Mock<IStorageService> storageMock;
+        /// <summary>
+        /// This mock mainly exists to satisfy contructor arguments, and normally won't have any features mocked
+        /// </summary>
+        private readonly Mock<ValcoinContext> contextMock;
         private readonly Mock<IMiningService> miningMock;
 
         public ChainServiceTests()
         {
-            storageMock = new Mock<IStorageService>();
+            contextMock = new Mock<ValcoinContext>();
             miningMock = new Mock<IMiningService>();
+            //chainServiceMock = new Mock<IChainService>();
         }
 
         private static ValcoinBlock GetExampleBlock()
@@ -37,61 +43,28 @@ namespace Valcoin.UnitTests
             );
         }
 
-        [Fact]
-        public async void CallsGetLastMainChainBlock()
-        {
-            storageMock.Setup(s => s.GetLastMainChainBlock()).ReturnsAsync(GetExampleBlock());
-
-            var result = await new ChainService(storageMock.Object, miningMock.Object).GetLastMainChainBlock();
-
-            Assert.Equal(1, storageMock.Invocations.Count);
-        }
-
-        [Fact]
-        public async void CallsGetBlock()
-        {
-            storageMock.Setup(s => s.GetBlock(It.IsAny<string>())).ReturnsAsync(GetExampleBlock());
-
-            var result = await new ChainService(storageMock.Object, miningMock.Object).GetBlock("test");
-
-            Assert.Equal(1, storageMock.Invocations.Count);
-        }
-
-        [Fact]
-        public async void CallsGetTx()
-        {
-            storageMock.Setup(s => s.GetTx(It.IsAny<string>())).ReturnsAsync(GetExampleTransaction());
-
-            var result = await new ChainService(storageMock.Object, miningMock.Object).GetTx("test");
-
-            Assert.Equal(1, storageMock.Invocations.Count);
-        }
-
-        [Fact]
-        public async void CallsGetTxByInput()
-        {
-            storageMock.Setup(s => s.GetTxByInput(It.IsAny<string>(), It.IsAny<int>())).ReturnsAsync(GetExampleTransaction());
-
-            var result = await new ChainService(storageMock.Object, miningMock.Object).GetTxByInput("test", 0);
-
-            Assert.Equal(1, storageMock.Invocations.Count);
-        }
 
         [Fact]
         public async void AddBlockAddsBlockWhenIsFirstBlock()
         {
-            storageMock.Setup(s => s.GetLastMainChainBlock()).ReturnsAsync(default(ValcoinBlock));
-            storageMock.Setup(s => s.AddBlock(It.IsAny<ValcoinBlock>()));
+            // build a ChainService mock here so that we can mock calls to other functions in the same object
+            var chainServiceMock = new Mock<ChainService>(miningMock.Object, contextMock.Object);
+
+            // we aren't testing these methods, so mock them
+            chainServiceMock.Setup(m => m.GetLastMainChainBlock()).ReturnsAsync((ValcoinBlock?)null);
+            chainServiceMock.Setup(m => m.CommitBlock(It.IsAny<ValcoinBlock>()));
+            
 
             // when verifying calls, the reference object must be the same
             var block = GetExampleBlock();
 
-            await new ChainService(storageMock.Object, miningMock.Object).AddBlock(block);
+            await chainServiceMock.Object.AddBlock(block);
 
-            storageMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
-            storageMock.Verify(m => m.AddBlock(block), Times.Once);
-            storageMock.VerifyNoOtherCalls();
+            chainServiceMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
+            chainServiceMock.Verify(m => m.CommitBlock(block), Times.Once);
+            chainServiceMock.VerifyNoOtherCalls();
             miningMock.VerifyNoOtherCalls();
+            contextMock.VerifyNoOtherCalls();
         }
     }
 }
