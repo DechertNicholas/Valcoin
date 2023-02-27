@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Documents;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -25,6 +26,10 @@ namespace Valcoin.Services
         /// All blocks handed to the ValidationService which were unable to be validated (but are not invalid). Normally pending network operations.
         /// </summary>
         private static List<ValcoinBlock> pendingBlocks = new();
+        private static IChainService AppChainService
+        {
+            get => App.Current.Services.GetService<IChainService>();
+        }
 
         public static ValidationCode ValidateBlock(ValcoinBlock block)
         {
@@ -141,9 +146,18 @@ namespace Valcoin.Services
             return allValidated;
         }
 
+        /// <summary>
+        /// Overload method to keep ease of use, but allow testability of code.
+        /// </summary>
+        /// <param name="tx">The transaction to validate</param>
+        /// <returns>The <see cref="ValidationCode"/></returns>
         public static ValidationCode ValidateTx(Transaction tx)
         {
-            var chainService = App.Current.Services.GetService<IChainService>();
+            return ValidateTx(tx, App.Current.Services.GetService<IChainService>());
+        }
+
+        public static ValidationCode ValidateTx(Transaction tx, IChainService chainService)
+        {
             var inputSum = 0;
 
             // validate the hash first since it's simple
