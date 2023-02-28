@@ -1,13 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Moq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Net.Sockets;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Moq;
 using Valcoin.Models;
 using Valcoin.Services;
 
@@ -45,40 +36,24 @@ namespace Valcoin.UnitTests
 
 
         [Fact]
-        public async void AddBlockAddsBlockWhenIsFirstBlock()
+        public async void AddBlockCommitsBlockWhenIsFirstBlock()
         {
             // build a ChainService mock here so that we can mock calls to other functions in the same object
-            //var chainServiceMock = new Mock<ChainService>(miningMock.Object, contextMock.Object);
+            var chainServiceMock = new Mock<ChainService>(miningMock.Object, contextMock.Object);
 
             // we aren't testing these methods, so mock them
-            //chainServiceMock.Setup(m => m.GetLastMainChainBlock()).ReturnsAsync((ValcoinBlock?)null);
-            //chainServiceMock.Setup(m => m.CommitBlock(It.IsAny<ValcoinBlock>()));
-            //contextMock.Setup(c => c.ValcoinBlocks.MaxAsync(It.IsAny<Expression<Func<ValcoinBlock?, ValcoinBlock?>>>(), default)).ReturnsAsync((ValcoinBlock?)null);
-            //contextMock.Setup(c => c.ValcoinBlocks.Where(It.IsAny<Expression<Func<ValcoinBlock?, bool>>>())).Returns(IQueryable<ValcoinBlock>(null));
-
-            // setup LINQ mocks
-            var data = new List<ValcoinBlock>().AsQueryable();
-            var mockSet = new Mock<DbSet<ValcoinBlock>>();
-            mockSet.As<IQueryable<ValcoinBlock>>().Setup(m => m.Provider).Returns(data.Provider);
-            mockSet.As<IQueryable<ValcoinBlock>>().Setup(m => m.Expression).Returns(data.Expression);
-            mockSet.As<IQueryable<ValcoinBlock>>().Setup(m => m.ElementType).Returns(data.ElementType);
-            mockSet.As<IQueryable<ValcoinBlock>>().Setup(m => m.GetEnumerator()).Returns(() => data.GetEnumerator());
-
-            // the context will return an empty list
-            // TODO: This is broken
-            contextMock.Setup(c => c.ValcoinBlocks).Returns(mockSet.Object);
+            chainServiceMock.Setup(m => m.GetLastMainChainBlock()).ReturnsAsync((ValcoinBlock?)null);
+            chainServiceMock.Setup(m => m.CommitBlock(It.IsAny<ValcoinBlock>()));
 
             // when verifying calls, the reference object must be the same
             var block = GetExampleBlock();
 
-            await new ChainService(miningMock.Object, contextMock.Object).AddBlock(block);
+            await chainServiceMock.Object.AddBlock(block);
 
-            //await new ChainService(miningMock.Object, contextMock.Object).AddBlock(block);
-
-            //storageMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
-            //storageMock.Verify(m => m.AddBlock(block), Times.Once);
-            //storageMock.VerifyNoOtherCalls();
-            //miningMock.VerifyNoOtherCalls();
+            chainServiceMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
+            chainServiceMock.Verify(m => m.CommitBlock(block), Times.Once);
+            chainServiceMock.VerifyNoOtherCalls();
+            miningMock.VerifyNoOtherCalls();
         }
     }
 }

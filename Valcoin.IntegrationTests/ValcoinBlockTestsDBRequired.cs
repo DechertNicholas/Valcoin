@@ -18,10 +18,11 @@ namespace Valcoin.IntegrationTests
         public ValcoinBlockTestsDBRequired(DatabaseFixture fixture)
         {
             this.fixture = fixture;
+            Console.WriteLine("BlockTests");
         }
 
         [Fact]
-        public async void VerifyReadWriteToDB()
+        public void VerifyReadWriteToDB()
         {
             ValcoinBlock block = new(1, new byte[32], 0, DateTime.UtcNow.Ticks, 22);
 
@@ -42,21 +43,16 @@ namespace Valcoin.IntegrationTests
 
             block.ComputeAndSetHash();
             fixture.Context.Add(block);
-            await fixture.Context.SaveChangesAsync();
+            fixture.Context.SaveChanges();
 
-            // dispose of the old fixture because issues were identified between loading models between one fixture and another
-            fixture.Dispose();
-            DatabaseFixture fixture2 = new();
-
-            var verify = fixture2.Context.ValcoinBlocks.First(b => b.BlockNumber == block.BlockNumber);
+            var verify = fixture.Context.ValcoinBlocks.First(b => b.BlockId == block.BlockId);
             verify.ComputeAndSetMerkleRoot();
             verify.ComputeAndSetHash();
-            Assert.True(block.MerkleRoot
-                .SequenceEqual(verify.MerkleRoot));
+            Assert.True(block.MerkleRoot.SequenceEqual(verify.MerkleRoot));
 
             // assert equal after re-computing the block's hash
-            Assert.True(block.BlockHash
-                .SequenceEqual(verify.BlockHash));
+            var hashEq = block.BlockHash.SequenceEqual(verify.BlockHash);
+            Assert.True(hashEq);
         }
     }
 }

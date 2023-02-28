@@ -37,13 +37,21 @@ namespace Valcoin.Services
             if (lastId == 1) // this only happens for the first block after the genesis block
                 return Db.ValcoinBlocks.First(b => b.BlockNumber == lastId);
 
-            var lastMainChainBlock = Db.ValcoinBlocks
-                .Where(b => Db.ValcoinBlocks
-                    .Where(b2 => b2.BlockNumber == lastId - 1)
-                    .FirstOrDefault().NextBlockHash.SequenceEqual(b.BlockHash))
-                .FirstOrDefault();
+            foreach (var b in Db.ValcoinBlocks)
+            {
+                if (b.BlockNumber == lastId)
+                {
+                    foreach (var b2 in Db.ValcoinBlocks)
+                    {
+                        if (b2.NextBlockHash.SequenceEqual(b.BlockHash))
+                        {
+                            return b;
+                        }
+                    }
+                }
+            }
 
-            return lastMainChainBlock;
+            throw new InvalidOperationException("No block was found that met the criteria");
         }
 
         public async Task<ValcoinBlock> GetBlock(string blockId)
@@ -86,13 +94,9 @@ namespace Valcoin.Services
                 return;
             }
 
-            // check if this newHighestBlock is part of a longer blockchain
-            if (block.BlockNumber > (lastBlock.BlockNumber + 1))
-                await Reorganize(block);
-
             // add a normal block to the chain. check that the lastBlock's number is one less than the incoming, and that the
             // new block references the last block
-            else if (lastBlock.BlockNumber == block.BlockNumber - 1 && lastBlock.BlockHash.SequenceEqual(block.BlockHash))
+            if (lastBlock.BlockNumber == block.BlockNumber - 1 && lastBlock.BlockHash.SequenceEqual(block.BlockHash))
             {
                 await UpdateBalance(block);
                 // update the next newHighestBlock identifier
@@ -100,6 +104,9 @@ namespace Valcoin.Services
                 await UpdateBlock(lastBlock);
                 await CommitBlock(block);
             }
+            // check if this newHighestBlock is part of a longer blockchain
+            else if (block.PreviousBlockHash != lastBlock.BlockHash && block.BlockNumber == lastBlock.BlockNumber + 1)
+                await Reorganize(block);
             else
             {
                 // this is some other block from the network, possibly an orphan or some other block we requested
@@ -138,8 +145,8 @@ namespace Valcoin.Services
             // subtract any payments we spent
             block.Transactions
                 .Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // filter out coinbase (this transaction is verified)
-            .ToList()
-            .ForEach(t => t.Inputs
+                .ToList()
+                .ForEach(t => t.Inputs
                     .Where(i => i.UnlockerPublicKey.SequenceEqual(myPublicKey) == true)
                     .ToList()
                     .ForEach(async i => await SubtractFromBalance(t.Outputs.Sum(o => o.Amount))));
