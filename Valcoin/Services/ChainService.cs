@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
@@ -21,14 +22,10 @@ namespace Valcoin.Services
 
         private byte[] myAddress;
         private byte[] myPublicKey;
-        //private readonly IStorageService storageService;
-        private readonly IMiningService miningService;
 
-        public ChainService(IMiningService miningService, ValcoinContext context)
+        public ChainService(ValcoinContext context)
         {
-            //this.storageService = storageService;
-            this.miningService = miningService;
-            this.Db = context;
+            Db = context;
         }
 
         public virtual async Task<ValcoinBlock> GetLastMainChainBlock()
@@ -51,7 +48,8 @@ namespace Valcoin.Services
                 }
             }
 
-            throw new InvalidOperationException("No block was found that met the criteria");
+            // no blocks were found
+            return (ValcoinBlock)null;
         }
 
         public async Task<ValcoinBlock> GetBlock(string blockId)
@@ -87,16 +85,17 @@ namespace Valcoin.Services
         {
             var lastBlock = await GetLastMainChainBlock();
 
-            if (lastBlock == null)
+            if (lastBlock == null && block.BlockNumber == 1)
             {
                 // this is the genesis block being added
+                await UpdateBalance(block);
                 await CommitBlock(block);
                 return;
             }
 
             // add a normal block to the chain. check that the lastBlock's number is one less than the incoming, and that the
             // new block references the last block
-            if (lastBlock.BlockNumber == block.BlockNumber - 1 && lastBlock.BlockHash.SequenceEqual(block.BlockHash))
+            if (lastBlock.BlockNumber == block.BlockNumber - 1 && lastBlock.BlockHash.SequenceEqual(block.PreviousBlockHash))
             {
                 await UpdateBalance(block);
                 // update the next newHighestBlock identifier
@@ -243,11 +242,6 @@ namespace Valcoin.Services
              * By having this method called, we already know the new block has been verified and is from the orphan chain, so we have no need to re-verify here.
              */
 
-            // stop the miner, if active
-            var previousMinerStatus = miningService.MineBlocks;
-            miningService.MineBlocks = false;
-            miningService.Status = "Reorganizing Chain";
-
             var previousOrphan = await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
             // the branch block is the block which had two different block referring back to it (the main chain and the orphan chain)
             var branchBlock = await GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
@@ -272,10 +266,10 @@ namespace Valcoin.Services
                     .ForEach(x => txsToReRelease.Remove(x)));
 
             // add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
-            txsToReRelease.ForEach(t => miningService.TransactionPool
+            txsToReRelease.ForEach(t => GetTransactionPool()
                 .Where(p => p.TransactionId != t.TransactionId)
                 .ToList()
-                .ForEach(r => miningService.TransactionPool.Add(r)));
+                .ForEach(r => AddToTransactionPool(r)));
 
             // update our branch block
             await UpdateBlock(branchBlock);
@@ -288,14 +282,16 @@ namespace Valcoin.Services
 
             // now add the newHighestBlock
             await CommitBlock(newHighestBlock);
+        }
 
-            // restart the miner if it was active
-            if (previousMinerStatus)
-            {
-                // TODO: This won't actually restart the miner. Change this.
-                miningService.MineBlocks = previousMinerStatus;
-                miningService.Status = "Mining";
-            }
+        public List<Transaction> GetTransactionPool()
+        {
+            return App.Current.Services.GetService<IMiningService>().TransactionPool.ToList();
+        }
+
+        public void AddToTransactionPool(Transaction t)
+        {
+            App.Current.Services.GetService<IMiningService>().TransactionPool.Add(t);
         }
     }
 }

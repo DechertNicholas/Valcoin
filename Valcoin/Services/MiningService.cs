@@ -26,12 +26,16 @@ namespace Valcoin.Services
         private int HashCount = 0;
         private ValcoinBlock CandidateBlock = new();
         private Wallet MyWallet;
+        private IChainService chainService;
 
         public string Status { get; set; } = "Stopped";
         public int HashSpeed { get; set; } = 0;
         public ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
-        public MiningService() { }
+        public MiningService(IChainService chainService)
+        {
+            this.chainService = chainService;
+        }
 
         public async void Mine()
         {
@@ -61,7 +65,7 @@ namespace Valcoin.Services
 
         public async void PopulateWalletInfo()
         {
-            MyWallet = await App.Current.Services.GetService<IChainService>().GetMyWallet();
+            MyWallet = await chainService.GetMyWallet();
             // this should never be called, but exists as a safety.
             // the application should always open to the wallet page first and generate a wallet if none exist
             if (MyWallet == null) { throw new NullReferenceException("A wallet was not found in the database"); }
@@ -119,7 +123,7 @@ namespace Valcoin.Services
         public async void AssembleCandidateBlock()
         {
             // always get the last block from the db, as the NetworkService may have gotten new information from the network
-            var lastBlock = await App.Current.Services.GetService<IChainService>().GetLastMainChainBlock();
+            var lastBlock = await chainService.GetLastMainChainBlock();
             if (lastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
@@ -179,7 +183,7 @@ namespace Valcoin.Services
             var valid = ValidationService.ValidateBlock(CandidateBlock);
             if (valid == ValidationService.ValidationCode.Valid)
             {
-                await App.Current.Services.GetService<IChainService>().AddBlock(CandidateBlock);
+                await chainService.AddBlock(CandidateBlock);
                 // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
                 await NetworkService.RelayData(CandidateBlock);
             }

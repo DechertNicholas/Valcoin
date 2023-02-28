@@ -49,7 +49,7 @@ namespace Valcoin.IntegrationTests
             await fixture.Context.SaveChangesAsync();
 
             // perform the reorganize (through the AddBlock method)
-            var service = new ChainService(new MiningService(), new ValcoinContext());
+            var service = new ChainService(new ValcoinContext());
             await service.AddBlock(block3);
 
             var lastMainBlock = await service.GetLastMainChainBlock();
