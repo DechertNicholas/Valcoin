@@ -34,6 +34,7 @@ namespace Valcoin.Services
             if (lastId == 1) // this only happens for the first block after the genesis block
                 return Db.ValcoinBlocks.First(b => b.BlockNumber == lastId);
 
+            // there's probably a fancy LINQ statement for this, but I couldn't get one to work
             foreach (var b in Db.ValcoinBlocks)
             {
                 if (b.BlockNumber == lastId)
