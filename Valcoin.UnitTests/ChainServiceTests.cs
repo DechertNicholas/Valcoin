@@ -39,10 +39,11 @@ namespace Valcoin.UnitTests
         public async void AddBlockCommitsBlockWhenIsFirstBlock()
         {
             // build a ChainService mock here so that we can mock calls to other functions in the same object
-            var chainServiceMock = new Mock<ChainService>(miningMock.Object, contextMock.Object);
+            var chainServiceMock = new Mock<ChainService>(contextMock.Object);
 
             // we aren't testing these methods, so mock them
             chainServiceMock.Setup(m => m.GetLastMainChainBlock()).ReturnsAsync((ValcoinBlock?)null);
+            chainServiceMock.Setup(m => m.UpdateBalance(It.IsAny<ValcoinBlock>()));
             chainServiceMock.Setup(m => m.CommitBlock(It.IsAny<ValcoinBlock>()));
 
             // when verifying calls, the reference object must be the same
@@ -51,9 +52,9 @@ namespace Valcoin.UnitTests
             await chainServiceMock.Object.AddBlock(block);
 
             chainServiceMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
+            chainServiceMock.Verify(m => m.UpdateBalance(block), Times.Once);
             chainServiceMock.Verify(m => m.CommitBlock(block), Times.Once);
             chainServiceMock.VerifyNoOtherCalls();
-            miningMock.VerifyNoOtherCalls();
         }
     }
 }

@@ -130,7 +130,7 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        private async Task UpdateBalance(ValcoinBlock block)
+        public virtual async Task UpdateBalance(ValcoinBlock block)
         {
             myAddress ??= (await GetMyWallet()).AddressBytes;
             myPublicKey ??= (await GetMyWallet()).PublicKey;
