@@ -28,5 +28,11 @@ namespace Valcoin.Models
         /// The last time the client communicated with us. Useful for finding which nodes are active and which are dead.
         /// </summary>
         public DateTime LastCommunicationUTC { get; set; }
+
+        public Client(string address, int port)
+        {
+            Address = address;
+            Port = port;
+        }
     }
 }

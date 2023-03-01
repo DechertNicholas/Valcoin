@@ -27,14 +27,16 @@ namespace Valcoin.Services
         private ValcoinBlock CandidateBlock = new();
         private Wallet MyWallet;
         private IChainService chainService;
+        private INetworkService networkService;
 
         public string Status { get; set; } = "Stopped";
         public int HashSpeed { get; set; } = 0;
         public ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
-        public MiningService(IChainService chainService)
+        public MiningService(IChainService chainService, INetworkService networkService)
         {
             this.chainService = chainService;
+            this.networkService = networkService;
         }
 
         public async void Mine()
@@ -185,7 +187,7 @@ namespace Valcoin.Services
             {
                 await chainService.AddBlock(CandidateBlock);
                 // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
-                await NetworkService.RelayData(CandidateBlock);
+                await networkService.RelayData(CandidateBlock);
             }
             else
             {

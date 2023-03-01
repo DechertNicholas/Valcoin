@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -12,20 +13,49 @@ namespace Valcoin.UnitTests
 {
     public class NetworkServiceTests
     {
-        //[Fact]
-        //public void SendData()
-        //{
-        //    var wallet = Wallet.Create();
-        //    ulong blockId = 10; // this tx is part of block 10
+        [Fact]
+        public async void ParsesOneMessage()
+        {
+            // token to cleanly cancel our tasks
+            var tokenSource = new CancellationTokenSource();
+            var token = tokenSource.Token;
 
-        //    var input = new TxInput(new string('0', 64), -1, wallet.PublicKey,
-        //        wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)));
+            var chainMock = new Mock<IChainService>();
+            var miningMock = new Mock<IMiningService>();
 
-        //    var output = new TxOutput(50, wallet.AddressBytes);
+            chainMock.Setup(s => s.GetClients()).ReturnsAsync(new List<Client>());
+            chainMock.Setup(s => s.GetBlock(It.IsAny<string>())); // returns null
+            
+            var networkService = new NetworkService(chainMock.Object, miningMock.Object);
 
-        //    var tx = new Transaction(blockId, new List<TxInput> { input }, new List<TxOutput> { output });
+            var blockId = "123";
+            var message = new Message(blockId); // block request message with fake id
+            var client = new Client(IPAddress.Broadcast.ToString(), 2106); // send data to ourselves
 
-        //    var t = Task.Run(() => NetworkService.StartListener());
-        //}
+            // we need to run this in the background, use a task
+            await Task.Run(() => networkService.StartListener(token), token);
+            await networkService.SendData(message, client);
+            Thread.Sleep(1000); // sleep 1 second to let the service get setup
+
+            // let the service parse the message we sent
+            var parsing = true;
+            while (parsing)
+            {
+                foreach(var task in NetworkService.ActiveParses)
+                {
+                    if (task.IsCompleted != true)
+                        break;
+                    parsing = false;
+                }
+
+            }
+            tokenSource.Cancel();
+
+            chainMock.Verify(m => m.GetClients(), Times.Once);
+            chainMock.Verify(m => m.GetBlock(It.IsAny<string>()), Times.Once);
+            chainMock.Verify(m => m.AddClient(It.IsAny<Client>()), Times.Once);
+            chainMock.VerifyNoOtherCalls();
+            miningMock.VerifyNoOtherCalls();
+        }
     }
 }

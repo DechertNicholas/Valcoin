@@ -12,27 +12,43 @@ using Valcoin.Models;
 using System.Threading;
 using static Valcoin.Services.ValidationService;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
+using System.Numerics;
 
 namespace Valcoin.Services
 {
     // https://learn.microsoft.com/en-us/dotnet/framework/network-programming/using-udp-services
-    public static class NetworkService
+    public class NetworkService : INetworkService
     {
         public static UdpClient Client { get; private set; } = new(listenPort);
+        /// <summary>
+        /// Useful property that shows which network parses are active.
+        /// </summary>
+        public static ConcurrentBag<Task> ActiveParses { get; private set; } = new();
+
         private const int listenPort = 2106;
-        private static List<Client> clients = new();
+        private List<Client> clients = new();
+        private IChainService chainService;
+        private IMiningService miningService;
 //#if !RELEASE
 //        private static string localIP;
 //#endif
 
-        public static async void StartListener()
+        public NetworkService(IChainService chainService, IMiningService miningService)
+        {
+            this.chainService = chainService;
+            this.miningService = miningService;
+        }
+
+        public async void StartListener(CancellationToken token)
         {
             Thread.CurrentThread.Name = "UDP Listener";
-            clients = await App.Current.Services.GetService<IChainService>().GetClients();
+            clients = await chainService.GetClients();
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
-            clients.Add(new Client() { Address = IPAddress.Broadcast.ToString(), Port = listenPort });
+            clients.Add(new Client(IPAddress.Broadcast.ToString(), listenPort));
 
             // we also need to know our IP, so we don't keep re-ingesting our own data
             //using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
@@ -46,12 +62,19 @@ namespace Valcoin.Services
 
             try
             {
-                while (true)
+                while (!token.IsCancellationRequested)
                 {
-                    var result = Client.Receive(ref remoteEP);
+                    // remove old parses
+                    ActiveParses.Where(t => t.IsCompleted == true).ToList().ForEach(t => ActiveParses.TryTake(out _));
+                    var result = await Client.ReceiveAsync(token);
                     // utilize a task here so that the listener thread can get back to listening ASAP
-                    await Task.Run(() => ParseData(result, remoteEP.Address.ToString(), remoteEP.Port));
+                    var task = Task.Run(async () => await ParseData(result), token);
+                    ActiveParses.Add(task);
                 }
+            }
+            catch (Exception ex) when (ex is OperationCanceledException || ex is TaskCanceledException)
+            {
+                // this is expected
             }
             finally
             {
@@ -59,7 +82,7 @@ namespace Valcoin.Services
             }
         }
 
-        public static void StopListener()
+        public void StopListener()
         {
             Client.Close();
         }
@@ -69,7 +92,7 @@ namespace Valcoin.Services
         /// </summary>
         /// <param name="data">The data to send (a <see cref="ValcoinBlock"/>, <see cref="Transaction"/>, etc).</param>
         /// <returns></returns>
-        public static async Task RelayData(byte[] data)
+        public async Task RelayData(byte[] data)
         {
             foreach (var client in clients)
             {
@@ -83,7 +106,7 @@ namespace Valcoin.Services
         /// <param name="data">The data to send (a <see cref="ValcoinBlock"/>, <see cref="Transaction"/>, etc).</param>
         /// <param name="client">The client to send to.</param>
         /// <returns></returns>
-        public static async Task SendData(byte[] data, Client client)
+        public async Task SendData(byte[] data, Client client)
         {
             // address is test value, will change to have a real param
             await Client.SendAsync(data, client.Address, client.Port);
@@ -95,13 +118,16 @@ namespace Valcoin.Services
         /// <param name="result">The bytes returned from the listener.</param>
         /// <param name="clientAddress">The IP address from the listener.</param>
         /// <param name="clientPort">The port from the listener.</param>
-        public static async Task ParseData(byte[] result, string clientAddress, int clientPort)
+        //public async Task ParseData(byte[] result, string clientAddress, int clientPort)
+        public async Task ParseData(UdpReceiveResult result)
         {
             Thread.CurrentThread.Name = "Network Data Parser";
             try
             {
                 // try to parse the raw data as json, catching if the data isn't json
-                var data = JsonDocument.Parse(result);
+                var clientAddress = result.RemoteEndPoint.Address;
+                var clientPort = result.RemoteEndPoint.Port;
+                var data = JsonDocument.Parse(result.Buffer);
 
                 // a block will always contain MerkleRoot and will have transactions, but if MerkleRoot is missing it must just be a transaction
                 if (data.RootElement.ToString().Contains("MerkleRoot"))
@@ -110,13 +136,16 @@ namespace Valcoin.Services
                     switch (ValidateBlock(block))
                     {
                         case ValidationCode.Miss_Prev_Block:
-                            // TODO: Send message to client asking for block.PreviousBlockHash block
-                            // break out of this, as the block will be pending in the validation service and we will handle the requested
-                            // block like normal.
-                            throw new NotImplementedException();
+                            // TODO: Send a sync request message to the client
+                            var message = new Message(Convert.ToHexString(block.PreviousBlockHash));
+                            foreach (var client in clients)
+                            {
+                                await SendData(message, client);
+                            }
+                            break;
 
                         case ValidationCode.Valid:
-                            await App.Current.Services.GetService<IChainService>().AddBlock(block);
+                            await chainService.AddBlock(block);
                             break;
                     }
                 }
@@ -124,12 +153,55 @@ namespace Valcoin.Services
                 {
                     // got a new transaction. Validate it and send it to the miner, if it's active
                     var tx = data.Deserialize<Transaction>();
-                    if (ValidateTx(tx) == ValidationCode.Valid && App.Current.Services.GetService<IMiningService>().MineBlocks == true)
-                        App.Current.Services.GetService<IMiningService>().TransactionPool.Add(tx);
+                    if (ValidateTx(tx) == ValidationCode.Valid && miningService.MineBlocks == true)
+                        miningService.TransactionPool.Add(tx);
+                }
+                else if (data.RootElement.ToString().Contains("MessageType"))
+                {
+                    var message = data.Deserialize<Message>();
+                    var client = new Client(clientAddress.ToString(), clientPort);
+                    switch (message.MessageType)
+                    {
+                        case MessageType.Sync:
+                            var syncBlock = await chainService.GetBlock(message.BlockId); // the client's highest block
+                            var ourHighestBlock = await chainService.GetLastMainChainBlock();
+                            // check if they already are at the last main chain block - same block height as us, and
+                            // no next block defined yet
+                            if (syncBlock != null &&
+                                syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
+                                syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
+                                break; // already sync'd
+                            else
+                                await SendData(ourHighestBlock, client); // send our highest instead of syncing their short chain.
+                                // the network service on their end will handle recursive requesting of whatever blocks they don't have before that
+                                // highest block.
+
+                            // get the next block in the chain. We don't really care if we're on the main
+                            var nextBlock = await chainService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
+                            do
+                            {
+                                await SendData(nextBlock, client);
+                                nextBlock = await chainService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
+                            }
+                            while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
+                            break;
+
+                        case MessageType.BlockRequest:
+                            var requestBlock = await chainService.GetBlock(message.BlockId);
+                            if (requestBlock != null)
+                                await SendData(requestBlock, client);
+                            break;
+                            
+                        case MessageType.ClientRequest:
+                            throw new NotImplementedException();
+
+                        case MessageType.ClientShare:
+                            throw new NotImplementedException();
+                    }
                 }
 
                 // regardless of validation outcome, update the client data
-                await ProcessClient(clientAddress, clientPort);
+                await ProcessClient(clientAddress.ToString(), clientPort);
             }
             catch (Exception ex)
             {
@@ -143,9 +215,8 @@ namespace Valcoin.Services
             }
         }
 
-        private static async Task ProcessClient(string clientAddress, int clientPort)
+        public async Task ProcessClient(string clientAddress, int clientPort)
         {
-            var service = App.Current.Services.GetService<IChainService>();
             // if all was successful, add the client to the clients list if not present already
             //var clientEndpoint = new IPEndPoint(clientAddress, clientPort);
             var client = clients.Where(c => c.Address == clientAddress)
@@ -154,14 +225,14 @@ namespace Valcoin.Services
             {
                 // client at this endpoint exists
                 client.LastCommunicationUTC = DateTime.UtcNow;
-                await service.UpdateClient(client);
+                await chainService.UpdateClient(client);
             }
             else
             {
                 // this is a new connection
-                client = new() { Address = clientAddress, Port = clientPort, LastCommunicationUTC = DateTime.UtcNow };
+                client = new(clientAddress, clientPort) { LastCommunicationUTC = DateTime.UtcNow };
                 clients.Add(client);
-                await service.AddClient(client);
+                await chainService.AddClient(client);
             }
         }
     }

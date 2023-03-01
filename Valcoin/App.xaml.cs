@@ -4,6 +4,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Valcoin.Services;
 
@@ -41,8 +42,9 @@ namespace Valcoin
         {
             this.InitializeComponent();
             Services = ConfigureServices();
-            UDPListener = Task.Run(() => NetworkService.StartListener());
+            UDPListener = Task.Run(() => Services.GetService<INetworkService>().StartListener(new CancellationTokenSource().Token));
         }
+
 
         /// <summary>
         /// Configures the services for the application.
@@ -52,6 +54,7 @@ namespace Valcoin
             var services = new ServiceCollection();
 
             services.AddSingleton<IMiningService, MiningService>();
+            services.AddSingleton<INetworkService, NetworkService>();
             services.AddDbContext<ValcoinContext>(ServiceLifetime.Transient);
             services.AddTransient<IChainService, ChainService>();
 
