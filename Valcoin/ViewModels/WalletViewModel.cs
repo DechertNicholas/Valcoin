@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
 using System;
 using System.Collections.Generic;
@@ -31,7 +32,7 @@ namespace Valcoin.ViewModels
 
         public async void SetWalletAsync()
         {
-            var service = new StorageService();
+            var service = App.Current.Services.GetService<IChainService>();
             if ((MyWallet = await service.GetMyWallet()) == null)
             {
                 MyWallet = Wallet.Create();
@@ -44,7 +45,7 @@ namespace Valcoin.ViewModels
             Thread.CurrentThread.Name = "Wallet Balance Updater";
             while (true)
             {
-                TheDispatcher.TryEnqueue(async () => Balance = (await new StorageService().GetMyWallet()).Balance);
+                TheDispatcher.TryEnqueue(async () => Balance = await App.Current.Services.GetService<IChainService>().GetMyBalance());
                 Thread.Sleep(1000 * 5); // run every 5 seconds
             }
         }

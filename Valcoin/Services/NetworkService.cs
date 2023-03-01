@@ -11,6 +11,7 @@ using System.Collections;
 using Valcoin.Models;
 using System.Threading;
 using static Valcoin.Services.ValidationService;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Valcoin.Services
 {
@@ -26,9 +27,8 @@ namespace Valcoin.Services
 
         public static async void StartListener()
         {
-            var service = new StorageService();
             Thread.CurrentThread.Name = "UDP Listener";
-            clients = await service.GetClients();
+            clients = await App.Current.Services.GetService<IChainService>().GetClients();
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
@@ -98,7 +98,6 @@ namespace Valcoin.Services
         public static async Task ParseData(byte[] result, string clientAddress, int clientPort)
         {
             Thread.CurrentThread.Name = "Network Data Parser";
-            var service = new StorageService();
             try
             {
                 // try to parse the raw data as json, catching if the data isn't json
@@ -108,7 +107,7 @@ namespace Valcoin.Services
                 if (data.RootElement.ToString().Contains("MerkleRoot"))
                 {
                     var block = data.Deserialize<ValcoinBlock>();
-                    switch (ValidateBlock(block, new()))
+                    switch (ValidateBlock(block))
                     {
                         case ValidationCode.Miss_Prev_Block:
                             // TODO: Send message to client asking for block.PreviousBlockHash block
@@ -117,7 +116,7 @@ namespace Valcoin.Services
                             throw new NotImplementedException();
 
                         case ValidationCode.Valid:
-                            await service.AddBlock(block);
+                            await App.Current.Services.GetService<IChainService>().AddBlock(block);
                             break;
                     }
                 }
@@ -125,12 +124,12 @@ namespace Valcoin.Services
                 {
                     // got a new transaction. Validate it and send it to the miner, if it's active
                     var tx = data.Deserialize<Transaction>();
-                    if (ValidateTx(tx, new StorageService()) == ValidationCode.Valid && Miner.MineBlocks == true)
-                        Miner.TransactionPool.Add(tx);
+                    if (ValidateTx(tx) == ValidationCode.Valid && App.Current.Services.GetService<IMiningService>().MineBlocks == true)
+                        App.Current.Services.GetService<IMiningService>().TransactionPool.Add(tx);
                 }
 
                 // regardless of validation outcome, update the client data
-                await ProcessClient(clientAddress, clientPort, service);
+                await ProcessClient(clientAddress, clientPort);
             }
             catch (Exception ex)
             {
@@ -144,8 +143,9 @@ namespace Valcoin.Services
             }
         }
 
-        private static async Task ProcessClient(string clientAddress, int clientPort, StorageService service)
+        private static async Task ProcessClient(string clientAddress, int clientPort)
         {
+            var service = App.Current.Services.GetService<IChainService>();
             // if all was successful, add the client to the clients list if not present already
             //var clientEndpoint = new IPEndPoint(clientAddress, clientPort);
             var client = clients.Where(c => c.Address == clientAddress)

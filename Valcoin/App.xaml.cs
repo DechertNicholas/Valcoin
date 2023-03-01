@@ -1,7 +1,9 @@
 ﻿// Copyright (c) Microsoft Corporation and Contributors.
 // Licensed under the MIT License.
 
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml;
+using System;
 using System.Threading.Tasks;
 using Valcoin.Services;
 
@@ -15,6 +17,17 @@ namespace Valcoin
     /// </summary>
     public partial class App : Application
     {
+        // setup dependency injection https://learn.microsoft.com/en-us/dotnet/communitytoolkit/mvvm/ioc
+        /// <summary>
+        /// Gets the current <see cref="App"/> instance in use
+        /// </summary>
+        public new static App Current => (App)Application.Current;
+
+        /// <summary>
+        /// Gets the <see cref="IServiceProvider"/> instance to resolve application services.
+        /// </summary>
+        public IServiceProvider Services { get; }
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("CodeQuality", "IDE0052:Remove unread private member",
             Justification = "This thread needs to keep listening, but never needs to be accessed." +
             "There is probably a better way to do this, but this is easy and works for this application.")]
@@ -27,7 +40,22 @@ namespace Valcoin
         public App()
         {
             this.InitializeComponent();
+            Services = ConfigureServices();
             UDPListener = Task.Run(() => NetworkService.StartListener());
+        }
+
+        /// <summary>
+        /// Configures the services for the application.
+        /// </summary>
+        private static IServiceProvider ConfigureServices()
+        {
+            var services = new ServiceCollection();
+
+            services.AddSingleton<IMiningService, MiningService>();
+            services.AddDbContext<ValcoinContext>(ServiceLifetime.Transient);
+            services.AddTransient<IChainService, ChainService>();
+
+            return services.BuildServiceProvider();
         }
 
         /// <summary>

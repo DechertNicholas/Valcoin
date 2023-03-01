@@ -25,6 +25,7 @@
     <PackageCertificateThumbprint>4DBDBD59E1C4A2B9840EBF0D52CFBD954D12FE6A</PackageCertificateThumbprint>
     <Configurations>Debug;Release;Debug - Persist DB</Configurations>
     <PlatformTarget>x86</PlatformTarget>
+    <Authors>Nicholas Dechert</Authors>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(FullVersion)'!=''">

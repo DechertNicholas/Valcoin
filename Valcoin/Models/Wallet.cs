@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -117,10 +118,9 @@ namespace Valcoin.Models
             return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
         }
 
-        public void UpdateBalance()
+        public async void UpdateBalance()
         {
-            var service = new StorageService();
-            Balance = service.GetMyBalance();
+            Balance = await App.Current.Services.GetService<IChainService>().GetMyBalance();
         }
     }
 }

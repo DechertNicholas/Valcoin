@@ -33,6 +33,12 @@ namespace Valcoin.Models
         /// </summary>
         public byte[] PreviousBlockHash { get; set; } = new byte[32];
         /// <summary>
+        /// Property used for database chain tracking. Tracks the next block in the longest chain.
+        /// </summary>
+#nullable enable
+        public byte[]? NextBlockHash { get; set; } = new byte[32];
+#nullable disable
+        /// <summary>
         /// The random value assigned to the block header for changing the hash. Critical for proof-of-work.
         /// </summary>
         public ulong Nonce { get; set; } = 0;

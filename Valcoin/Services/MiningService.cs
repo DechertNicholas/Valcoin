@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -9,28 +10,37 @@ using System.Numerics;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Valcoin.Models;
-using Valcoin.Services;
 
-namespace Valcoin
+namespace Valcoin.Services
 {
-    public static class Miner
+    public class MiningService : IMiningService
     {
-        internal static bool MineBlocks = false;
-        private static readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
-        private static byte[] DifficultyMask = new byte[32];
-        private static readonly Stopwatch Stopwatch = new();
-        private static readonly TimeSpan HashInterval = new(0, 0, 10);
-        private static int HashCount = 0;
-        private static ValcoinBlock CandidateBlock = new();
-        private static Wallet MyWallet;
+        public bool MineBlocks { get; set; } = false;
+        private readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
+        private byte[] DifficultyMask = new byte[32];
+        private readonly Stopwatch Stopwatch = new();
+        private readonly TimeSpan HashInterval = new(0, 0, 10);
+        private int HashCount = 0;
+        private ValcoinBlock CandidateBlock = new();
+        private Wallet MyWallet;
+        private IChainService chainService;
 
-        public static int HashSpeed { get; set; } = 0;
-        public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
+        public string Status { get; set; } = "Stopped";
+        public int HashSpeed { get; set; } = 0;
+        public ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
-        public static async void Mine()
+        public MiningService(IChainService chainService)
         {
+            this.chainService = chainService;
+        }
+
+        public async void Mine()
+        {
+            Thread.CurrentThread.Name = "Mining Thread";
+            Status = "Mining";
             // setup wallet info
             PopulateWalletInfo();
 
@@ -48,19 +58,20 @@ namespace Valcoin
                 FindValidHash();
                 await CommitBlock();
             }
+            Status = "Stopped";
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
         }
 
-        private static async void PopulateWalletInfo()
+        public async void PopulateWalletInfo()
         {
-            MyWallet = await new StorageService().GetMyWallet();
+            MyWallet = await chainService.GetMyWallet();
             // this should never be called, but exists as a safety.
             // the application should always open to the wallet page first and generate a wallet if none exist
             if (MyWallet == null) { throw new NullReferenceException("A wallet was not found in the database"); }
         }
 
-        private static void ComputeHashSpeed()
+        public void ComputeHashSpeed()
         {
             HashSpeed = HashCount / HashInterval.Seconds;
 
@@ -69,7 +80,7 @@ namespace Valcoin
             Stopwatch.Restart();
         }
 
-        private static void SetDifficultyMask(int difficulty)
+        public void SetDifficultyMask(int difficulty)
         {
 
             int bytesToShift = Convert.ToInt32(Math.Ceiling(difficulty / 8d)); // 8 bits in a byte
@@ -83,12 +94,12 @@ namespace Valcoin
                 difficultyMask[i] = 0x00;
             }
 
-            int toShift = difficulty - (8 * (bytesToShift - 1));
+            int toShift = difficulty - 8 * (bytesToShift - 1);
             difficultyMask[^1] = (byte)(0b_1111_1111 >> toShift);
             DifficultyMask = difficultyMask;
         }
 
-        private static ValcoinBlock BuildGenesisBlock()
+        public ValcoinBlock BuildGenesisBlock()
         {
             var genesisHash = new byte[32];
             for (var i = 0; i < genesisHash.Length; i++)
@@ -98,7 +109,7 @@ namespace Valcoin
             return new ValcoinBlock(1, genesisHash, 0, DateTime.UtcNow.Ticks, Difficulty);
         }
 
-        private static Transaction AssembleCoinbaseTransaction()
+        public Transaction AssembleCoinbaseTransaction()
         {
             // debugging serialization
             var unlockBytes = (byte[])new UnlockSignatureStruct(CandidateBlock.BlockNumber, MyWallet.PublicKey);
@@ -109,11 +120,10 @@ namespace Valcoin
             return new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
         }
 
-        private static async void AssembleCandidateBlock()
+        public async void AssembleCandidateBlock()
         {
             // always get the last block from the db, as the NetworkService may have gotten new information from the network
-            var service = new StorageService();
-            var lastBlock = await service.GetLastBlock();
+            var lastBlock = await chainService.GetLastMainChainBlock();
             if (lastBlock == null)
             {
                 // no blocks are in the database after sync, start a new chain
@@ -139,7 +149,7 @@ namespace Valcoin
             }
         }
 
-        private static void FindValidHash()
+        public void FindValidHash()
         {
             var hashFound = false;
             // check on each hash if a stop has been requested
@@ -167,15 +177,15 @@ namespace Valcoin
             }
         }
 
-        private static async Task CommitBlock()
+        public async Task CommitBlock()
         {
             // run our own block through validations before saving
-            var valid = ValidationService.ValidateBlock(CandidateBlock, new());
+            var valid = ValidationService.ValidateBlock(CandidateBlock);
             if (valid == ValidationService.ValidationCode.Valid)
             {
-                var service = new StorageService();
-                await service.AddBlock(CandidateBlock);
-                await Task.Run(() => NetworkService.RelayData(CandidateBlock));
+                await chainService.AddBlock(CandidateBlock);
+                // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
+                await NetworkService.RelayData(CandidateBlock);
             }
             else
             {

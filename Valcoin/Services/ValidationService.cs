@@ -1,7 +1,9 @@
-﻿using Microsoft.UI.Xaml.Documents;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml.Documents;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
@@ -24,11 +26,16 @@ namespace Valcoin.Services
         /// All blocks handed to the ValidationService which were unable to be validated (but are not invalid). Normally pending network operations.
         /// </summary>
         private static List<ValcoinBlock> pendingBlocks = new();
-
-        public static ValidationCode ValidateBlock(ValcoinBlock block, StorageService service)
+        private static IChainService AppChainService
         {
+            get => App.Current.Services.GetService<IChainService>();
+        }
+
+        public static ValidationCode ValidateBlock(ValcoinBlock block)
+        {
+            var chainService = App.Current.Services.GetService<IChainService>();
             // first, check if we already have this block to avoid extra work
-            if (service.GetBlock(block.BlockId).Result != null)
+            if (chainService.GetBlock(block.BlockId).Result != null)
                 return ValidationCode.Existing;
 
             // if we don't already have it, then validate and add it to the database.
@@ -36,7 +43,7 @@ namespace Valcoin.Services
             // before the whole block can be validated however, each transaction must first be validated since one invalid transaction will
             // spoil the whole block.
             // and for each transaction to be validated, we need to ensure we have the whole chain up to this block
-            if (service.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
+            if (chainService.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
                 block.BlockId != new string('0', 64) &&                               // filter out the genesis hash
                 block.BlockNumber != 1)                                               // filter out the genesis block when paired with the blockhash
             {
@@ -132,14 +139,24 @@ namespace Valcoin.Services
             // validate the rest as non-coinbase transactions
             foreach (var tx in txs.Where(t => txs.IndexOf(t) != 0))
             {
-                if (ValidateTx(tx, new StorageService()) == ValidationCode.Invalid)
+                if (ValidateTx(tx) == ValidationCode.Invalid)
                     return allValidated = ValidationCode.Invalid; // the whole block is bad, exit
             }
 
             return allValidated;
         }
 
-        public static ValidationCode ValidateTx(Transaction tx, IStorageService service)
+        /// <summary>
+        /// Overload method to keep ease of use, but allow testability of code.
+        /// </summary>
+        /// <param name="tx">The transaction to validate</param>
+        /// <returns>The <see cref="ValidationCode"/></returns>
+        public static ValidationCode ValidateTx(Transaction tx)
+        {
+            return ValidateTx(tx, App.Current.Services.GetService<IChainService>());
+        }
+
+        public static ValidationCode ValidateTx(Transaction tx, IChainService chainService)
         {
             var inputSum = 0;
 
@@ -151,12 +168,12 @@ namespace Valcoin.Services
             foreach (var input in tx.Inputs)
             {
                 // first, check if a tx already exists that references the same input
-                var spend = service.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
+                var spend = chainService.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
                 if (spend != null)
                     return ValidationCode.Invalid;
 
                 // get the referenced transaction data
-                var prevTx = service.GetTx(input.PreviousTransactionId).Result;
+                var prevTx = chainService.GetTx(input.PreviousTransactionId).Result;
                 var prevOutput = prevTx.Outputs[input.PreviousOutputIndex];
 
                 // compute the hashes and signatures
