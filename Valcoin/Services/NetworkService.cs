@@ -47,10 +47,11 @@ namespace Valcoin.Services
         {
             Thread.CurrentThread.Name = "UDP Listener";
             clients = await chainService.GetClients();
+            if (clients.Count == 0) { clients.Add(rootClientHint); }
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
-            clients.Add(new Client(IPAddress.Broadcast.ToString(), listenPort));
+            //clients.Add(new Client(IPAddress.Broadcast.ToString(), listenPort));
 
             // we also need to know our IP, so we don't keep re-ingesting our own data
             //using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
@@ -288,10 +289,6 @@ namespace Valcoin.Services
         {
             // organize the client list by last comm time, then split into chunks of 3, and select the first chunk (top 3 clients)
             var top3 = clients.OrderBy(c => c.LastCommunicationUTC).Chunk(3).ToList()[0].ToList();
-            if (top3.Count < 3)
-            {
-                top3.Add(rootClientHint);
-            }
             // try to synchronize with the top 3 clients
             for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
