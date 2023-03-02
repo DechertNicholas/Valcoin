@@ -174,7 +174,7 @@ namespace Valcoin.Services
                             if (message.HighestBlockNumber == 0 && message.BlockId == "")
                             {
                                 // client has no blocks and needs a full sync
-                                syncBlock = (await chainService.GetBlocksByNumber(0)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
+                                syncBlock = (await chainService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
                                 if (syncBlock == null) break; // we have no blocks either, send nothing
                             }
                             else
