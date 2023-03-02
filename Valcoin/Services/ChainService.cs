@@ -292,12 +292,12 @@ namespace Valcoin.Services
 
         public List<Transaction> GetTransactionPool()
         {
-            return App.Current.Services.GetService<IMiningService>().TransactionPool.ToList();
+            return MiningService.TransactionPool.ToList();
         }
 
         public void AddToTransactionPool(Transaction t)
         {
-            App.Current.Services.GetService<IMiningService>().TransactionPool.Add(t);
+            MiningService.TransactionPool.Add(t);
         }
     }
 }

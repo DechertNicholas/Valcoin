@@ -18,7 +18,7 @@ namespace Valcoin.Services
 {
     public class MiningService : IMiningService
     {
-        public bool MineBlocks { get; set; } = false;
+        public static bool MineBlocks { get; set; } = false;
         private readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
@@ -31,7 +31,7 @@ namespace Valcoin.Services
 
         public string Status { get; set; } = "Stopped";
         public int HashSpeed { get; set; } = 0;
-        public ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
+        public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
         public MiningService(IChainService chainService, INetworkService networkService)
         {

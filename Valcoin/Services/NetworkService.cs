@@ -34,15 +34,13 @@ namespace Valcoin.Services
         private const int listenPort = 2106;
         private List<Client> clients = new();
         private IChainService chainService;
-        private IMiningService miningService;
 //#if !RELEASE
 //        private static string localIP;
 //#endif
 
-        public NetworkService(IChainService chainService, IMiningService miningService)
+        public NetworkService(IChainService chainService)
         {
             this.chainService = chainService;
-            this.miningService = miningService;
         }
 
         public async void StartListener(CancellationToken token)
@@ -159,8 +157,8 @@ namespace Valcoin.Services
                 {
                     // got a new transaction. Validate it and send it to the miner, if it's active
                     var tx = data.Deserialize<Transaction>();
-                    if (ValidateTx(tx) == ValidationCode.Valid && miningService.MineBlocks == true)
-                        miningService.TransactionPool.Add(tx);
+                    if (ValidateTx(tx) == ValidationCode.Valid && MiningService.MineBlocks == true)
+                        MiningService.TransactionPool.Add(tx);
                 }
                 else if (data.RootElement.ToString().Contains("MessageType"))
                 {

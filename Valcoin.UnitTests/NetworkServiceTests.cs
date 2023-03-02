@@ -26,7 +26,7 @@ namespace Valcoin.UnitTests
             chainMock.Setup(s => s.GetClients()).ReturnsAsync(new List<Client>());
             chainMock.Setup(s => s.GetBlock(It.IsAny<string>())); // returns null
             
-            var networkService = new NetworkService(chainMock.Object, miningMock.Object);
+            var networkService = new NetworkService(chainMock.Object);
 
             var blockId = "123";
             var message = new Message(blockId); // block request message with fake id
