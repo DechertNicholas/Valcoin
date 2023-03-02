@@ -176,6 +176,8 @@ namespace Valcoin.Services
                                 // client has no blocks and needs a full sync
                                 syncBlock = (await chainService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
                                 if (syncBlock == null) break; // we have no blocks either, send nothing
+                                // send the initial block
+                                await SendData(syncBlock, client);
                             }
                             else
                             {
