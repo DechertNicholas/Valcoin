@@ -15,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using System.Numerics;
+using Microsoft.UI.Xaml.Automation;
 
 namespace Valcoin.Services
 {
@@ -27,6 +28,8 @@ namespace Valcoin.Services
         /// </summary>
         public static ConcurrentBag<Task> ActiveParses { get; private set; } = new();
 
+        // my domain, running a node that will always be online. Used as the first contact on the network
+        private static Client rootClientHint = new("nicholasdechert.com", 2106);
         private const int listenPort = 2106;
         private List<Client> clients = new();
         private IChainService chainService;
@@ -59,6 +62,9 @@ namespace Valcoin.Services
             //}
 #endif
             var remoteEP = new IPEndPoint(IPAddress.Any, 0); // get from any IP sending to any port (to our port listenPort)
+
+            await SynchronizeChain();
+            await ProliferateClients();
 
             try
             {
@@ -118,7 +124,6 @@ namespace Valcoin.Services
         /// <param name="result">The bytes returned from the listener.</param>
         /// <param name="clientAddress">The IP address from the listener.</param>
         /// <param name="clientPort">The port from the listener.</param>
-        //public async Task ParseData(byte[] result, string clientAddress, int clientPort)
         public async Task ParseData(UdpReceiveResult result)
         {
             Thread.CurrentThread.Name = "Network Data Parser";
@@ -162,6 +167,7 @@ namespace Valcoin.Services
                     var client = new Client(clientAddress.ToString(), clientPort);
                     switch (message.MessageType)
                     {
+                        // the client wants to synchronize their chain with ours
                         case MessageType.Sync:
                             var syncBlock = await chainService.GetBlock(message.BlockId); // the client's highest block
                             var ourHighestBlock = await chainService.GetLastMainChainBlock();
@@ -186,17 +192,25 @@ namespace Valcoin.Services
                             while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
                             break;
 
+                        // the client is requesting a specific block
                         case MessageType.BlockRequest:
                             var requestBlock = await chainService.GetBlock(message.BlockId);
                             if (requestBlock != null)
                                 await SendData(requestBlock, client);
                             break;
                             
+                        // the client is requesting we share our list of clients
                         case MessageType.ClientRequest:
-                            throw new NotImplementedException();
+                            var clientSend = new Message(await chainService.GetClients());
+                            await SendData(clientSend, client);
+                            break;
 
                         case MessageType.ClientShare:
-                            throw new NotImplementedException();
+                            var ourClients = await chainService.GetClients();
+                            message.Clients.Where(c => ourClients.Contains(c) == false)
+                                .ToList()
+                                .ForEach(async c => await ProcessClient(c.Address, c.Port));
+                            break;
                     }
                 }
 
@@ -233,6 +247,41 @@ namespace Valcoin.Services
                 client = new(clientAddress, clientPort) { LastCommunicationUTC = DateTime.UtcNow };
                 clients.Add(client);
                 await chainService.AddClient(client);
+            }
+        }
+
+        public async Task SynchronizeChain()
+        {
+            var highestBlock = await chainService.GetLastMainChainBlock();
+            // organize the client list by last comm time, then split into chunks of 3, and select the first chunk (top 3 clients)
+            var top3 = clients.OrderBy(c => c.LastCommunicationUTC).Chunk(3).ToList()[0].ToList();
+            if (top3.Count < 3)
+            {
+                top3.Add(rootClientHint);
+            }
+            // try to synchronize with the top 3 clients
+            for (var i = 0; i < Math.Min(3, clients.Count); i++)
+            {
+                var client = top3[i];
+                var msg = new Message(highestBlock.BlockNumber, highestBlock.BlockId);
+                await SendData(msg, client);
+            }
+        }
+
+        public async Task ProliferateClients()
+        {
+            // organize the client list by last comm time, then split into chunks of 3, and select the first chunk (top 3 clients)
+            var top3 = clients.OrderBy(c => c.LastCommunicationUTC).Chunk(3).ToList()[0].ToList();
+            if (top3.Count < 3)
+            {
+                top3.Add(rootClientHint);
+            }
+            // try to synchronize with the top 3 clients
+            for (var i = 0; i < Math.Min(3, clients.Count); i++)
+            {
+                var client = top3[i];
+                var msg = new Message() { MessageType = MessageType.ClientRequest };
+                await SendData(msg, client);
             }
         }
     }

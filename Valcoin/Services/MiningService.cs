@@ -46,8 +46,6 @@ namespace Valcoin.Services
             // setup wallet info
             PopulateWalletInfo();
 
-            //SynchronizeChain();
-
             // how many 0 bits need to lead the SHA256 hash. 256 is max, which would be impossible.
             // a difficulty of 6 means the hash bits must start with "000000xxxxxx..."
             SetDifficultyMask(Difficulty);

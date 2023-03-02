@@ -12,7 +12,7 @@ namespace Valcoin.Models
     {
         Sync,
         BlockRequest,
-        ClientRequest, // potentially unused
+        ClientRequest,
         ClientShare
     }
 
