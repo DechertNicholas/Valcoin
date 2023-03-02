@@ -263,10 +263,6 @@ namespace Valcoin.Services
             var highestBlock = await chainService.GetLastMainChainBlock();
             // organize the client list by last comm time, then split into chunks of 3, and select the first chunk (top 3 clients)
             var top3 = clients.OrderBy(c => c.LastCommunicationUTC).Chunk(3).ToList()[0].ToList();
-            if (top3.Count < 3)
-            {
-                top3.Add(rootClientHint);
-            }
             // try to synchronize with the top 3 clients
             for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
