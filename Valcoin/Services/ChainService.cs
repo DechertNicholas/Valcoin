@@ -58,6 +58,11 @@ namespace Valcoin.Services
             return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
         }
 
+        public async Task<List<ValcoinBlock>> GetBlocksByNumber(ulong blockNumber)
+        {
+            return await Db.ValcoinBlocks.Where(b => b.BlockNumber == blockNumber).ToListAsync();
+        }
+
         public async Task<Transaction> GetTx(string transactionId)
         {
             return await Db.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId);

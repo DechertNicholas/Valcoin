@@ -16,6 +16,7 @@ using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using System.Numerics;
 using Microsoft.UI.Xaml.Automation;
+using System.Reflection.Metadata.Ecma335;
 
 namespace Valcoin.Services
 {
@@ -169,18 +170,26 @@ namespace Valcoin.Services
                     {
                         // the client wants to synchronize their chain with ours
                         case MessageType.Sync:
-                            var syncBlock = await chainService.GetBlock(message.BlockId); // the client's highest block
-                            var ourHighestBlock = await chainService.GetLastMainChainBlock();
-                            // check if they already are at the last main chain block - same block height as us, and
-                            // no next block defined yet
-                            if (syncBlock != null &&
-                                syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
-                                syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
-                                break; // already sync'd
+                            ValcoinBlock syncBlock = null;
+                            ValcoinBlock ourHighestBlock = await chainService.GetLastMainChainBlock();
+                            if (message.HighestBlockNumber == 0 && message.BlockId == "")
+                            {
+                                // client has no blocks and needs a full sync
+                                syncBlock = (await chainService.GetBlocksByNumber(0)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
+                                if (syncBlock == null) break; // we have no blocks either, send nothing
+                            }
                             else
-                                await SendData(ourHighestBlock, client); // send our highest instead of syncing their short chain.
-                                // the network service on their end will handle recursive requesting of whatever blocks they don't have before that
-                                // highest block.
+                            {
+                                syncBlock = await chainService.GetBlock(message.BlockId); // the client's highest block
+                                if (syncBlock == null) break; // we don't have this block, send nothing
+
+                                // check if they already are at the last main chain block - same block height as us, and
+                                // no next block defined yet
+                                if (syncBlock != null &&
+                                    syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
+                                    syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
+                                    break; // already sync'd
+                            }
 
                             // get the next block in the chain. We don't really care if we're on the main
                             var nextBlock = await chainService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
@@ -260,10 +269,19 @@ namespace Valcoin.Services
                 top3.Add(rootClientHint);
             }
             // try to synchronize with the top 3 clients
-            for (var i = 0; i < Math.Min(3, clients.Count); i++)
+            for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
                 var client = top3[i];
-                var msg = new Message(highestBlock.BlockNumber, highestBlock.BlockId);
+                Message msg = null;
+                if (highestBlock == null)
+                {
+                    msg = new Message(0, ""); // we have no blocks
+                }
+                else
+                {
+                    msg = new Message(highestBlock.BlockNumber, highestBlock.BlockId);
+                }
+                
                 await SendData(msg, client);
             }
         }
@@ -277,7 +295,7 @@ namespace Valcoin.Services
                 top3.Add(rootClientHint);
             }
             // try to synchronize with the top 3 clients
-            for (var i = 0; i < Math.Min(3, clients.Count); i++)
+            for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
                 var client = top3[i];
                 var msg = new Message() { MessageType = MessageType.ClientRequest };

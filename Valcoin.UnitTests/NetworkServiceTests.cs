@@ -51,9 +51,13 @@ namespace Valcoin.UnitTests
             }
             tokenSource.Cancel();
 
-            chainMock.Verify(m => m.GetClients(), Times.Once);
+            chainMock.Verify(m => m.GetClients(), Times.Exactly(3));
             chainMock.Verify(m => m.GetBlock(It.IsAny<string>()), Times.Once);
             chainMock.Verify(m => m.AddClient(It.IsAny<Client>()), Times.Once);
+            chainMock.Verify(m => m.GetLastMainChainBlock(), Times.Exactly(2));
+            chainMock.Verify(m => m.GetBlocksByNumber(0), Times.Once);
+            chainMock.Verify(m => m.UpdateClient(It.IsAny<Client>()), Times.Exactly(2));
+
             chainMock.VerifyNoOtherCalls();
             miningMock.VerifyNoOtherCalls();
         }
