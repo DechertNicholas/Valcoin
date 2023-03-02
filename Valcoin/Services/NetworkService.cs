@@ -31,6 +31,8 @@ namespace Valcoin.Services
 
         // my domain, running a node that will always be online. Used as the first contact on the network
         private static Client rootClientHint = new("nicholasdechert.com", 2106);
+        private Task listenerTask;
+        private bool initializing = true;
         private const int listenPort = 2106;
         private List<Client> clients = new();
         private IChainService chainService;
@@ -63,13 +65,20 @@ namespace Valcoin.Services
 #endif
             var remoteEP = new IPEndPoint(IPAddress.Any, 0); // get from any IP sending to any port (to our port listenPort)
 
-            await SynchronizeChain();
-            await ProliferateClients();
+            
 
             try
             {
                 while (!token.IsCancellationRequested)
                 {
+                    if (initializing)
+                    {
+                        listenerTask = Task.Run(() => Client.ReceiveAsync(token));
+                        await SynchronizeChain();
+                        await ProliferateClients();
+                        initializing = false;
+                        listenerTask.Wait(token);
+                    }
                     // remove old parses
                     ActiveParses.Where(t => t.IsCompleted == true).ToList().ForEach(t => ActiveParses.TryTake(out _));
                     var result = await Client.ReceiveAsync(token);
