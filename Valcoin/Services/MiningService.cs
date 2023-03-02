@@ -56,6 +56,8 @@ namespace Valcoin.Services
             {
                 AssembleCandidateBlock();
                 FindValidHash();
+                if (MineBlocks == false) // when we stop mining, the hashing process stops and we need to not try to commit a block
+                    return;
                 await CommitBlock();
             }
             Status = "Stopped";
