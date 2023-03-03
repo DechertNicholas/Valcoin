@@ -49,11 +49,11 @@ namespace Valcoin.Services
         {
             Thread.CurrentThread.Name = "UDP Listener";
             clients = await chainService.GetClients();
-            if (clients.Count == 0) { clients.Add(rootClientHint); }
+            if (clients.Count < 3) { clients.Add(rootClientHint); }
 #if !RELEASE
             // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
             // useful for debugging, ingest your own data
-            //clients.Add(new Client(IPAddress.Broadcast.ToString(), listenPort));
+            clients.Add(new Client(IPAddress.Broadcast.ToString(), listenPort));
 
             // we also need to know our IP, so we don't keep re-ingesting our own data
             //using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
@@ -65,22 +65,17 @@ namespace Valcoin.Services
 #endif
             var remoteEP = new IPEndPoint(IPAddress.Any, 0); // get from any IP sending to any port (to our port listenPort)
 
-            
-
             try
             {
                 while (!token.IsCancellationRequested)
                 {
                     if (initializing)
                     {
-                        listenerTask = Task.Run(() => Client.ReceiveAsync(token));
-                        await SynchronizeChain();
-                        await ProliferateClients();
+                        // we don't actually want to await this
+                        _ = Task.Run(async () => await BootstrapNetwork(500), token);
                         initializing = false;
-                        listenerTask.Wait(token);
                     }
-                    // remove old parses
-                    ActiveParses.Where(t => t.IsCompleted == true).ToList().ForEach(t => ActiveParses.TryTake(out _));
+
                     var result = await Client.ReceiveAsync(token);
                     // utilize a task here so that the listener thread can get back to listening ASAP
                     var task = Task.Run(async () => await ParseData(result), token);
@@ -135,6 +130,8 @@ namespace Valcoin.Services
         /// <param name="clientPort">The port from the listener.</param>
         public async Task ParseData(UdpReceiveResult result)
         {
+            // remove old parses
+            ActiveParses.Where(t => t.IsCompleted == true).ToList().ForEach(t => ActiveParses.TryTake(out _));
             Thread.CurrentThread.Name = "Network Data Parser";
             try
             {
@@ -267,6 +264,14 @@ namespace Valcoin.Services
                 clients.Add(client);
                 await chainService.AddClient(client);
             }
+        }
+
+        public async Task BootstrapNetwork(int delay)
+        {
+            // delay execution to ensure the network service is listening
+            Task.Delay(delay).Wait();
+            await ProliferateClients();
+            await SynchronizeChain();
         }
 
         public async Task SynchronizeChain()
