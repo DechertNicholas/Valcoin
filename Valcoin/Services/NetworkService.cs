@@ -284,8 +284,6 @@ namespace Valcoin.Services
             // try to synchronize with the top 3 clients
             for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
-                // delay execution to ensure the network service is listening
-                Task.Delay(delay).Wait();
                 var client = top3[i];
                 Message msg = null;
                 if (highestBlock == null)
@@ -308,8 +306,6 @@ namespace Valcoin.Services
             // try to synchronize with the top 3 clients
             for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
-                // delay execution to ensure the network service is listening
-                Task.Delay(delay).Wait();
                 var client = top3[i];
                 var msg = new Message() { MessageType = MessageType.ClientRequest };
                 await SendData(msg, client);
