@@ -36,9 +36,8 @@ namespace Valcoin.Services
         private const int listenPort = 2106;
         private List<Client> clients = new();
         private IChainService chainService;
-//#if !RELEASE
-//        private static string localIP;
-//#endif
+        private static string localIP;
+        private static int delay = 500;
 
         public NetworkService(IChainService chainService)
         {
@@ -56,12 +55,12 @@ namespace Valcoin.Services
             clients.Add(new Client(IPAddress.Broadcast.ToString(), listenPort));
 
             // we also need to know our IP, so we don't keep re-ingesting our own data
-            //using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
-            //{
-            //    socket.Connect("8.8.8.8", 65530);
-            //    IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-            //    localIP = endPoint.Address.ToString();
-            //}
+            using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+            {
+                socket.Connect("8.8.8.8", 65530);
+                IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+                localIP = endPoint.Address.ToString();
+            }
 #endif
             var remoteEP = new IPEndPoint(IPAddress.Any, 0); // get from any IP sending to any port (to our port listenPort)
 
@@ -72,7 +71,7 @@ namespace Valcoin.Services
                     if (initializing)
                     {
                         // we don't actually want to await this
-                        _ = Task.Run(async () => await BootstrapNetwork(500), token);
+                        _ = Task.Run(async () => await BootstrapNetwork(), token);
                         initializing = false;
                     }
 
@@ -138,6 +137,8 @@ namespace Valcoin.Services
                 // try to parse the raw data as json, catching if the data isn't json
                 var clientAddress = result.RemoteEndPoint.Address;
                 var clientPort = result.RemoteEndPoint.Port;
+                if (clientAddress.ToString() == localIP) return;
+
                 var data = JsonDocument.Parse(result.Buffer);
 
                 // a block will always contain MerkleRoot and will have transactions, but if MerkleRoot is missing it must just be a transaction
@@ -202,6 +203,8 @@ namespace Valcoin.Services
                             var nextBlock = await chainService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
                             do
                             {
+                                // delay execution to ensure the network service is listening
+                                Task.Delay(delay).Wait();
                                 await SendData(nextBlock, client);
                                 nextBlock = await chainService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                             }
@@ -248,7 +251,8 @@ namespace Valcoin.Services
         public async Task ProcessClient(string clientAddress, int clientPort)
         {
             // if all was successful, add the client to the clients list if not present already
-            //var clientEndpoint = new IPEndPoint(clientAddress, clientPort);
+            if (clientAddress == localIP) return;
+
             var client = clients.Where(c => c.Address == clientAddress)
                 .FirstOrDefault(c => c.Port == clientPort);
             if (client != null)
@@ -266,10 +270,8 @@ namespace Valcoin.Services
             }
         }
 
-        public async Task BootstrapNetwork(int delay)
+        public async Task BootstrapNetwork()
         {
-            // delay execution to ensure the network service is listening
-            Task.Delay(delay).Wait();
             await ProliferateClients();
             await SynchronizeChain();
         }
@@ -282,6 +284,8 @@ namespace Valcoin.Services
             // try to synchronize with the top 3 clients
             for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
+                // delay execution to ensure the network service is listening
+                Task.Delay(delay).Wait();
                 var client = top3[i];
                 Message msg = null;
                 if (highestBlock == null)
@@ -304,6 +308,8 @@ namespace Valcoin.Services
             // try to synchronize with the top 3 clients
             for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
+                // delay execution to ensure the network service is listening
+                Task.Delay(delay).Wait();
                 var client = top3[i];
                 var msg = new Message() { MessageType = MessageType.ClientRequest };
                 await SendData(msg, client);
