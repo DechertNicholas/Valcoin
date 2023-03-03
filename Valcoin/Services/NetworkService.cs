@@ -66,15 +66,15 @@ namespace Valcoin.Services
 
             try
             {
+                if (initializing)
+                {
+                    // we don't actually want to await this
+                    _ = Task.Run(async () => await BootstrapNetwork(), token);
+                    initializing = false;
+                }
+
                 while (!token.IsCancellationRequested)
                 {
-                    if (initializing)
-                    {
-                        // we don't actually want to await this
-                        _ = Task.Run(async () => await BootstrapNetwork(), token);
-                        initializing = false;
-                    }
-
                     var result = await Client.ReceiveAsync(token);
                     // utilize a task here so that the listener thread can get back to listening ASAP
                     var task = Task.Run(async () => await ParseData(result), token);
