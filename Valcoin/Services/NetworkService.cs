@@ -17,18 +17,20 @@ using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using System.Numerics;
 using Microsoft.UI.Xaml.Automation;
 using System.Reflection.Metadata.Ecma335;
+using Windows.Media.Protection.PlayReady;
 
 namespace Valcoin.Services
 {
     // https://learn.microsoft.com/en-us/dotnet/framework/network-programming/using-udp-services
     public class NetworkService : INetworkService
     {
-        public static UdpClient Client { get; private set; } = new(listenPort);
+        public static UdpClient Client { get; private set; }
         /// <summary>
         /// Useful property that shows which network parses are active.
         /// </summary>
         public static ConcurrentQueue<Task> ActiveParses { get; private set; } = new();
 
+        public const int SIO_UDP_CONNRESET = -1744830452; // used to suppress errors later
         // my domain, running a node that will always be online. Used as the first contact on the network
         private static Client rootClientHint = new("nicholasdechert.com", 2106);
         private Task listenerTask;
@@ -42,6 +44,16 @@ namespace Valcoin.Services
         public NetworkService(IChainService chainService)
         {
             this.chainService = chainService;
+            // the socket listens for ICMP messages, and if it can't reach a remote host, may get a 
+            // "An existing connection was forcibly closed by the remote host" exception. This is UDP, and we don't care if it gets closed
+            // or if the host is unreachable - so we kill it here (we could also catch the exception, but this seems nicer
+            Client = new(listenPort);
+            // https://stackoverflow.com/a/39440399/4822183
+            Client.Client.IOControl(
+                (IOControlCode)SIO_UDP_CONNRESET,
+                new byte[] { 0, 0, 0, 0 },
+                null
+            );
         }
 
         public async void StartListener(CancellationToken token)
@@ -118,7 +130,7 @@ namespace Valcoin.Services
         public async Task SendData(byte[] data, Client client)
         {
             // delay execution to ensure the network service is listening
-            Task.Delay(delay).Wait();
+            //Task.Delay(delay).Wait();
             // address is test value, will change to have a real param
             await Client.SendAsync(data, client.Address, client.Port);
         }
@@ -226,6 +238,9 @@ namespace Valcoin.Services
                                 nextBlock = await chainService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                             }
                             while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
+                            // the current nextBlock has a NextBlockHash of 0, but we still need to send it
+                            await SendData(nextBlock, client);
+                            // now we've sent all blocks
                             break;
 
                         // the client is requesting a specific block
