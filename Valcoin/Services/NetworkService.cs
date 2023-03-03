@@ -38,7 +38,7 @@ namespace Valcoin.Services
         private static List<Client> clients = new();
         private IChainService chainService;
         private static string localIP;
-        private static int delay = 500;
+        private static int delay = 200;
 
         public NetworkService(IChainService chainService)
         {
@@ -136,7 +136,7 @@ namespace Valcoin.Services
         public async Task SendData(byte[] data, Client client)
         {
             // delay execution to ensure the network service is listening
-            //Task.Delay(delay).Wait();
+            Task.Delay(delay).Wait();
             // address is test value, will change to have a real param
             await Client.SendAsync(data, client.Address, client.Port);
         }
