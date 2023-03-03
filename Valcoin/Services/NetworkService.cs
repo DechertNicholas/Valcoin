@@ -33,10 +33,9 @@ namespace Valcoin.Services
         public const int SIO_UDP_CONNRESET = -1744830452; // used to suppress errors later
         // my domain, running a node that will always be online. Used as the first contact on the network
         private static Client rootClientHint = new("nicholasdechert.com", 2106);
-        private Task listenerTask;
-        private bool initializing = true;
+        private static bool initializing = true;
         private const int listenPort = 2106;
-        private List<Client> clients = new();
+        private static List<Client> clients = new();
         private IChainService chainService;
         private static string localIP;
         private static int delay = 500;
@@ -44,18 +43,25 @@ namespace Valcoin.Services
         public NetworkService(IChainService chainService)
         {
             this.chainService = chainService;
-            // the socket listens for ICMP messages, and if it can't reach a remote host, may get a 
-            // "An existing connection was forcibly closed by the remote host" exception. This is UDP, and we don't care if it gets closed
-            // or if the host is unreachable - so we kill it here (we could also catch the exception, but this seems nicer
-            Client = new(listenPort);
-            // https://stackoverflow.com/a/39440399/4822183
-            Client.Client.IOControl(
-                (IOControlCode)SIO_UDP_CONNRESET,
-                new byte[] { 0, 0, 0, 0 },
-                null
-            );
+            if (Client == null)
+            {
+                Client = new(listenPort);
+                // the socket listens for ICMP messages, and if it can't reach a remote host, may get a 
+                // "An existing connection was forcibly closed by the remote host" exception. This is UDP, and we don't care if it gets closed
+                // or if the host is unreachable - so we kill it here (we could also catch the exception, but this seems nicer
+                // https://stackoverflow.com/a/39440399/4822183
+                Client.Client.IOControl(
+                    (IOControlCode)SIO_UDP_CONNRESET,
+                    new byte[] { 0, 0, 0, 0 },
+                    null
+                );
+            }
         }
 
+        /// <summary>
+        /// This should only ever be called once across all instances of the class.
+        /// </summary>
+        /// <param name="token"></param>
         public async void StartListener(CancellationToken token)
         {
             Thread.CurrentThread.Name = "UDP Listener";
@@ -170,6 +176,9 @@ namespace Valcoin.Services
                 var clientPort = result.RemoteEndPoint.Port;
                 if (clientAddress.ToString() == localIP) return;
 
+                // create a new version of the IChainService to avoid DBContext issues when working in parallel
+                var localService = chainService.GetFreshService();
+
                 var data = JsonDocument.Parse(result.Buffer);
 
                 // a block will always contain MerkleRoot and will have transactions, but if MerkleRoot is missing it must just be a transaction
@@ -188,7 +197,7 @@ namespace Valcoin.Services
                             break;
 
                         case ValidationCode.Valid:
-                            await chainService.AddBlock(block);
+                            await localService.AddBlock(block);
                             break;
                     }
                 }
@@ -208,18 +217,18 @@ namespace Valcoin.Services
                         // the client wants to synchronize their chain with ours
                         case MessageType.Sync:
                             ValcoinBlock syncBlock = null;
-                            ValcoinBlock ourHighestBlock = await chainService.GetLastMainChainBlock();
+                            ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
                             if (message.HighestBlockNumber == 0 && message.BlockId == "")
                             {
                                 // client has no blocks and needs a full sync
-                                syncBlock = (await chainService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
+                                syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
                                 if (syncBlock == null) break; // we have no blocks either, send nothing
                                 // send the initial block
                                 await SendData(syncBlock, client);
                             }
                             else
                             {
-                                syncBlock = await chainService.GetBlock(message.BlockId); // the client's highest block
+                                syncBlock = await localService.GetBlock(message.BlockId); // the client's highest block
                                 if (syncBlock == null) break; // we don't have this block, send nothing
 
                                 // check if they already are at the last main chain block - same block height as us, and
@@ -231,11 +240,11 @@ namespace Valcoin.Services
                             }
 
                             // get the next block in the chain. We don't really care if we're on the main
-                            var nextBlock = await chainService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
+                            var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
                             do
                             {
                                 await SendData(nextBlock, client);
-                                nextBlock = await chainService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
+                                nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                             }
                             while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
                             // the current nextBlock has a NextBlockHash of 0, but we still need to send it
@@ -245,19 +254,19 @@ namespace Valcoin.Services
 
                         // the client is requesting a specific block
                         case MessageType.BlockRequest:
-                            var requestBlock = await chainService.GetBlock(message.BlockId);
+                            var requestBlock = await localService.GetBlock(message.BlockId);
                             if (requestBlock != null)
                                 await SendData(requestBlock, client);
                             break;
                             
                         // the client is requesting we share our list of clients
                         case MessageType.ClientRequest:
-                            var clientSend = new Message(await chainService.GetClients());
+                            var clientSend = new Message(await localService.GetClients());
                             await SendData(clientSend, client);
                             break;
 
                         case MessageType.ClientShare:
-                            var ourClients = await chainService.GetClients();
+                            var ourClients = await localService.GetClients();
                             message.Clients.Where(c => ourClients.Contains(c) == false)
                                 .ToList()
                                 .ForEach(async c => await ProcessClient(c.Address, c.Port));
@@ -292,6 +301,8 @@ namespace Valcoin.Services
                 clients.Where(c => c.Address == IPAddress.Any.ToString()).ToList().ForEach(c => clients.Remove(c));
             }
 #endif
+            // create a new version of the IChainService to avoid DBContext issues when working in parallel
+            var localService = chainService.GetFreshService();
 
             var client = clients.Where(c => c.Address == clientAddress)
                 .FirstOrDefault(c => c.Port == clientPort);
@@ -299,14 +310,14 @@ namespace Valcoin.Services
             {
                 // client at this endpoint exists
                 client.LastCommunicationUTC = DateTime.UtcNow;
-                await chainService.UpdateClient(client);
+                await localService.UpdateClient(client);
             }
             else
             {
                 // this is a new connection
                 client = new(clientAddress, clientPort) { LastCommunicationUTC = DateTime.UtcNow };
                 clients.Add(client);
-                await chainService.AddClient(client);
+                await localService.AddClient(client);
             }
         }
 
@@ -318,7 +329,9 @@ namespace Valcoin.Services
 
         public async Task SynchronizeChain()
         {
-            var highestBlock = await chainService.GetLastMainChainBlock();
+            // create a new version of the IChainService to avoid DBContext issues when working in parallel
+            var localService = chainService.GetFreshService();
+            var highestBlock = await localService.GetLastMainChainBlock();
             // organize the client list by last comm time, then split into chunks of 3, and select the first chunk (top 3 clients)
             var top3 = clients.OrderBy(c => c.LastCommunicationUTC).Chunk(3).ToList()[0].ToList();
             // try to synchronize with the top 3 clients

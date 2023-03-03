@@ -28,6 +28,15 @@ namespace Valcoin.Services
             Db = context;
         }
 
+        /// <summary>
+        /// This gets a fresh context and is mainly used by the network
+        /// </summary>
+        /// <returns></returns>
+        public IChainService GetFreshService()
+        {
+            return new ChainService(new ValcoinContext());
+        }
+
         public virtual async Task<ValcoinBlock> GetLastMainChainBlock()
         {
             uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
