@@ -117,6 +117,8 @@ namespace Valcoin.Services
         /// <returns></returns>
         public async Task SendData(byte[] data, Client client)
         {
+            // delay execution to ensure the network service is listening
+            Task.Delay(delay).Wait();
             // address is test value, will change to have a real param
             await Client.SendAsync(data, client.Address, client.Port);
         }
@@ -203,8 +205,6 @@ namespace Valcoin.Services
                             var nextBlock = await chainService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
                             do
                             {
-                                // delay execution to ensure the network service is listening
-                                Task.Delay(delay).Wait();
                                 await SendData(nextBlock, client);
                                 nextBlock = await chainService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                             }
