@@ -27,7 +27,7 @@ namespace Valcoin.Services
         /// <summary>
         /// Useful property that shows which network parses are active.
         /// </summary>
-        public static ConcurrentBag<Task> ActiveParses { get; private set; } = new();
+        public static ConcurrentQueue<Task> ActiveParses { get; private set; } = new();
 
         // my domain, running a node that will always be online. Used as the first contact on the network
         private static Client rootClientHint = new("nicholasdechert.com", 2106);
@@ -78,7 +78,7 @@ namespace Valcoin.Services
                     var result = await Client.ReceiveAsync(token);
                     // utilize a task here so that the listener thread can get back to listening ASAP
                     var task = Task.Run(async () => await ParseData(result), token);
-                    ActiveParses.Add(task);
+                    ActiveParses.Enqueue(task);
                 }
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is TaskCanceledException)
@@ -132,7 +132,24 @@ namespace Valcoin.Services
         public async Task ParseData(UdpReceiveResult result)
         {
             // remove old parses
-            ActiveParses.Where(t => t.IsCompleted == true).ToList().ForEach(t => ActiveParses.TryTake(out _));
+            for (var i = 0; i < ActiveParses.Count; i++)
+            {
+                // there isn't a great thread-safe way to do this, so we use a queue and remove each item. If the item is not finished,
+                // we re-add it to the queue. If it is finished, we dispose of it. This cleans the queue on each call of ParseData()
+                // the variable i is simply an iterator here, and it doesn't matter if the queue shrinks while iterating because we don't
+                // access by index. We simply retry until we max out i, which should always be small
+                var taken = ActiveParses.TryDequeue(out Task task);
+                if (!taken) continue; // just skip if we didn't take anything
+                if (task.IsCompleted != true)
+                {
+                    ActiveParses.Enqueue(task);
+                }
+                else
+                {
+                    task.Dispose();
+                }
+            }
+
             Thread.CurrentThread.Name = "Network Data Parser";
             try
             {
@@ -252,6 +269,14 @@ namespace Valcoin.Services
         {
             // if all was successful, add the client to the clients list if not present already
             if (clientAddress == localIP) return;
+#if !RELEASE
+            if (clientAddress != localIP)
+            {
+                // when we get the first client on the local network that isn't us, remove the broadcast address.
+                // this prevents a lot of duplicate data later when doing debug testing
+                clients.Where(c => c.Address == IPAddress.Any.ToString()).ToList().ForEach(c => clients.Remove(c));
+            }
+#endif
 
             var client = clients.Where(c => c.Address == clientAddress)
                 .FirstOrDefault(c => c.Port == clientPort);
