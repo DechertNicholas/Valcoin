@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 using Valcoin.Models;
 
 namespace Valcoin.Services
@@ -11,6 +12,8 @@ namespace Valcoin.Services
         public DbSet<TxOutput> TxOutputs { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<Client> Clients { get; set; }
+
+        private static bool dbRefreshed;
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");
@@ -30,8 +33,13 @@ namespace Valcoin.Services
         {
             var context = new ValcoinContext();
 #if !DEBUG___PERSIST_DB && !RELEASE
-            // delete and remake in debug env
-            context.Database.EnsureDeleted();
+            // contexts get re-created, and we need to ensure we don't keep deleting the DB
+            if (!dbRefreshed)
+            {
+                // delete and remake in debug env
+                context.Database.EnsureDeleted();
+                dbRefreshed = true;
+            }
 #endif
             // create the database
             context.Database.EnsureCreated();
