@@ -188,7 +188,7 @@ namespace Valcoin.Services
             {
                 await chainService.AddBlock(CandidateBlock);
                 // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
-                await networkService.RelayData(new Message(CandidateBlock, NetworkService.ListenPort));
+                await networkService.RelayData(new Message(CandidateBlock));
             }
             else
             {

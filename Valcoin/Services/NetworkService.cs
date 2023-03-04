@@ -236,7 +236,7 @@ namespace Valcoin.Services
                             syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
                             if (syncBlock == null) break; // we have no blocks either, send nothing
                             // send the initial block
-                            await SendData(new Message(syncBlock, ListenPort), client);
+                            await SendData(new Message(syncBlock), client);
                         }
                         else
                         {
@@ -255,12 +255,12 @@ namespace Valcoin.Services
                         var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
                         do
                         {
-                            await SendData(new Message(nextBlock, ListenPort), client);
+                            await SendData(new Message(nextBlock), client);
                             nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                         }
                         while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
                         // the current nextBlock has a NextBlockHash of 0, but we still need to send it
-                        await SendData(new Message(nextBlock, ListenPort), client);
+                        await SendData(new Message(nextBlock), client);
                         // now we've sent all blocks
                         break;
 
@@ -268,12 +268,12 @@ namespace Valcoin.Services
                     case MessageType.BlockRequest:
                         var requestBlock = await localService.GetBlock(message.BlockId);
                         if (requestBlock != null)
-                            await SendData(new Message(requestBlock, ListenPort), client);
+                            await SendData(new Message(requestBlock), client);
                         break;
 
                     // the client is requesting we share our list of clients
                     case MessageType.ClientRequest:
-                        var clientSend = new Message(await localService.GetClients());
+                        var clientSend = new Message(await localService.GetClients(), ListenPort);
                         await SendData(clientSend, client);
                         break;
 
@@ -399,7 +399,7 @@ namespace Valcoin.Services
             for (var i = 0; i < Math.Min(3, top3.Count); i++)
             {
                 var client = top3[i];
-                var msg = new Message() { MessageType = MessageType.ClientRequest };
+                var msg = new Message(MessageType.ClientRequest);
                 await SendData(msg, client);
             }
         }

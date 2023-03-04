@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using Valcoin.Services;
 
 namespace Valcoin.Models
 {
@@ -40,6 +41,11 @@ namespace Valcoin.Models
         [JsonConstructor]
         public Message() { }
 
+        public Message(MessageType type)
+        {
+            MessageType = type;
+        }
+
         /// <summary>
         /// Sync control message
         /// </summary>
@@ -50,6 +56,7 @@ namespace Valcoin.Models
             MessageType = MessageType.Sync;
             HighestBlockNumber = highestBlockNumber;
             BlockId = blockId;
+            ListenPort = NetworkService.ListenPort;
         }
 
         /// <summary>
@@ -59,30 +66,32 @@ namespace Valcoin.Models
         {
             MessageType = MessageType.BlockRequest;
             BlockId = blockId;
+            ListenPort = NetworkService.ListenPort;
         }
 
         /// <summary>
         /// Client share message. Contains a list of clients to share to the recipient. 
         /// </summary>
         /// <param name="clients"></param>
-        public Message(List<Client> clients)
+        public Message(List<Client> clients, int listenPort)
         {
             MessageType = MessageType.ClientShare;
             clients.ForEach(c => Clients.Add(c));
+            ListenPort = NetworkService.ListenPort;
         }
 
-        public Message(ValcoinBlock block, int listenPort)
+        public Message(ValcoinBlock block)
         {
             MessageType = MessageType.BlockShare;
             Block = block;
-            ListenPort = listenPort;
+            ListenPort = NetworkService.ListenPort;
         }
 
-        public Message(Transaction tx, int listenPort)
+        public Message(Transaction tx)
         {
             MessageType = MessageType.BlockShare;
             Transaction = tx;
-            ListenPort = listenPort;
+            ListenPort = NetworkService.ListenPort;
         }
     }
 }
