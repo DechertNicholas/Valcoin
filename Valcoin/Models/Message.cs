@@ -13,7 +13,9 @@ namespace Valcoin.Models
         Sync,
         BlockRequest,
         ClientRequest,
-        ClientShare
+        ClientShare,
+        BlockShare,
+        TransactionShare
     }
 
     /// <summary>
@@ -22,10 +24,13 @@ namespace Valcoin.Models
     /// </summary>
     public class Message
     {
+        public int ListenPort { get; private set; }
         public MessageType MessageType { get; set; }
         public ulong HighestBlockNumber { get; set; } = 0;
         public string BlockId { get; set; }
         public List<Client> Clients { get; set; } = new();
+        public ValcoinBlock Block { get; set; }
+        public Transaction Transaction { get; set; }
 
         public static implicit operator byte[](Message m) => JsonSerializer.SerializeToUtf8Bytes(m);
 
@@ -64,6 +69,20 @@ namespace Valcoin.Models
         {
             MessageType = MessageType.ClientShare;
             clients.ForEach(c => Clients.Add(c));
+        }
+
+        public Message(ValcoinBlock block, int listenPort)
+        {
+            MessageType = MessageType.BlockShare;
+            Block = block;
+            ListenPort = listenPort;
+        }
+
+        public Message(Transaction tx, int listenPort)
+        {
+            MessageType = MessageType.BlockShare;
+            Transaction = tx;
+            ListenPort = listenPort;
         }
     }
 }

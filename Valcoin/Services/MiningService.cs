@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -187,7 +188,7 @@ namespace Valcoin.Services
             {
                 await chainService.AddBlock(CandidateBlock);
                 // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
-                await networkService.RelayData(CandidateBlock);
+                await networkService.RelayData(new Message(CandidateBlock, NetworkService.ListenPort));
             }
             else
             {

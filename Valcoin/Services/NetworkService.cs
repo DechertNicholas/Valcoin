@@ -30,12 +30,12 @@ namespace Valcoin.Services
         /// Useful property that shows which network parses are active.
         /// </summary>
         public static ConcurrentQueue<Task> ActiveParses { get; private set; } = new();
+        public static int ListenPort { get; private set; } = 2106;
 
         //public const int SIO_UDP_CONNRESET = -1744830452; // used to suppress errors later
         // my domain, running a node that will always be online. Used as the first contact on the network
         private static readonly Client rootClientHint = new("nicholasdechert.com", 2106);
         private static bool initializing = true;
-        private const int listenPort = 2106;
         private static List<Client> clients = new();
         private readonly IChainService chainService;
         private static string localIP;
@@ -44,7 +44,7 @@ namespace Valcoin.Services
         public NetworkService(IChainService chainService)
         {
             this.chainService = chainService;
-            Listener ??= new(IPAddress.Any, listenPort);
+            Listener ??= new(IPAddress.Any, ListenPort);
         }
 
         /// <summary>
@@ -59,8 +59,8 @@ namespace Valcoin.Services
 #if !RELEASE
             // for testing, I add two machines on my local network to the client list. This allows me to test connections without
             // needing to use the internet. These do not need to be kept in a database
-            clients.Add(new Client("10.11.5.100", listenPort));
-            clients.Add(new Client("10.11.5.101", listenPort));
+            clients.Add(new Client("10.11.5.100", ListenPort));
+            clients.Add(new Client("10.11.5.101", ListenPort));
 
             // we also need to know our IP, so we don't keep re-ingesting our own data
             using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
@@ -110,11 +110,11 @@ namespace Valcoin.Services
         /// </summary>
         /// <param name="data">The data to send (a <see cref="ValcoinBlock"/>, <see cref="Transaction"/>, etc).</param>
         /// <returns></returns>
-        public async Task RelayData(byte[] data)
+        public async Task RelayData(Message msg)
         {
             foreach (var client in clients)
             {
-                await SendData(data, client);
+                await SendData(msg, client);
             }
         }
 
@@ -124,7 +124,7 @@ namespace Valcoin.Services
         /// <param name="data">The data to send (a <see cref="ValcoinBlock"/>, <see cref="Transaction"/>, etc).</param>
         /// <param name="client">The client to send to.</param>
         /// <returns></returns>
-        public async Task SendData(byte[] data, Client client)
+        public async Task SendData(Message msg, Client client)
         {
             // delay execution to ensure the network service is listening
             //Task.Delay(delay).Wait();
@@ -132,7 +132,7 @@ namespace Valcoin.Services
             var tcpClient = new TcpClient();
             try
             {
-                if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000))
+                if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000)) // wait two seconds to try and connect
                 {
                     // we didn't connect
                     return;
@@ -140,7 +140,7 @@ namespace Valcoin.Services
                 if (!tcpClient.Connected) { return; } // not connected, just leave
 
                 var stream = tcpClient.GetStream();
-                await stream.WriteAsync(data);
+                await stream.WriteAsync((byte[])msg);
             }
             finally
             {
@@ -218,104 +218,103 @@ namespace Valcoin.Services
 
                 // we're done communicating, so close the socket and continue parsing the data
                 tcpClient.Close();
+                var memory = buffer.AsMemory()[0..totalBytesRead];
+                var data = JsonDocument.Parse(memory);
 
-                var data = JsonDocument.Parse(buffer);
-
-                // a block will always contain MerkleRoot and will have transactions, but if MerkleRoot is missing it must just be a transaction
-                if (data.RootElement.ToString().Contains("MerkleRoot"))
+                // all data is transmitted in a message
+                var message = data.Deserialize<Message>();
+                var client = new Client(clientAddress.ToString(), message.ListenPort);
+                switch (message.MessageType)
                 {
-                    var block = data.Deserialize<ValcoinBlock>();
-                    switch (ValidateBlock(block))
-                    {
-                        case ValidationCode.Miss_Prev_Block:
-                            // TODO: Send a sync request message to the client
-                            var message = new Message(Convert.ToHexString(block.PreviousBlockHash));
-                            foreach (var client in clients)
+                    // the client wants to synchronize their chain with ours
+                    case MessageType.Sync:
+                        ValcoinBlock syncBlock = null;
+                        ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
+                        if (message.HighestBlockNumber == 0 && message.BlockId == "")
+                        {
+                            // client has no blocks and needs a full sync
+                            syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
+                            if (syncBlock == null) break; // we have no blocks either, send nothing
+                            // send the initial block
+                            await SendData(new Message(syncBlock, ListenPort), client);
+                        }
+                        else
+                        {
+                            syncBlock = await localService.GetBlock(message.BlockId); // the client's highest block
+                            if (syncBlock == null) break; // we don't have this block, send nothing
+
+                            // check if they already are at the last main chain block - same block height as us, and
+                            // no next block defined yet
+                            if (syncBlock != null &&
+                                syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
+                                syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
+                                break; // already sync'd
+                        }
+
+                        // get the next block in the chain. We don't really care if we're on the main
+                        var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
+                        do
+                        {
+                            await SendData(new Message(nextBlock, ListenPort), client);
+                            nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
+                        }
+                        while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
+                        // the current nextBlock has a NextBlockHash of 0, but we still need to send it
+                        await SendData(new Message(nextBlock, ListenPort), client);
+                        // now we've sent all blocks
+                        break;
+
+                    // the client is requesting a specific block
+                    case MessageType.BlockRequest:
+                        var requestBlock = await localService.GetBlock(message.BlockId);
+                        if (requestBlock != null)
+                            await SendData(new Message(requestBlock, ListenPort), client);
+                        break;
+
+                    // the client is requesting we share our list of clients
+                    case MessageType.ClientRequest:
+                        var clientSend = new Message(await localService.GetClients());
+                        await SendData(clientSend, client);
+                        break;
+
+                    case MessageType.ClientShare:
+                        var ourClients = await localService.GetClients();
+                        message.Clients.Where(c => ourClients.Contains(c) == false)
+                            .ToList()
+                            .ForEach(async c => await ProcessClient(c.Address, c.Port));
+                        break;
+
+                    case MessageType.BlockShare:
+                        {
+                            var block = message.Block;
+                            switch (ValidateBlock(block))
                             {
-                                await SendData(message, client);
+                                case ValidationCode.Miss_Prev_Block:
+                                    // TODO: Send a sync request message to the client
+                                    var returnMessage = new Message(Convert.ToHexString(block.PreviousBlockHash));
+                                    // relay to the network
+                                    await RelayData(returnMessage);
+                                    break;
+
+                                case ValidationCode.Valid:
+                                    await localService.AddBlock(block);
+                                    break;
                             }
                             break;
+                        }
 
-                        case ValidationCode.Valid:
-                            await localService.AddBlock(block);
+                    case MessageType.TransactionShare:
+                        {
+                            //got a new transaction.Validate it and send it to the miner, if it's active
+                            var tx = message.Transaction;
+                            if (ValidateTx(tx) == ValidationCode.Valid && MiningService.MineBlocks == true)
+                                MiningService.TransactionPool.Add(tx);
                             break;
-                    }
-                }
-                else if (data.RootElement.ToString().Contains("TransactionId"))
-                {
-                    // got a new transaction. Validate it and send it to the miner, if it's active
-                    var tx = data.Deserialize<Transaction>();
-                    if (ValidateTx(tx) == ValidationCode.Valid && MiningService.MineBlocks == true)
-                        MiningService.TransactionPool.Add(tx);
-                }
-                else if (data.RootElement.ToString().Contains("MessageType"))
-                {
-                    var message = data.Deserialize<Message>();
-                    var client = new Client(clientAddress.ToString(), clientPort);
-                    switch (message.MessageType)
-                    {
-                        // the client wants to synchronize their chain with ours
-                        case MessageType.Sync:
-                            ValcoinBlock syncBlock = null;
-                            ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
-                            if (message.HighestBlockNumber == 0 && message.BlockId == "")
-                            {
-                                // client has no blocks and needs a full sync
-                                syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
-                                if (syncBlock == null) break; // we have no blocks either, send nothing
-                                // send the initial block
-                                await SendData(syncBlock, client);
-                            }
-                            else
-                            {
-                                syncBlock = await localService.GetBlock(message.BlockId); // the client's highest block
-                                if (syncBlock == null) break; // we don't have this block, send nothing
-
-                                // check if they already are at the last main chain block - same block height as us, and
-                                // no next block defined yet
-                                if (syncBlock != null &&
-                                    syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
-                                    syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
-                                    break; // already sync'd
-                            }
-
-                            // get the next block in the chain. We don't really care if we're on the main
-                            var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
-                            do
-                            {
-                                await SendData(nextBlock, client);
-                                nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
-                            }
-                            while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
-                            // the current nextBlock has a NextBlockHash of 0, but we still need to send it
-                            await SendData(nextBlock, client);
-                            // now we've sent all blocks
-                            break;
-
-                        // the client is requesting a specific block
-                        case MessageType.BlockRequest:
-                            var requestBlock = await localService.GetBlock(message.BlockId);
-                            if (requestBlock != null)
-                                await SendData(requestBlock, client);
-                            break;
-                            
-                        // the client is requesting we share our list of clients
-                        case MessageType.ClientRequest:
-                            var clientSend = new Message(await localService.GetClients());
-                            await SendData(clientSend, client);
-                            break;
-
-                        case MessageType.ClientShare:
-                            var ourClients = await localService.GetClients();
-                            message.Clients.Where(c => ourClients.Contains(c) == false)
-                                .ToList()
-                                .ForEach(async c => await ProcessClient(c.Address, c.Port));
-                            break;
-                    }
+                        }
                 }
 
                 // regardless of validation outcome, update the client data
-                await ProcessClient(clientAddress.ToString(), clientPort);
+                await ProcessClient(clientAddress.ToString(), message.ListenPort);
             }
             catch (Exception ex)
             {

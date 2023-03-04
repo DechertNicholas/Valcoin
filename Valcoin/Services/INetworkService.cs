@@ -18,8 +18,8 @@ namespace Valcoin.Services
 
         public void StartListener(CancellationToken token);
         public void StopListener();
-        public Task RelayData(byte[] data);
-        public Task SendData(byte[] data, Client client);
+        public Task RelayData(Message msg);
+        public Task SendData(Message msg, Client client);
         public Task ParseData(TcpClient client);
         public Task ProcessClient(string clientAddress, int clientPort);
 
