@@ -198,7 +198,7 @@ namespace Valcoin.Services
                 {
                     // the client wants to synchronize their chain with ours
                     case MessageType.Sync:
-                        await SynchronizeChainWithClient(client, message, tcpClient);
+                        await SynchronizeChainWithClient(client, message);
                         break;
 
                     // the client is requesting a specific block
@@ -343,48 +343,62 @@ namespace Valcoin.Services
             await SynchronizeChain();
         }
 
-        public async Task SynchronizeChainWithClient(Client client, Message syncMessage, TcpClient tcpClient)
+        public async Task SynchronizeChainWithClient(Client client, Message syncMessage)
         {
-            var stream = tcpClient.GetStream();
-            var localService = chainService.GetFreshService();
-            ValcoinBlock syncBlock = null;
-            ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
-            if (syncMessage.HighestBlockNumber == 0 && syncMessage.BlockId == "")
+            if (syncMessage.MessageType == MessageType.Sync)
             {
-                // client has no blocks and needs a full sync.
-                // get the first block in the chain
-                syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
-                if (syncBlock == null) return; // we have no blocks either, send nothing
+                TcpClient tcpClient = new(client.Address, client.Port);
+                var stream = tcpClient.GetStream();
+
+                // the client sent out sync requests to multiple clients, then closed the connection.
+                // we need to establish a new connection that does not stop
+                await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
+
+
+                var localService = chainService.GetFreshService();
+                ValcoinBlock syncBlock = null;
+                ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
+                if (syncMessage.HighestBlockNumber == 0 && syncMessage.BlockId == "")
+                {
+                    // client has no blocks and needs a full sync.
+                    // get the first block in the chain
+                    syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
+                    if (syncBlock == null) return; // we have no blocks either, send nothing
                     // send the initial block
                     await stream.WriteAsync((byte[])new Message(syncBlock));
                     //await SendData(new Message(syncBlock), client);
-            }
-            else
-            {
-                syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
-                if (syncBlock == null) return; // we don't have this block, send nothing
+                }
+                else
+                {
+                    syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
+                    if (syncBlock == null) return; // we don't have this block, send nothing
 
-                // check if they already are at the last main chain block - same block height as us, and
-                // no next block defined yet
-                if (syncBlock != null &&
-                    syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
-                    syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
-                    return; // already sync'd
-            }
+                    // check if they already are at the last main chain block - same block height as us, and
+                    // no next block defined yet
+                    if (syncBlock != null &&
+                        syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
+                        syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
+                        return; // already sync'd
+                }
 
-            //_ = stream.ReadAsync()
+                //_ = stream.ReadAsync()
 
-            // get the next block in the chain. We don't really care if we're on the main
-            var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
-            do
-            {
+                // get the next block in the chain. We don't really care if we're on the main
+                var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
+                do
+                {
+                    await SendData(new Message(nextBlock), client);
+                    nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
+                }
+                while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
+                                                                              // the current nextBlock has a NextBlockHash of 0, but we still need to send it
                 await SendData(new Message(nextBlock), client);
-                nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
+                // now we've sent all blocks
             }
-            while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
-                                                                          // the current nextBlock has a NextBlockHash of 0, but we still need to send it
-            await SendData(new Message(nextBlock), client);
-            // now we've sent all blocks
+            else if (syncMessage.MessageType == MessageType.SyncResponse)
+            {
+                // TODO: response stuff
+            }
         }
 
         public async Task SynchronizeChain()
