@@ -347,11 +347,19 @@ namespace Valcoin.Services
         {
             if (syncMessage.MessageType == MessageType.Sync)
             {
-                TcpClient tcpClient = new(client.Address, client.Port);
-                var stream = tcpClient.GetStream();
-
                 // the client sent out sync requests to multiple clients, then closed the connection.
                 // we need to establish a new connection that does not stop
+                TcpClient tcpClient = new();
+                if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000)) // wait two seconds to try and connect
+                {
+                    // we didn't connect
+                    return;
+                }
+                if (!tcpClient.Connected) { return; } // not connected, just leave
+
+                //var response = await GetDataFromClient(tcpClient);
+
+                var stream = tcpClient.GetStream();
                 await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
 
 
