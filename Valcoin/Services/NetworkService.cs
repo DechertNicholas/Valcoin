@@ -18,44 +18,33 @@ using System.Numerics;
 using Microsoft.UI.Xaml.Automation;
 using System.Reflection.Metadata.Ecma335;
 using Windows.Media.Protection.PlayReady;
+using System.Buffers;
 
 namespace Valcoin.Services
 {
     // https://learn.microsoft.com/en-us/dotnet/framework/network-programming/using-udp-services
     public class NetworkService : INetworkService
     {
-        public static UdpClient Client { get; private set; }
+        public static TcpListener Listener { get; private set; }
         /// <summary>
         /// Useful property that shows which network parses are active.
         /// </summary>
         public static ConcurrentQueue<Task> ActiveParses { get; private set; } = new();
 
-        public const int SIO_UDP_CONNRESET = -1744830452; // used to suppress errors later
+        //public const int SIO_UDP_CONNRESET = -1744830452; // used to suppress errors later
         // my domain, running a node that will always be online. Used as the first contact on the network
-        private static Client rootClientHint = new("nicholasdechert.com", 2106);
+        private static readonly Client rootClientHint = new("nicholasdechert.com", 2106);
         private static bool initializing = true;
         private const int listenPort = 2106;
         private static List<Client> clients = new();
-        private IChainService chainService;
+        private readonly IChainService chainService;
         private static string localIP;
-        private static int delay = 200;
+        //private static int delay = 200;
 
         public NetworkService(IChainService chainService)
         {
             this.chainService = chainService;
-            if (Client == null)
-            {
-                Client = new(listenPort);
-                // the socket listens for ICMP messages, and if it can't reach a remote host, may get a 
-                // "An existing connection was forcibly closed by the remote host" exception. This is UDP, and we don't care if it gets closed
-                // or if the host is unreachable - so we kill it here (we could also catch the exception, but this seems nicer
-                // https://stackoverflow.com/a/39440399/4822183
-                Client.Client.IOControl(
-                    (IOControlCode)SIO_UDP_CONNRESET,
-                    new byte[] { 0, 0, 0, 0 },
-                    null
-                );
-            }
+            Listener ??= new(IPAddress.Any, listenPort);
         }
 
         /// <summary>
@@ -64,13 +53,14 @@ namespace Valcoin.Services
         /// <param name="token"></param>
         public async void StartListener(CancellationToken token)
         {
-            Thread.CurrentThread.Name = "UDP Listener";
+            Thread.CurrentThread.Name = "TCP Listener";
             clients = await chainService.GetClients();
             if (clients.Count < 3) { clients.Add(rootClientHint); }
 #if !RELEASE
-            // 255 is not routable, but should hit all clients on the current subnet (including us, which is what we want)
-            // useful for debugging, ingest your own data
-            clients.Add(new Client(IPAddress.Broadcast.ToString(), listenPort));
+            // for testing, I add two machines on my local network to the client list. This allows me to test connections without
+            // needing to use the internet. These do not need to be kept in a database
+            clients.Add(new Client("10.11.5.100", listenPort));
+            clients.Add(new Client("10.11.5.101", listenPort));
 
             // we also need to know our IP, so we don't keep re-ingesting our own data
             using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
@@ -80,23 +70,24 @@ namespace Valcoin.Services
                 localIP = endPoint.Address.ToString();
             }
 #endif
-            var remoteEP = new IPEndPoint(IPAddress.Any, 0); // get from any IP sending to any port (to our port listenPort)
 
             try
             {
                 if (initializing)
                 {
-                    // we don't actually want to await this
+                    // start listening
+                    Listener.Start();
+                    // we don't care about this task result, just start running it
                     _ = Task.Run(async () => await BootstrapNetwork(), token);
                     initializing = false;
                 }
 
                 while (!token.IsCancellationRequested)
                 {
-                    var result = await Client.ReceiveAsync(token);
+                    TcpClient client = await Listener.AcceptTcpClientAsync(token);
                     // utilize a task here so that the listener thread can get back to listening ASAP
-                    var task = Task.Run(async () => await ParseData(result), token);
-                    ActiveParses.Enqueue(task);
+                    _ = Task.Run(async () => await ParseData(client), token);
+                    //ActiveParses.Enqueue(task);
                 }
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is TaskCanceledException)
@@ -105,13 +96,13 @@ namespace Valcoin.Services
             }
             finally
             {
-                Client.Close();
+                Listener.Stop();
             }
         }
 
         public void StopListener()
         {
-            Client.Close();
+            Listener.Stop();
         }
 
         /// <summary>
@@ -136,9 +127,26 @@ namespace Valcoin.Services
         public async Task SendData(byte[] data, Client client)
         {
             // delay execution to ensure the network service is listening
-            Task.Delay(delay).Wait();
+            //Task.Delay(delay).Wait();
             // address is test value, will change to have a real param
-            await Client.SendAsync(data, client.Address, client.Port);
+            var tcpClient = new TcpClient();
+            try
+            {
+                if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000))
+                {
+                    // we didn't connect
+                    return;
+                }
+                if (!tcpClient.Connected) { return; } // not connected, just leave
+
+                var stream = tcpClient.GetStream();
+                await stream.WriteAsync(data);
+            }
+            finally
+            {
+                tcpClient.Close();
+            }
+            //await Listener.SendAsync(data, client.Address, client.Port);
         }
 
         /// <summary>
@@ -147,39 +155,71 @@ namespace Valcoin.Services
         /// <param name="result">The bytes returned from the listener.</param>
         /// <param name="clientAddress">The IP address from the listener.</param>
         /// <param name="clientPort">The port from the listener.</param>
-        public async Task ParseData(UdpReceiveResult result)
+        public async Task ParseData(TcpClient tcpClient)
         {
             // remove old parses
-            for (var i = 0; i < ActiveParses.Count; i++)
-            {
+            //for (var i = 0; i < ActiveParses.Count; i++)
+            //{
                 // there isn't a great thread-safe way to do this, so we use a queue and remove each item. If the item is not finished,
                 // we re-add it to the queue. If it is finished, we dispose of it. This cleans the queue on each call of ParseData()
                 // the variable i is simply an iterator here, and it doesn't matter if the queue shrinks while iterating because we don't
                 // access by index. We simply retry until we max out i, which should always be small
-                var taken = ActiveParses.TryDequeue(out Task task);
-                if (!taken) continue; // just skip if we didn't take anything
-                if (task.IsCompleted != true)
-                {
-                    ActiveParses.Enqueue(task);
-                }
-                else
-                {
-                    task.Dispose();
-                }
-            }
+                //var taken = ActiveParses.TryDequeue(out Task task);
+                //if (!taken) continue; // just skip if we didn't take anything
+                //if (task.IsCompleted != true)
+                //{
+                //    ActiveParses.Enqueue(task);
+                //}
+                //else
+                //{
+                //    task.Dispose();
+                //}
+            //}
 
             Thread.CurrentThread.Name = "Network Data Parser";
             try
             {
                 // try to parse the raw data as json, catching if the data isn't json
-                var clientAddress = result.RemoteEndPoint.Address;
-                var clientPort = result.RemoteEndPoint.Port;
+                var clientAddress = (tcpClient.Client.RemoteEndPoint as IPEndPoint).Address;
+                var clientPort = (tcpClient.Client.RemoteEndPoint as IPEndPoint).Port;
                 if (clientAddress.ToString() == localIP) return;
 
                 // create a new version of the IChainService to avoid DBContext issues when working in parallel
                 var localService = chainService.GetFreshService();
 
-                var data = JsonDocument.Parse(result.Buffer);
+                // Use a rented buffer to receive data from the client
+                int bufferSize = 65535;
+                byte[] buffer = ArrayPool<byte>.Shared.Rent(65535);
+                int totalBytesRead = 0;
+
+                var stream = tcpClient.GetStream();
+                stream.ReadTimeout = 10000; // Set read timeout to 10 seconds
+
+                // get the data
+                while (true)
+                {
+                    int bytesRead = await stream.ReadAsync(buffer);
+
+                    if (bytesRead == 0)
+                    {
+                        // If no data was received, the client has disconnected
+                        break;
+                    }
+
+                    // ensure the buffer is large enough to receive all the data
+                    totalBytesRead += bytesRead;
+
+                    if (totalBytesRead == bufferSize)
+                    {
+                        // buffer is full, so resize it to double the size.
+                        Array.Resize(ref buffer, bufferSize * 2);
+                    }
+                }
+
+                // we're done communicating, so close the socket and continue parsing the data
+                tcpClient.Close();
+
+                var data = JsonDocument.Parse(buffer);
 
                 // a block will always contain MerkleRoot and will have transactions, but if MerkleRoot is missing it must just be a transaction
                 if (data.RootElement.ToString().Contains("MerkleRoot"))

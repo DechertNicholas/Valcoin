@@ -20,7 +20,7 @@ namespace Valcoin.Services
         public void StopListener();
         public Task RelayData(byte[] data);
         public Task SendData(byte[] data, Client client);
-        public Task ParseData(UdpReceiveResult result);
+        public Task ParseData(TcpClient client);
         public Task ProcessClient(string clientAddress, int clientPort);
 
     }
