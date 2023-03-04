@@ -181,7 +181,6 @@ namespace Valcoin.Services
             {
                 // try to parse the raw data as json, catching if the data isn't json
                 var clientAddress = (tcpClient.Client.RemoteEndPoint as IPEndPoint).Address;
-                var clientPort = (tcpClient.Client.RemoteEndPoint as IPEndPoint).Port;
                 if (clientAddress.ToString() == localIP) return;
 
                 // create a new version of the IChainService to avoid DBContext issues when working in parallel

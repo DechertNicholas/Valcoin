@@ -25,7 +25,7 @@ namespace Valcoin.Models
     /// </summary>
     public class Message
     {
-        public int ListenPort { get; private set; }
+        public int ListenPort { get; private set; } = NetworkService.ListenPort;
         public MessageType MessageType { get; set; }
         public ulong HighestBlockNumber { get; set; } = 0;
         public string BlockId { get; set; }
@@ -56,7 +56,6 @@ namespace Valcoin.Models
             MessageType = MessageType.Sync;
             HighestBlockNumber = highestBlockNumber;
             BlockId = blockId;
-            ListenPort = NetworkService.ListenPort;
         }
 
         /// <summary>
@@ -66,7 +65,6 @@ namespace Valcoin.Models
         {
             MessageType = MessageType.BlockRequest;
             BlockId = blockId;
-            ListenPort = NetworkService.ListenPort;
         }
 
         /// <summary>
@@ -77,21 +75,18 @@ namespace Valcoin.Models
         {
             MessageType = MessageType.ClientShare;
             clients.ForEach(c => Clients.Add(c));
-            ListenPort = NetworkService.ListenPort;
         }
 
         public Message(ValcoinBlock block)
         {
             MessageType = MessageType.BlockShare;
             Block = block;
-            ListenPort = NetworkService.ListenPort;
         }
 
         public Message(Transaction tx)
         {
             MessageType = MessageType.BlockShare;
             Transaction = tx;
-            ListenPort = NetworkService.ListenPort;
         }
     }
 }
