@@ -12,6 +12,7 @@ namespace Valcoin.Models
     public enum MessageType
     {
         Sync,
+        SyncResponse,
         BlockRequest,
         ClientRequest,
         ClientShare,

@@ -186,38 +186,9 @@ namespace Valcoin.Services
                 // create a new version of the IChainService to avoid DBContext issues when working in parallel
                 var localService = chainService.GetFreshService();
 
-                // Use a rented buffer to receive data from the client
-                int bufferSize = 65535;
-                byte[] buffer = ArrayPool<byte>.Shared.Rent(65535);
-                int totalBytesRead = 0;
+                var memory = await GetDataFromClient(tcpClient);
 
-                var stream = tcpClient.GetStream();
-                stream.ReadTimeout = 10000; // Set read timeout to 10 seconds
-
-                // get the data
-                while (true)
-                {
-                    int bytesRead = await stream.ReadAsync(buffer);
-
-                    if (bytesRead == 0)
-                    {
-                        // If no data was received, the client has disconnected
-                        break;
-                    }
-
-                    // ensure the buffer is large enough to receive all the data
-                    totalBytesRead += bytesRead;
-
-                    if (totalBytesRead == bufferSize)
-                    {
-                        // buffer is full, so resize it to double the size.
-                        Array.Resize(ref buffer, bufferSize * 2);
-                    }
-                }
-
-                // we're done communicating, so close the socket and continue parsing the data
-                tcpClient.Close();
-                var memory = buffer.AsMemory()[0..totalBytesRead];
+                //var memory = buffer.AsMemory()[0..totalBytesRead];
                 var data = JsonDocument.Parse(memory);
 
                 // all data is transmitted in a message
@@ -227,40 +198,7 @@ namespace Valcoin.Services
                 {
                     // the client wants to synchronize their chain with ours
                     case MessageType.Sync:
-                        ValcoinBlock syncBlock = null;
-                        ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
-                        if (message.HighestBlockNumber == 0 && message.BlockId == "")
-                        {
-                            // client has no blocks and needs a full sync
-                            syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
-                            if (syncBlock == null) break; // we have no blocks either, send nothing
-                            // send the initial block
-                            await SendData(new Message(syncBlock), client);
-                        }
-                        else
-                        {
-                            syncBlock = await localService.GetBlock(message.BlockId); // the client's highest block
-                            if (syncBlock == null) break; // we don't have this block, send nothing
-
-                            // check if they already are at the last main chain block - same block height as us, and
-                            // no next block defined yet
-                            if (syncBlock != null &&
-                                syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
-                                syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
-                                break; // already sync'd
-                        }
-
-                        // get the next block in the chain. We don't really care if we're on the main
-                        var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
-                        do
-                        {
-                            await SendData(new Message(nextBlock), client);
-                            nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
-                        }
-                        while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
-                        // the current nextBlock has a NextBlockHash of 0, but we still need to send it
-                        await SendData(new Message(nextBlock), client);
-                        // now we've sent all blocks
+                        await SynchronizeChainWithClient(client, message, tcpClient);
                         break;
 
                     // the client is requesting a specific block
@@ -325,6 +263,46 @@ namespace Valcoin.Services
                     throw;
                 }
             }
+            finally
+            {
+                // we're done communicating, so close the socket and continue parsing the data
+                if (tcpClient.Connected)
+                    tcpClient.Close();
+            }
+        }
+
+        public async Task<Memory<byte>> GetDataFromClient(TcpClient tcpClient)
+        {
+            // Use a rented buffer to receive data from the client
+            int bufferSize = 65535;
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(65535);
+            int totalBytesRead = 0;
+
+            var stream = tcpClient.GetStream();
+            stream.ReadTimeout = 10000; // Set read timeout to 10 seconds
+
+            // get the data
+            while (true)
+            {
+                int bytesRead = await stream.ReadAsync(buffer);
+
+                if (bytesRead == 0)
+                {
+                    // If no data was received, the client has disconnected
+                    break;
+                }
+
+                // ensure the buffer is large enough to receive all the data
+                totalBytesRead += bytesRead;
+
+                if (totalBytesRead == bufferSize)
+                {
+                    // buffer is full, so resize it to double the size.
+                    Array.Resize(ref buffer, bufferSize * 2);
+                }
+            }
+
+            return buffer.AsMemory()[0..totalBytesRead];
         }
 
         public async Task ProcessClient(string clientAddress, int clientPort)
@@ -363,6 +341,50 @@ namespace Valcoin.Services
         {
             await ProliferateClients();
             await SynchronizeChain();
+        }
+
+        public async Task SynchronizeChainWithClient(Client client, Message syncMessage, TcpClient tcpClient)
+        {
+            var stream = tcpClient.GetStream();
+            var localService = chainService.GetFreshService();
+            ValcoinBlock syncBlock = null;
+            ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
+            if (syncMessage.HighestBlockNumber == 0 && syncMessage.BlockId == "")
+            {
+                // client has no blocks and needs a full sync.
+                // get the first block in the chain
+                syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
+                if (syncBlock == null) return; // we have no blocks either, send nothing
+                    // send the initial block
+                    await stream.WriteAsync((byte[])new Message(syncBlock));
+                    //await SendData(new Message(syncBlock), client);
+            }
+            else
+            {
+                syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
+                if (syncBlock == null) return; // we don't have this block, send nothing
+
+                // check if they already are at the last main chain block - same block height as us, and
+                // no next block defined yet
+                if (syncBlock != null &&
+                    syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
+                    syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
+                    return; // already sync'd
+            }
+
+            //_ = stream.ReadAsync()
+
+            // get the next block in the chain. We don't really care if we're on the main
+            var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
+            do
+            {
+                await SendData(new Message(nextBlock), client);
+                nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
+            }
+            while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
+                                                                          // the current nextBlock has a NextBlockHash of 0, but we still need to send it
+            await SendData(new Message(nextBlock), client);
+            // now we've sent all blocks
         }
 
         public async Task SynchronizeChain()
