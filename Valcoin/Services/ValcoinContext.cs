@@ -12,8 +12,11 @@ namespace Valcoin.Services
         public DbSet<TxOutput> TxOutputs { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<Client> Clients { get; set; }
+        public DbSet<UTXO> UTXOs { get; set; }
 
+#if !DEBUG___PERSIST_DB && !RELEASE
         private static bool dbRefreshed;
+#endif
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");

@@ -154,7 +154,7 @@ namespace Valcoin.Services
                 .ForEach(t => t.Outputs
                     .Where(o => o.LockSignature.SequenceEqual(myAddress) == true)
                     .ToList()
-                    .ForEach(async o => await AddToBalance(o.Amount)));
+                    .ForEach(async o => await AddToBalance(o.Amount, t.Outputs.IndexOf(o), t.TransactionId)));
 
             // subtract any payments we spent
             block.Transactions
@@ -163,7 +163,7 @@ namespace Valcoin.Services
                 .ForEach(t => t.Inputs
                     .Where(i => i.UnlockerPublicKey.SequenceEqual(myPublicKey) == true)
                     .ToList()
-                    .ForEach(async i => await SubtractFromBalance(t.Outputs.Sum(o => o.Amount))));
+                    .ForEach(async i => await SubtractFromBalance(i)));
         }
 
         public async Task AddWallet(Wallet wallet)
@@ -185,21 +185,29 @@ namespace Valcoin.Services
 
         public async Task<int> GetMyBalance()
         {
-            return (await Db.Wallets.FirstAsync()).Balance;
+            return await Db.UTXOs.SumAsync(u => u.Amount);
         }
 
-        private async Task AddToBalance(int payment)
+        private async Task AddToBalance(int amount, int index, string txId)
         {
-            var wallet = await GetMyWallet();
-            wallet.Balance += payment;
-            await UpdateWallet(wallet);
+            var utxo = new UTXO(txId, index, amount);
+            Db.Add(utxo);
+            await Db.SaveChangesAsync();
         }
 
-        private async Task SubtractFromBalance(int payment)
+        private async Task SubtractFromBalance(TxInput input)
         {
-            var wallet = await GetMyWallet();
-            wallet.Balance -= payment;
-            await UpdateWallet(wallet);
+            Db.UTXOs.Where(u => u.TransactionId == input.PreviousTransactionId)
+                .Where(u => u.OutputIndex == input.PreviousOutputIndex)
+                .ToList()
+                .ForEach(u => Db.Remove(u));
+            await Db.SaveChangesAsync();
+        }
+
+        private async Task SubtractFromBalance(UTXO utxo)
+        {
+            Db.Remove(utxo);
+            await Db.SaveChangesAsync();
         }
 
         public async Task AddClient(Client client)
@@ -286,7 +294,8 @@ namespace Valcoin.Services
                 {
                     if (output.LockSignature == myAddress)
                     {
-                        await SubtractFromBalance(output.Amount);
+                        var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
+                        await SubtractFromBalance(utxo);
                     }
                 }
             }

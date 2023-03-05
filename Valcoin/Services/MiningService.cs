@@ -142,6 +142,7 @@ namespace Valcoin.Services
 
             if (!TransactionPool.IsEmpty)
             {
+                // only allow 32 transactions in a block, including the coinbase (so 31 from the pool)
                 for (var i = 0; i < Math.Min(31, TransactionPool.Count); i++)
                 {
                     if (TransactionPool.TryTake(out Transaction tx))
