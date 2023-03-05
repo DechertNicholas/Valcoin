@@ -456,6 +456,9 @@ namespace Valcoin.Services
                 var highestBlockNumber = dataHighest.Deserialize<Message>().Block.BlockNumber;
                 var finished = false;
 
+                // begin the sync
+                await stream.WriteAsync(new byte[] { 1 });
+
                 do
                 {
                     var memory = await GetDataFromClient(tcpClient);
