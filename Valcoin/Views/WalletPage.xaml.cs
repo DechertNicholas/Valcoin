@@ -33,5 +33,10 @@ namespace Valcoin.Views
             ViewModel.TheDispatcher = this.DispatcherQueue;
             ViewModel.WalletUpdater = Task.Run(() => ViewModel.BalanceScheduler());
         }
+
+        private void TextBox_BeforeTextChanging_NumbersOnly(TextBox sender, TextBoxBeforeTextChangingEventArgs args)
+        {
+            args.Cancel = args.NewText.Any(c => !char.IsDigit(c));
+        }
     }
 }

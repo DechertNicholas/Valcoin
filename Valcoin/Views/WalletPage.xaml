@@ -23,6 +23,7 @@
         <StackPanel Orientation="Horizontal">
             <TextBlock Text="My address:"/>
             <TextBlock Text="{x:Bind ViewModel.MyWallet.Address}"
+                       IsTextSelectionEnabled="True"
                        Margin="5,0,0,0"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal">
@@ -30,5 +31,44 @@
             <TextBlock Text="{x:Bind ViewModel.Balance, Mode=OneWay}"
                        Margin="5,0,0,0"/>
         </StackPanel>
+
+        <AppBarSeparator></AppBarSeparator>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="Recipient Address:"
+                       Grid.Row="0"
+                       Grid.Column="0"/>
+            <TextBox Text="{x:Bind ViewModel.RecipientAddress, Mode=OneWay}"
+                     Grid.Row="0"
+                     Grid.Column="1"
+                     FontFamily="Cascadia Code"
+                     Width="600"
+                     MaxLength="66"
+                     Margin="5,0,0,0"/>
+
+            <TextBlock Text="Amount:"
+                       Grid.Row="1"
+                       Grid.Column="0"/>
+            <TextBox Text="{x:Bind ViewModel.RecipientAmount, Mode=OneWay}"
+                     Grid.Row="1"
+                     Grid.Column="1"
+                     HorizontalAlignment="Left"
+                     BeforeTextChanging="TextBox_BeforeTextChanging_NumbersOnly"
+                     FontFamily="Cascadia Code"
+                     Margin="5,0,0,0"/>
+
+            <Button Content="Send"
+                    Grid.Row="2"/>
+
+        </Grid>
     </StackPanel>
 </Page>
