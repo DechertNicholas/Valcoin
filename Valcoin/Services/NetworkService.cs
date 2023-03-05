@@ -19,6 +19,7 @@ using Microsoft.UI.Xaml.Automation;
 using System.Reflection.Metadata.Ecma335;
 using Windows.Media.Protection.PlayReady;
 using System.Buffers;
+using Microsoft.UI.Xaml.Documents;
 
 namespace Valcoin.Services
 {
@@ -283,7 +284,7 @@ namespace Valcoin.Services
             int totalBytesRead = 0;
 
             var stream = tcpClient.GetStream();
-            stream.ReadTimeout = 10000; // Set read timeout to 10 seconds
+            stream.ReadTimeout = 100000; // Set read timeout to 100 seconds
 
             // get the data
             do
@@ -360,14 +361,18 @@ namespace Valcoin.Services
                     // we didn't connect
                     return;
                 }
-                if (!tcpClient.Connected) { return; } // not connected, just leave
+                if (!tcpClient.Connected) { tcpClient.Close(); } // not connected, just leave
 
                 var stream = tcpClient.GetStream();
                 // inform the client we're willing to sync
                 await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
                 // wait for the clien to confirm they're connected and ready
                 var response = await GetDataFromClient(tcpClient);
-
+                if (response.Length != 1 || response.Span[0] != 1)
+                {
+                    // something is malformed, exit
+                    tcpClient.Close();
+                }
 
                 var localService = chainService.GetFreshService();
                 ValcoinBlock syncBlock = null;
@@ -377,7 +382,7 @@ namespace Valcoin.Services
                     // client has no blocks and needs a full sync.
                     // get the first block in the chain
                     syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
-                    if (syncBlock == null) return; // we have no blocks either, send nothing
+                    if (syncBlock == null) tcpClient.Close(); // we have no blocks either, send nothing
                     // send the initial block
                     await stream.WriteAsync((byte[])new Message(syncBlock));
                     //await SendData(new Message(syncBlock), client);
@@ -385,38 +390,67 @@ namespace Valcoin.Services
                 else
                 {
                     syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
-                    if (syncBlock == null) return; // we don't have this block, send nothing
+                    if (syncBlock == null) tcpClient.Close(); // we don't have this block, send nothing
 
                     // check if they already are at the last main chain block - same block height as us, and
                     // no next block defined yet
                     if (syncBlock != null &&
                         syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
                         syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
-                        return; // already sync'd
+                        tcpClient.Close(); // already sync'd
                 }
 
-                //_ = stream.ReadAsync()
+                
 
                 // get the next block in the chain. We don't really care if we're on the main
                 var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
                 do
                 {
-                    await SendData(new Message(nextBlock), client);
+                    // wait for the client to be ready each time
+                    response = await GetDataFromClient(tcpClient);
+                    if (response.Length != 1 || response.Span[0] != 1)
+                    {
+                        // something is malformed, exit
+                        tcpClient.Close();
+                    }
+                    await stream.WriteAsync((byte[])new Message(nextBlock));
                     nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                 }
                 while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
-                                                                              // the current nextBlock has a NextBlockHash of 0, but we still need to send it
-                await SendData(new Message(nextBlock), client);
+                // wait once more
+                response = await GetDataFromClient(tcpClient);
+                if (response.Length != 1 || response.Span[0] != 1)
+                {
+                    // something is malformed, exit
+                    tcpClient.Close();
+                }
+                // the current nextBlock has a NextBlockHash of 0, but we still need to send it
+                await stream.WriteAsync((byte[])new Message(syncBlock));
                 // now we've sent all blocks
+                tcpClient.Close();
             }
             else if (syncMessage.MessageType == MessageType.SyncResponse)
             {
+                var localService = chainService.GetFreshService();
                 // TODO: response stuff
                 var stream = tcpClient.GetStream();
                 // say we're ready to start sync
                 await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
 
+                do
+                {
+                    var memory = await GetDataFromClient(tcpClient);
+                    var data = JsonDocument.Parse(memory);
 
+                    // all data is transmitted in a message
+                    var message = data.Deserialize<Message>();
+                    if (ValidateBlock(message.Block) == ValidationCode.Valid)
+                    {
+                        await localService.AddBlock(message.Block);
+                    }
+                    await stream.WriteAsync(new byte[] { 1 });
+                }
+                while (tcpClient.Connected);
             }
         }
 
