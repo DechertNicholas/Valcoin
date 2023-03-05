@@ -281,6 +281,16 @@ namespace Valcoin.Services
                     .ForEach(x => txsToReRelease.Remove(x)));
 
             // TODO: Need to subtract our balance from any transactions that are being re-released, as we don't actually have that money yet
+            foreach (var tx in txsToReRelease)
+            {
+                foreach (var output in tx.Outputs)
+                {
+                    if (output.LockSignature == myAddress)
+                    {
+                        await SubtractFromBalance(output.Amount);
+                    }
+                }
+            }
 
             // add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
             txsToReRelease.ForEach(t => GetTransactionPool()
