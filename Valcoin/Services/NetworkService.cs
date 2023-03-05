@@ -444,7 +444,6 @@ namespace Valcoin.Services
             else if (syncMessage.MessageType == MessageType.SyncResponse)
             {
                 var localService = chainService.GetFreshService();
-                // TODO: response stuff
                 var stream = tcpClient.GetStream();
                 // say we're ready to start sync
                 await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
