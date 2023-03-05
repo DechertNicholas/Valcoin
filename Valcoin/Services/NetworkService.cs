@@ -286,7 +286,7 @@ namespace Valcoin.Services
             stream.ReadTimeout = 10000; // Set read timeout to 10 seconds
 
             // get the data
-            while (stream.DataAvailable)
+            do
             {
                 int bytesRead = await stream.ReadAsync(buffer);
 
@@ -305,6 +305,7 @@ namespace Valcoin.Services
                     Array.Resize(ref buffer, bufferSize * 2);
                 }
             }
+            while (stream.DataAvailable);
 
             return buffer.AsMemory()[0..totalBytesRead];
         }
