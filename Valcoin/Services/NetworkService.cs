@@ -232,7 +232,6 @@ namespace Valcoin.Services
                             switch (ValidateBlock(block))
                             {
                                 case ValidationCode.Miss_Prev_Block:
-                                    // TODO: Send a sync request message to the client
                                     var returnMessage = new Message(Convert.ToHexString(block.PreviousBlockHash));
                                     // relay to the network
                                     await RelayData(returnMessage);
