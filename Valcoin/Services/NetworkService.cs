@@ -201,6 +201,10 @@ namespace Valcoin.Services
                         await SynchronizeChainWithClient(client, message);
                         break;
 
+                    case MessageType.SyncResponse:
+                        await SynchronizeChainWithClient(client, message, tcpClient); // pass the established client this time
+                        break;
+
                     // the client is requesting a specific block
                     case MessageType.BlockRequest:
                         var requestBlock = await localService.GetBlock(message.BlockId);
@@ -340,16 +344,16 @@ namespace Valcoin.Services
         public async Task BootstrapNetwork()
         {
             await ProliferateClients();
-            await SynchronizeChain();
+            await SendSyncRequests();
         }
 
-        public async Task SynchronizeChainWithClient(Client client, Message syncMessage)
+        public async Task SynchronizeChainWithClient(Client client, Message syncMessage, TcpClient tcpClient = null)
         {
             if (syncMessage.MessageType == MessageType.Sync)
             {
                 // the client sent out sync requests to multiple clients, then closed the connection.
                 // we need to establish a new connection that does not stop
-                TcpClient tcpClient = new();
+                tcpClient = new();
                 if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000)) // wait two seconds to try and connect
                 {
                     // we didn't connect
@@ -357,10 +361,11 @@ namespace Valcoin.Services
                 }
                 if (!tcpClient.Connected) { return; } // not connected, just leave
 
-                //var response = await GetDataFromClient(tcpClient);
-
                 var stream = tcpClient.GetStream();
+                // inform the client we're willing to sync
                 await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
+                // wait for the clien to confirm they're connected and ready
+                var response = await GetDataFromClient(tcpClient);
 
 
                 var localService = chainService.GetFreshService();
@@ -406,10 +411,15 @@ namespace Valcoin.Services
             else if (syncMessage.MessageType == MessageType.SyncResponse)
             {
                 // TODO: response stuff
+                var stream = tcpClient.GetStream();
+                // say we're ready to start sync
+                await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
+
+
             }
         }
 
-        public async Task SynchronizeChain()
+        public async Task SendSyncRequests()
         {
             // create a new version of the IChainService to avoid DBContext issues when working in parallel
             var localService = chainService.GetFreshService();
