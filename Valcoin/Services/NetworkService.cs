@@ -425,7 +425,7 @@ namespace Valcoin.Services
                     tcpClient.Close();
                 }
                 // the current nextBlock has a NextBlockHash of 0, but we still need to send it
-                await stream.WriteAsync((byte[])new Message(syncBlock));
+                await stream.WriteAsync((byte[])new Message(nextBlock));
                 // now we've sent all blocks
                 tcpClient.Close();
             }
