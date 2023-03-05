@@ -111,7 +111,6 @@ namespace Valcoin.Models
         /// <returns></returns>
         public static bool VerifyData(byte[] data, byte[] signature, byte[] publicKey)
         {
-            // TODO: Load the public key of the transaction since it won't always be our public key
             var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
 
             ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);

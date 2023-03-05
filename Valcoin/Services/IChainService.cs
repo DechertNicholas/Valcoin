@@ -11,8 +11,10 @@ namespace Valcoin.Services
 {
     public interface IChainService
     {
+        public abstract IChainService GetFreshService();
         public Task<ValcoinBlock> GetLastMainChainBlock();
         public Task<ValcoinBlock> GetBlock(string blockId);
+        public Task<List<ValcoinBlock>> GetBlocksByNumber(ulong blockNumber);
         public Task AddBlock(ValcoinBlock block);
         public Task UpdateBlock(ValcoinBlock block);
         public Task<Transaction> GetTx(string transactionId);

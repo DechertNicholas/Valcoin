@@ -22,15 +22,6 @@ namespace Valcoin.Services
             Miss_Prev_Block
         }
 
-        /// <summary>
-        /// All blocks handed to the ValidationService which were unable to be validated (but are not invalid). Normally pending network operations.
-        /// </summary>
-        private static List<ValcoinBlock> pendingBlocks = new();
-        private static IChainService AppChainService
-        {
-            get => App.Current.Services.GetService<IChainService>();
-        }
-
         public static ValidationCode ValidateBlock(ValcoinBlock block)
         {
             var chainService = App.Current.Services.GetService<IChainService>();
@@ -44,11 +35,11 @@ namespace Valcoin.Services
             // spoil the whole block.
             // and for each transaction to be validated, we need to ensure we have the whole chain up to this block
             if (chainService.GetBlock(Convert.ToHexString(block.PreviousBlockHash)).Result == null &&
-                block.BlockId != new string('0', 64) &&                               // filter out the genesis hash
+                block.PreviousBlockHash != new byte[32] &&                            // filter out the genesis hash
                 block.BlockNumber != 1)                                               // filter out the genesis block when paired with the blockhash
             {
                 // we don't have the previous block. Request it.
-                pendingBlocks.Add(block);
+                // we don't need to store this block either, as a sync request will get us up-to-date on the longest chain, including this block
                 return ValidationCode.Miss_Prev_Block;
             }
 

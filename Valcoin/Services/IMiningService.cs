@@ -10,10 +10,10 @@ namespace Valcoin.Services
 {
     public interface IMiningService
     {
-        public bool MineBlocks { get; set; }
+        public static bool MineBlocks { get; set; }
         public int HashSpeed { get; set; }
         public string Status { get; set; }
-        public ConcurrentBag<Transaction> TransactionPool { get; set; }
+        public static ConcurrentBag<Transaction> TransactionPool { get; set; }
 
         public void Mine();
         public void PopulateWalletInfo() { }

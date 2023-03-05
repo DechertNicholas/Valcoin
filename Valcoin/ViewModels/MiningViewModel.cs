@@ -35,13 +35,13 @@ namespace Valcoin.ViewModels
         [RelayCommand]
         public void InvokeMinerStop()
         {
-            App.Current.Services.GetService<IMiningService>().MineBlocks = false;
+            MiningService.MineBlocks = false;
             MinerWorker.CancelAsync();
         }
 
         private void BeginMining(object sender, DoWorkEventArgs e)
         {
-            App.Current.Services.GetService<IMiningService>().MineBlocks = true;
+            MiningService.MineBlocks = true;
             App.Current.Services.GetService<IMiningService>().Mine();
         }
 

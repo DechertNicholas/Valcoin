@@ -28,6 +28,15 @@ namespace Valcoin.Services
             Db = context;
         }
 
+        /// <summary>
+        /// This gets a fresh context and is mainly used by the network
+        /// </summary>
+        /// <returns></returns>
+        public IChainService GetFreshService()
+        {
+            return new ChainService(new ValcoinContext());
+        }
+
         public virtual async Task<ValcoinBlock> GetLastMainChainBlock()
         {
             uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
@@ -56,6 +65,11 @@ namespace Valcoin.Services
         public async Task<ValcoinBlock> GetBlock(string blockId)
         {
             return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
+        }
+
+        public async Task<List<ValcoinBlock>> GetBlocksByNumber(ulong blockNumber)
+        {
+            return await Db.ValcoinBlocks.Where(b => b.BlockNumber == blockNumber).ToListAsync();
         }
 
         public async Task<Transaction> GetTx(string transactionId)
@@ -266,6 +280,17 @@ namespace Valcoin.Services
                     .ToList()
                     .ForEach(x => txsToReRelease.Remove(x)));
 
+            foreach (var tx in txsToReRelease)
+            {
+                foreach (var output in tx.Outputs)
+                {
+                    if (output.LockSignature == myAddress)
+                    {
+                        await SubtractFromBalance(output.Amount);
+                    }
+                }
+            }
+
             // add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
             txsToReRelease.ForEach(t => GetTransactionPool()
                 .Where(p => p.TransactionId != t.TransactionId)
@@ -287,12 +312,12 @@ namespace Valcoin.Services
 
         public List<Transaction> GetTransactionPool()
         {
-            return App.Current.Services.GetService<IMiningService>().TransactionPool.ToList();
+            return MiningService.TransactionPool.ToList();
         }
 
         public void AddToTransactionPool(Transaction t)
         {
-            App.Current.Services.GetService<IMiningService>().TransactionPool.Add(t);
+            MiningService.TransactionPool.Add(t);
         }
     }
 }

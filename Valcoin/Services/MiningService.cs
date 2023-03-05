@@ -1,6 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml.Controls;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace Valcoin.Services
 {
     public class MiningService : IMiningService
     {
-        public bool MineBlocks { get; set; } = false;
+        public static bool MineBlocks { get; set; } = false;
         private readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
@@ -27,14 +28,16 @@ namespace Valcoin.Services
         private ValcoinBlock CandidateBlock = new();
         private Wallet MyWallet;
         private IChainService chainService;
+        private INetworkService networkService;
 
         public string Status { get; set; } = "Stopped";
         public int HashSpeed { get; set; } = 0;
-        public ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
+        public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
 
-        public MiningService(IChainService chainService)
+        public MiningService(IChainService chainService, INetworkService networkService)
         {
             this.chainService = chainService;
+            this.networkService = networkService;
         }
 
         public async void Mine()
@@ -43,8 +46,6 @@ namespace Valcoin.Services
             Status = "Mining";
             // setup wallet info
             PopulateWalletInfo();
-
-            //SynchronizeChain();
 
             // how many 0 bits need to lead the SHA256 hash. 256 is max, which would be impossible.
             // a difficulty of 6 means the hash bits must start with "000000xxxxxx..."
@@ -56,6 +57,8 @@ namespace Valcoin.Services
             {
                 AssembleCandidateBlock();
                 FindValidHash();
+                if (MineBlocks == false) // when we stop mining, the hashing process stops and we need to not try to commit a block
+                    return;
                 await CommitBlock();
             }
             Status = "Stopped";
@@ -184,8 +187,7 @@ namespace Valcoin.Services
             if (valid == ValidationService.ValidationCode.Valid)
             {
                 await chainService.AddBlock(CandidateBlock);
-                // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
-                await NetworkService.RelayData(CandidateBlock);
+                await networkService.RelayData(new Message(CandidateBlock));
             }
             else
             {
