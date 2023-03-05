@@ -27,20 +27,14 @@ namespace Valcoin.Services
     public class NetworkService : INetworkService
     {
         public static TcpListener Listener { get; private set; }
-        /// <summary>
-        /// Useful property that shows which network parses are active.
-        /// </summary>
-        public static ConcurrentQueue<Task> ActiveParses { get; private set; } = new();
         public static int ListenPort { get; private set; } = 2106;
 
-        //public const int SIO_UDP_CONNRESET = -1744830452; // used to suppress errors later
         // my domain, running a node that will always be online. Used as the first contact on the network
         private static readonly Client rootClientHint = new("nicholasdechert.com", 2106);
         private static bool initializing = true;
         private static List<Client> clients = new();
         private readonly IChainService chainService;
         private static string localIP;
-        //private static int delay = 200;
 
         public NetworkService(IChainService chainService)
         {
@@ -88,7 +82,6 @@ namespace Valcoin.Services
                     TcpClient client = await Listener.AcceptTcpClientAsync(token);
                     // utilize a task here so that the listener thread can get back to listening ASAP
                     _ = Task.Run(async () => await ParseData(client), token);
-                    //ActiveParses.Enqueue(task);
                 }
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is TaskCanceledException)
@@ -127,9 +120,6 @@ namespace Valcoin.Services
         /// <returns></returns>
         public async Task SendData(Message msg, Client client)
         {
-            // delay execution to ensure the network service is listening
-            //Task.Delay(delay).Wait();
-            // address is test value, will change to have a real param
             var tcpClient = new TcpClient();
             try
             {
@@ -147,7 +137,6 @@ namespace Valcoin.Services
             {
                 tcpClient.Close();
             }
-            //await Listener.SendAsync(data, client.Address, client.Port);
         }
 
         /// <summary>
@@ -158,25 +147,6 @@ namespace Valcoin.Services
         /// <param name="clientPort">The port from the listener.</param>
         public async Task ParseData(TcpClient tcpClient)
         {
-            // remove old parses
-            //for (var i = 0; i < ActiveParses.Count; i++)
-            //{
-                // there isn't a great thread-safe way to do this, so we use a queue and remove each item. If the item is not finished,
-                // we re-add it to the queue. If it is finished, we dispose of it. This cleans the queue on each call of ParseData()
-                // the variable i is simply an iterator here, and it doesn't matter if the queue shrinks while iterating because we don't
-                // access by index. We simply retry until we max out i, which should always be small
-                //var taken = ActiveParses.TryDequeue(out Task task);
-                //if (!taken) continue; // just skip if we didn't take anything
-                //if (task.IsCompleted != true)
-                //{
-                //    ActiveParses.Enqueue(task);
-                //}
-                //else
-                //{
-                //    task.Dispose();
-                //}
-            //}
-
             Thread.CurrentThread.Name = "Network Data Parser";
             try
             {
@@ -189,7 +159,6 @@ namespace Valcoin.Services
 
                 var memory = await GetDataFromClient(tcpClient);
 
-                //var memory = buffer.AsMemory()[0..totalBytesRead];
                 var data = JsonDocument.Parse(memory);
 
                 // all data is transmitted in a message
@@ -396,7 +365,6 @@ namespace Valcoin.Services
                     if (syncBlock == null) tcpClient.Close(); // we have no blocks either, send nothing
                     // send the initial block
                     await stream.WriteAsync((byte[])new Message(syncBlock));
-                    //await SendData(new Message(syncBlock), client);
                 }
                 else
                 {
