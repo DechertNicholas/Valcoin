@@ -280,7 +280,6 @@ namespace Valcoin.Services
                     .ToList()
                     .ForEach(x => txsToReRelease.Remove(x)));
 
-            // TODO: Need to subtract our balance from any transactions that are being re-released, as we don't actually have that money yet
             foreach (var tx in txsToReRelease)
             {
                 foreach (var output in tx.Outputs)
