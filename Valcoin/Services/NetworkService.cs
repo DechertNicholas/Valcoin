@@ -284,7 +284,7 @@ namespace Valcoin.Services
             int totalBytesRead = 0;
 
             var stream = tcpClient.GetStream();
-            stream.ReadTimeout = 100000; // Set read timeout to 100 seconds
+            stream.ReadTimeout = 30000; // Set read timeout to 30 seconds
 
             // get the data
             do
@@ -417,6 +417,7 @@ namespace Valcoin.Services
                     nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                 }
                 while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
+
                 // wait once more
                 response = await GetDataFromClient(tcpClient);
                 if (response.Length != 1 || response.Span[0] != 1)
