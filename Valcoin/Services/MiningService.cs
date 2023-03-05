@@ -187,7 +187,6 @@ namespace Valcoin.Services
             if (valid == ValidationService.ValidationCode.Valid)
             {
                 await chainService.AddBlock(CandidateBlock);
-                // TODO: Properly execute this on another thread so that sending data doesn't block the mining thread
                 await networkService.RelayData(new Message(CandidateBlock));
             }
             else
