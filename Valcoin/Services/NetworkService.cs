@@ -377,6 +377,18 @@ namespace Valcoin.Services
                 var localService = chainService.GetFreshService();
                 ValcoinBlock syncBlock = null;
                 ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
+
+                // we send our highest block so the client knows when to no longer expect data. We will send this again later when the
+                // client is actually ready to validate it
+                await stream.WriteAsync((byte[])new Message(ourHighestBlock));
+                // wait for the clien to confirm they're connected and ready
+                response = await GetDataFromClient(tcpClient);
+                if (response.Length != 1 || response.Span[0] != 1)
+                {
+                    // something is malformed, exit
+                    tcpClient.Close();
+                }
+
                 if (syncMessage.HighestBlockNumber == 0 && syncMessage.BlockId == "")
                 {
                     // client has no blocks and needs a full sync.
@@ -438,6 +450,12 @@ namespace Valcoin.Services
                 // say we're ready to start sync
                 await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
 
+                // get the highest block to expect
+                var memoryHighest = await GetDataFromClient(tcpClient);
+                var dataHighest = JsonDocument.Parse(memoryHighest);
+                var highestBlockNumber = dataHighest.Deserialize<Message>().Block.BlockNumber;
+                var finished = false;
+
                 do
                 {
                     var memory = await GetDataFromClient(tcpClient);
@@ -449,9 +467,15 @@ namespace Valcoin.Services
                     {
                         await localService.AddBlock(message.Block);
                     }
+                    if (message.Block.BlockNumber == highestBlockNumber)
+                    {
+                        finished = true;
+                        break;
+                    }
                     await stream.WriteAsync(new byte[] { 1 });
                 }
-                while (tcpClient.Connected);
+                while (!finished);
+                tcpClient.Close();
             }
         }
 
