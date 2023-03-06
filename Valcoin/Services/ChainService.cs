@@ -328,5 +328,10 @@ namespace Valcoin.Services
         {
             MiningService.TransactionPool.Add(t);
         }
+
+        public async void Transact(string recipient, int amount)
+        {
+
+        }
     }
 }

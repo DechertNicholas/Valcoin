@@ -22,6 +22,7 @@ namespace Valcoin.ViewModels
     {
         public Wallet MyWallet { get; set; }
         public Task WalletUpdater { get; set; }
+        public IChainService chainService;
         public Microsoft.UI.Dispatching.DispatcherQueue TheDispatcher { get; set; }
         public event EventHandler<TransactionEventHelper> TransactionEvent;
 
@@ -123,6 +124,15 @@ namespace Valcoin.ViewModels
                     "Ok"));
                 return;
             }
+
+            chainService ??= SetChainService();
+
+
+        }
+
+        public IChainService SetChainService()
+        {
+            return App.Current.Services.GetService<IChainService>();
         }
     }
 }
