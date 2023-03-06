@@ -9,6 +9,8 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
+using Valcoin.Helpers;
 using Valcoin.Models;
 using Valcoin.Services;
 using Windows.ApplicationModel.Activation;
@@ -21,6 +23,7 @@ namespace Valcoin.ViewModels
         public Wallet MyWallet { get; set; }
         public Task WalletUpdater { get; set; }
         public Microsoft.UI.Dispatching.DispatcherQueue TheDispatcher { get; set; }
+        public event EventHandler<TransactionEventHelper> TransactionEvent;
 
         /// <summary>
         /// The balance of our wallet.
@@ -31,12 +34,12 @@ namespace Valcoin.ViewModels
         /// The address of the wallet we want to send a transaction to, in string format. Prefix with '0x'.
         /// </summary>
         [ObservableProperty]
-        private string recipientAddress;
+        private string recipientAddress = string.Empty;
         /// <summary>
         /// The amount to send to a recipient.
         /// </summary>
         [ObservableProperty]
-        private string recipientAmount; // use a string here to avoid defaulting to '0' and displaying it
+        private string recipientAmount = string.Empty; // use a string here to avoid defaulting to '0' and displaying it
         
 
         public WalletViewModel()
@@ -67,22 +70,59 @@ namespace Valcoin.ViewModels
         [RelayCommand]
         public async void SendTransaction()
         {
-            if (Balance < int.Parse(RecipientAmount))
+            // verify the recipient address
+            if (RecipientAddress == string.Empty)
             {
-                await DisplayInsufficientBalanceDialog();
+                TransactionEvent.Invoke(null, new(
+                    "No recipient",
+                    "Please specify a recipient address.",
+                    "Ok"));
+                return;
             }
-        }
 
-        private async Task DisplayInsufficientBalanceDialog()
-        {
-            ContentDialog insufficientBalanceDialog = new ContentDialog
+            // we require a prefix with 0x to ensure the user has actually copied an address, not some other byte or hash string.
+            // this help ensure it will actually go to a person and not be locked away forever on accident.
+            if (RecipientAddress.Length != 66 || RecipientAddress[0..2] != "0x")
             {
-                Title = "Insufficient balance",
-                Content = "You are trying to send more Valcoin than you own.",
-                CloseButtonText = "Ok"
-            };
+                TransactionEvent.Invoke(null, new(
+                    "Invalid address",
+                    "The recipient address is invalid. Ensure the address begins with '0x' and is followed by a 64 character hexadecimal string.",
+                    "Ok"));
+                return;
+            }
 
-            await insufficientBalanceDialog.ShowAsync();
+            // setup amount
+            int amount;
+            if (RecipientAmount == string.Empty)
+            {
+                TransactionEvent.Invoke(null, new(
+                    "Sending a zero amount",
+                    "You cannot send a zero amount.",
+                    "Ok"));
+                return;
+            }
+            else
+            {
+                var parsed = int.TryParse(RecipientAmount, out amount);
+                if (!parsed)
+                {
+                    TransactionEvent.Invoke(null, new(
+                    "Invalid amount",
+                    "The amount you entered is not a valid amount.",
+                    "Ok"));
+                    return;
+                }
+            }
+
+            // check our balance
+            if (Balance < amount)
+            {
+                TransactionEvent.Invoke(null, new(
+                    "Insufficient balance",
+                    "You cannot send more Valcoin than you own.",
+                    "Ok"));
+                return;
+            }
         }
     }
 }

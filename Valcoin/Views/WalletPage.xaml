@@ -47,7 +47,7 @@
             <TextBlock Text="Recipient Address:"
                        Grid.Row="0"
                        Grid.Column="0"/>
-            <TextBox Text="{x:Bind ViewModel.RecipientAddress, Mode=OneWay}"
+            <TextBox Text="{x:Bind ViewModel.RecipientAddress, Mode=TwoWay}"
                      Grid.Row="0"
                      Grid.Column="1"
                      FontFamily="Cascadia Code"
@@ -58,7 +58,7 @@
             <TextBlock Text="Amount:"
                        Grid.Row="1"
                        Grid.Column="0"/>
-            <TextBox Text="{x:Bind ViewModel.RecipientAmount, Mode=OneWay}"
+            <TextBox Text="{x:Bind ViewModel.RecipientAmount, Mode=TwoWay}"
                      Grid.Row="1"
                      Grid.Column="1"
                      HorizontalAlignment="Left"
@@ -67,7 +67,8 @@
                      Margin="5,0,0,0"/>
 
             <Button Content="Send"
-                    Grid.Row="2"/>
+                    Grid.Row="2"
+                    Command="{x:Bind ViewModel.SendTransactionCommand}"/>
 
         </Grid>
     </StackPanel>
