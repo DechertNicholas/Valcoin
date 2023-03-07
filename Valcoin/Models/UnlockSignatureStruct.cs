@@ -27,18 +27,16 @@ namespace Valcoin.Models
             byte[] returnBytes = Array.Empty<byte>();
             foreach (var input in tx.Inputs)
             {
-                returnBytes = (byte[])returnBytes.Concat(Convert.FromHexString(input.PreviousTransactionId))
-                    .Concat(BitConverter.GetBytes(input.PreviousOutputIndex))
-                    .Concat(input.UnlockerPublicKey)
-                    .Concat(unlockOverride)
-                    .ToArray();
+                returnBytes = returnBytes.Concat(Convert.FromHexString(input.PreviousTransactionId)).ToArray();
+                returnBytes = returnBytes.Concat(BitConverter.GetBytes(input.PreviousOutputIndex)).ToArray();
+                returnBytes = returnBytes.Concat(input.UnlockerPublicKey).ToArray();
+                returnBytes = returnBytes.Concat(unlockOverride).ToArray();
             }
 
             foreach (var output in tx.Outputs)
             {
-                returnBytes = (byte[])returnBytes.Concat(BitConverter.GetBytes(output.Amount))
-                    .Concat(output.Address)
-                    .ToArray();
+                returnBytes = returnBytes.Concat(BitConverter.GetBytes(output.Amount)).ToArray();
+                returnBytes = returnBytes.Concat(output.Address).ToArray();
             }
 
             return returnBytes;

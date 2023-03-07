@@ -32,7 +32,7 @@ namespace Valcoin.Models
             set
             {
                 _inputs = value.OrderBy(i => i.PreviousTransactionId).ThenBy(i => i.PreviousOutputIndex).ToList();
-
+                TransactionId = GetTxIdAsString();
             }
         }
         /// <summary>
@@ -44,7 +44,7 @@ namespace Valcoin.Models
             set
             {
                 _outputs = value.OrderBy(o => Convert.ToHexString(o.Address)).ThenBy(o => o.Amount).ToList();
-
+                TransactionId = GetTxIdAsString();
             }
         }
         /// <summary>
@@ -109,6 +109,11 @@ namespace Valcoin.Models
                     Outputs = Outputs
                 })
             );
+        }
+
+        public void ComputeAndSetTransactionId()
+        {
+            TransactionId = GetTxIdAsString();
         }
     }
 }

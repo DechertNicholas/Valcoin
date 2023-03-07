@@ -106,6 +106,7 @@ namespace Valcoin.Models
 
         public void AddTx(Transaction tx)
         {
+            tx.ComputeAndSetTransactionId();
             Transactions.Add(tx);
             ComputeAndSetMerkleRoot();
         }
