@@ -96,11 +96,19 @@ namespace Valcoin.Models
         /// <summary>
         /// Signs data using the wallet's key pair.
         /// </summary>
-        /// <param name="data">The data to sign. Normally used in a <see cref="TxOutput"/>'s <see cref="TxOutput.LockSignature"/>.</param>
+        /// <param name="data">The data to sign. Normally used in a <see cref="TxOutput"/>'s <see cref="TxOutput.Address"/>.</param>
         /// <returns></returns>
+        [Obsolete("Use SignTransactionInputs instead.")]
         public byte[] SignData(byte[] data)
         {
             return _ecdsa.SignData(data, HashAlgorithmName.SHA256);
+        }
+
+        public void SignTransactionInputs(ref Transaction tx)
+        {
+            var sig = _ecdsa.SignData(new UnlockSignatureStruct(tx), HashAlgorithmName.SHA256);
+            // assign the signature to all inputs
+            tx.Inputs.ForEach(i => i.UnlockSignature = sig);
         }
 
         /// <summary>
@@ -109,12 +117,25 @@ namespace Valcoin.Models
         /// <param name="data"></param>
         /// <param name="signature"></param>
         /// <returns></returns>
+        [Obsolete("Use VerifyTransactionInputs instead.")]
         public static bool VerifyData(byte[] data, byte[] signature, byte[] publicKey)
         {
             var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
 
             ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
             return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
+        }
+
+        public static bool VerifyTransactionInputs(Transaction tx)
+        {
+            var pubKey = tx.Inputs.First().UnlockerPublicKey;
+            var sig = tx.Inputs.First().UnlockSignature;
+
+            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+            // all public keys will be the same, so we can use the first one
+            ecdsa.ImportSubjectPublicKeyInfo(pubKey, out _);
+
+            return ecdsa.VerifyData(new UnlockSignatureStruct(tx), sig, HashAlgorithmName.SHA256);
         }
 
         public async void UpdateBalance()

@@ -30,14 +30,14 @@ namespace Valcoin.UnitTests.SharedData
                 block1.BlockNumber,
                 new List<TxInput>()
                 {
-                    new TxInput(new string('0', 64), -1, wallet.PublicKey,
-                        wallet.SignData(new UnlockSignatureStruct(block1.BlockNumber, wallet.PublicKey)))
+                    new TxInput(new string('0', 64), -1, wallet.PublicKey)
                 },
                 new List<TxOutput>()
                 {
                     new TxOutput(50, wallet.AddressBytes)
                 }
             );
+            wallet.SignTransactionInputs(ref coinbase);
 
             block1.AddTx(coinbase);
             block1.ComputeAndSetHash();
@@ -54,27 +54,27 @@ namespace Valcoin.UnitTests.SharedData
                 block2.BlockNumber,
                 new List<TxInput>()
                 {
-                    new TxInput(new string('0', 64), -1, wallet.PublicKey,
-                        wallet.SignData(new UnlockSignatureStruct(block2.BlockNumber, wallet.PublicKey)))
+                    new TxInput(new string('0', 64), -1, wallet.PublicKey)
                 },
                 new List<TxOutput>()
                 {
                     new TxOutput(50, wallet.AddressBytes)
                 }
             );
+            wallet.SignTransactionInputs(ref coinbase2);
 
             var spend = new Transaction(
                 block2.BlockNumber,
                 new List<TxInput>()
                 {
-                    new TxInput(block1.Transactions[0].TransactionId, 0, wallet.PublicKey,
-                        wallet.SignData(new UnlockSignatureStruct(block1.BlockNumber, wallet.PublicKey)))
+                    new TxInput(block1.Transactions[0].TransactionId, 0, wallet.PublicKey)
                 },
                 new List<TxOutput>()
                 {
                     new TxOutput(50, wallet.AddressBytes)
                 }
             );
+            wallet.SignTransactionInputs(ref spend);
 
             block2.AddTx(coinbase2);
             block2.AddTx(spend);

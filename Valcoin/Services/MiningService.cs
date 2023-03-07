@@ -114,13 +114,12 @@ namespace Valcoin.Services
 
         public Transaction AssembleCoinbaseTransaction()
         {
-            // debugging serialization
-            var unlockBytes = (byte[])new UnlockSignatureStruct(CandidateBlock.BlockNumber, MyWallet.PublicKey);
-            var input = new TxInput(new string('0', 64), -1, MyWallet.PublicKey, MyWallet.SignData(unlockBytes));
-
+            // no value for UnlockSignature, as it will be filled in during the signing process
+            var input = new TxInput(new string('0', 64), -1, MyWallet.PublicKey);
             var output = new TxOutput(50, MyWallet.AddressBytes);
-
-            return new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
+            var tx = new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
+            MyWallet.SignTransactionInputs(ref tx);
+            return tx;
         }
 
         public async void AssembleCandidateBlock()
@@ -139,6 +138,16 @@ namespace Valcoin.Services
 
             // add our coinbase payout to ourselves, and any other transactions in the transaction pool (max 31 others, 32 tx total per block)
             CandidateBlock.AddTx(AssembleCoinbaseTransaction());
+
+            // testing a spend
+            if (CandidateBlock.BlockNumber == 2)
+            {
+                var input = new TxInput(lastBlock.Transactions[0].TransactionId, 0, MyWallet.PublicKey);
+                var output = new TxOutput(lastBlock.Transactions[0].Outputs[0].Amount, MyWallet.AddressBytes);
+                var spend = new Transaction(CandidateBlock.BlockNumber, new() { input }, new() { output });
+                MyWallet.SignTransactionInputs(ref spend);
+                TransactionPool.Add(spend);
+            }
 
             if (!TransactionPool.IsEmpty)
             {

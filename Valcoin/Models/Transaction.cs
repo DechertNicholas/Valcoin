@@ -43,7 +43,7 @@ namespace Valcoin.Models
             get => _outputs;
             set
             {
-                _outputs = value.OrderBy(o => Convert.ToHexString(o.LockSignature)).ThenBy(o => o.Amount).ToList();
+                _outputs = value.OrderBy(o => Convert.ToHexString(o.Address)).ThenBy(o => o.Amount).ToList();
 
             }
         }
@@ -72,6 +72,14 @@ namespace Valcoin.Models
             BlockNumber = blockNumber;
         }
 
+        public Transaction(List<TxInput> inputs, List<TxOutput> outputs)
+        {
+            Inputs = inputs.OrderBy(i => i.PreviousTransactionId).ThenBy(i => i.PreviousOutputIndex).ToList();
+            Outputs = outputs.OrderBy(o => Convert.ToHexString(o.Address)).ThenBy(o => o.Amount).ToList();
+
+            TransactionId = GetTxIdAsString();
+        }
+
         /// <summary>
         /// The constructor used by other classes to build a new transaction.
         /// </summary>
@@ -85,7 +93,7 @@ namespace Valcoin.Models
                 throw new InvalidOperationException("You cannot assign two outputs of the same amount to the same address in the same transaction.");
 
             Inputs = inputs.OrderBy(i => i.PreviousTransactionId).ThenBy(i => i.PreviousOutputIndex).ToList();
-            Outputs = outputs.OrderBy(o => Convert.ToHexString(o.LockSignature)).ThenBy(o => o.Amount).ToList();
+            Outputs = outputs.OrderBy(o => Convert.ToHexString(o.Address)).ThenBy(o => o.Amount).ToList();
             BlockNumber = blockNumber;
 
             TransactionId = GetTxIdAsString();

@@ -20,12 +20,12 @@ namespace Valcoin.Services
     {
         protected ValcoinContext Db { get; private set; }
 
-        private byte[] myAddress;
-        private byte[] myPublicKey;
+        private Wallet myWallet;
 
         public ChainService(ValcoinContext context)
         {
             Db = context;
+            myWallet = GetMyWallet().Result;
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace Valcoin.Services
             if (lastBlock == null && block.BlockNumber == 1)
             {
                 // this is the genesis block being added
-                await UpdateBalance(block);
+                UpdateBalance(block);
                 await CommitBlock(block);
                 return;
             }
@@ -112,7 +112,7 @@ namespace Valcoin.Services
             // new block references the last block
             if (lastBlock.BlockNumber == block.BlockNumber - 1 && lastBlock.BlockHash.SequenceEqual(block.PreviousBlockHash))
             {
-                await UpdateBalance(block);
+                UpdateBalance(block);
                 // update the next newHighestBlock identifier
                 block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
                 await UpdateBlock(lastBlock);
@@ -145,14 +145,12 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        public virtual async Task UpdateBalance(ValcoinBlock block)
+        public virtual void UpdateBalance(ValcoinBlock block)
         {
-            myAddress ??= (await GetMyWallet()).AddressBytes;
-            myPublicKey ??= (await GetMyWallet()).PublicKey;
             // add any payments we may have gotten
             block.Transactions
                 .ForEach(t => t.Outputs
-                    .Where(o => o.LockSignature.SequenceEqual(myAddress) == true)
+                    .Where(o => o.Address.SequenceEqual(myWallet.AddressBytes) == true)
                     .ToList()
                     .ForEach(async o => await AddToBalance(o.Amount, t.Outputs.IndexOf(o), t.TransactionId)));
 
@@ -161,7 +159,7 @@ namespace Valcoin.Services
                 .Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // filter out coinbase (this transaction is verified)
                 .ToList()
                 .ForEach(t => t.Inputs
-                    .Where(i => i.UnlockerPublicKey.SequenceEqual(myPublicKey) == true)
+                    .Where(i => i.UnlockerPublicKey.SequenceEqual(myWallet.PublicKey) == true)
                     .ToList()
                     .ForEach(async i => await SubtractFromBalance(i)));
         }
@@ -292,7 +290,7 @@ namespace Valcoin.Services
             {
                 foreach (var output in tx.Outputs)
                 {
-                    if (output.LockSignature == myAddress)
+                    if (output.Address == myWallet.AddressBytes)
                     {
                         var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
                         await SubtractFromBalance(utxo);
@@ -329,9 +327,41 @@ namespace Valcoin.Services
             MiningService.TransactionPool.Add(t);
         }
 
-        public async void Transact(string recipient, int amount)
+        public async Task Transact(string recipient, int amount)
         {
+            List<TxInput> inputs = new();
+            List<TxOutput> outputs = new()
+            {
+                // add the recipient output
+                new(0, Convert.FromHexString(recipient[2..])) // set the amount to 0 initially
+            };
+            // find the transaction's we'll use. Pick the smallest first to keep the UTXO DB smaller
+            foreach (var utxo in Db.UTXOs.OrderBy( u => u.Amount))
+            {
+                inputs.Add(new(utxo.TransactionId, utxo.Amount, myWallet.AddressBytes));
+                outputs.First().Amount += utxo.Amount;
 
+                // we will always need a list of inputs that is greater than or equal to the amount we went to send.
+                // if the sum is greater, then the difference will be returned to us in a second output in the transaction
+                // amount = 25,
+                // 1 + 1 + 3 + 5 + 6 + 6 + 7 = 29
+                // to recipient = 25
+                // back to us = 4
+
+                if (outputs.First().Amount >= amount)
+                    break;
+            }
+
+            // add our change, if any
+            var change = outputs.First().Amount - amount;
+            if (change > 0)
+            {
+                outputs.Add(new(change, myWallet.AddressBytes));
+            }
+
+            var tx = new Transaction(inputs, outputs);
+            myWallet.SignTransactionInputs(ref tx);
+            
         }
     }
 }

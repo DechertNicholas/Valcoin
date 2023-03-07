@@ -35,11 +35,12 @@ namespace Valcoin.IntegrationTests
         {
             ulong blockId = 10; // this tx is part of block 10
 
-            var input = new TxInput(new string('0', 64), -1, wallet.PublicKey, wallet.SignData(new UnlockSignatureStruct(blockId, wallet.PublicKey)));
+            var input = new TxInput(new string('0', 64), -1, wallet.PublicKey);
 
             var output = new TxOutput(50, wallet.AddressBytes);
 
             var tx = new Transaction(blockId, new List<TxInput> { input }, new List<TxOutput> { output });
+            wallet.SignTransactionInputs(ref tx);
 
             // assert on field that are generated and not statically assigned in the test
             Assert.NotNull(tx.TransactionId);
@@ -49,7 +50,7 @@ namespace Valcoin.IntegrationTests
             //Assert.NotNull(tx.JsonOutputs);
             Assert.NotNull(tx.Inputs[0].UnlockerPublicKey);
             Assert.NotNull(tx.Inputs[0].UnlockSignature);
-            Assert.NotNull(tx.Outputs[0].LockSignature);
+            Assert.NotNull(tx.Outputs[0].Address);
         }
     }
 }

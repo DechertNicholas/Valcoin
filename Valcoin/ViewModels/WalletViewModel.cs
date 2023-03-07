@@ -127,7 +127,7 @@ namespace Valcoin.ViewModels
 
             chainService ??= SetChainService();
 
-
+            await chainService.Transact(RecipientAddress, amount);
         }
 
         public IChainService SetChainService()

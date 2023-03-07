@@ -22,16 +22,16 @@ namespace Valcoin.Models
         /// </summary>
         public int PreviousOutputIndex { get; set; }
         /// <summary>
-        /// Public key which, when hashed, matches the <see cref="TxOutput.LockSignature"/> of this selected <see cref="TxOutput"/>.
+        /// Public key which, when hashed, matches the <see cref="TxOutput.Address"/> of this selected <see cref="TxOutput"/>.
         /// This key will also be used to verify the <see cref="UnlockSignature"/>.
         /// </summary>
         public byte[] UnlockerPublicKey { get; set; }
         /// <summary>
-        /// Signed combination of this transactions BlockNumber and the unlocker's public key.
-        /// Proves ownership of the public key which the transaction was sent to (by having
-        /// the corresponding private key which signed the data).
+        /// The signature of all inputs and outputs in the transaction. The <see cref="TxInput.UnlockSignature"/> property is replaced with 4 bytes of 
+        /// zero during the signing and verification process, since it would be impossible to know the signature that will be signed before it 
+        /// is computed. 
         /// </summary>
-        public byte[] UnlockSignature { get; set; }
+        public byte[] UnlockSignature { get; set; } // this can be null or default on init, it is overwritten when computed and when verified
 
         /// <summary>
         /// Database property to uniquely link this input to a transaction, since most coinbase transactions will be identical.
@@ -41,12 +41,19 @@ namespace Valcoin.Models
 
         public static implicit operator byte[](TxInput t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
-        public TxInput(string previousTransactionId, int previousOutputIndex, byte[] unlockerPublicKey, byte[] unlockSignature)
+        public TxInput(string previousTransactionId, int previousOutputIndex, byte[] unlockerPublicKey)
         {
             PreviousTransactionId = previousTransactionId;
             PreviousOutputIndex = previousOutputIndex;
             UnlockerPublicKey = unlockerPublicKey;
-            UnlockSignature = unlockSignature;
         }
+
+        //public TxInput(string previousTransactionId, int previousOutputIndex, byte[] unlockerPublicKey, byte[] unlockSignature)
+        //{
+        //    PreviousTransactionId = previousTransactionId;
+        //    PreviousOutputIndex = previousOutputIndex;
+        //    UnlockerPublicKey = unlockerPublicKey;
+        //    UnlockSignature = unlockSignature;
+        //}
     }
 }

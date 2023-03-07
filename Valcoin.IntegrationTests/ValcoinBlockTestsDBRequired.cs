@@ -26,16 +26,22 @@ namespace Valcoin.IntegrationTests
         {
             ValcoinBlock block = new(1, new byte[32], 0, DateTime.UtcNow.Ticks, 22);
 
-            var tx1Inputs = new List<TxInput>() { new TxInput(new string('0', 64), -1, fixture.Wallet.PublicKey,
-                fixture.Wallet.SignData(new UnlockSignatureStruct(block.BlockNumber, fixture.Wallet.PublicKey)))};
+            var tx1Inputs = new List<TxInput>()
+            { 
+                new TxInput(new string('0', 64), -1, fixture.Wallet.PublicKey)
+            };
             var tx1Outputs = new List<TxOutput>() { new TxOutput(50, fixture.Wallet.AddressBytes) };
             var tx1 = new Transaction(block.BlockNumber, tx1Inputs, tx1Outputs);
+            fixture.Wallet.SignTransactionInputs(ref tx1);
 
-            var tx2Inputs = new List<TxInput>() { new TxInput(new string('2', 64), -1, fixture.Wallet.PublicKey,
-                fixture.Wallet.SignData(new UnlockSignatureStruct(block.BlockNumber, fixture.Wallet.PublicKey)))};
+            var tx2Inputs = new List<TxInput>()
+            { 
+                new TxInput(new string('2', 64), -1, fixture.Wallet.PublicKey)
+            };
             // assign two outputs
             var tx2Outputs = new List<TxOutput>() { new TxOutput(50, fixture.Wallet.AddressBytes), new TxOutput(30, fixture.Wallet.AddressBytes) };
             var tx2 = new Transaction(block.BlockNumber, tx2Inputs, tx2Outputs);
+            fixture.Wallet.SignTransactionInputs(ref tx2);
 
 
             block.AddTx(tx1);

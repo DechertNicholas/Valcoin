@@ -29,7 +29,7 @@ namespace Valcoin.UnitTests
         {
             return new Transaction(
                 1,
-                new() { new TxInput("0000", 0, new byte[] { 1 }, new byte[] { 1 }) },
+                new() { new TxInput("0000", 0, new byte[] { 1 }) },
                 new() { new TxOutput(50, new byte[] { 1 }) }
             );
         }

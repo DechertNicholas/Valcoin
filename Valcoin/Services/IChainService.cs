@@ -27,5 +27,6 @@ namespace Valcoin.Services
         public Task AddClient(Client client);
         public Task<List<Client>> GetClients();
         public Task UpdateClient(Client client);
+        public Task Transact(string recipient, int amount);
     }
 }
