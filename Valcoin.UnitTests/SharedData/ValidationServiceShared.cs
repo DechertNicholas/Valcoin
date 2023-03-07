@@ -84,7 +84,7 @@ namespace Valcoin.UnitTests.SharedData
             ValidSpendBlock = block2;
         }
 
-        private static Wallet MakeTestingWallet()
+        public static Wallet MakeTestingWallet()
         {
             // random wallet that was generated
             ECParameters ecParams = new()

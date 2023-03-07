@@ -1,6 +1,7 @@
 ﻿using Moq;
 using Valcoin.Models;
 using Valcoin.Services;
+using Valcoin.UnitTests.SharedData;
 
 namespace Valcoin.UnitTests
 {
@@ -45,6 +46,7 @@ namespace Valcoin.UnitTests
             chainServiceMock.Setup(m => m.GetLastMainChainBlock()).ReturnsAsync((ValcoinBlock?)null);
             chainServiceMock.Setup(m => m.UpdateBalance(It.IsAny<ValcoinBlock>()));
             chainServiceMock.Setup(m => m.CommitBlock(It.IsAny<ValcoinBlock>()));
+            chainServiceMock.Setup(m => m.GetMyWallet()).ReturnsAsync(ValidationServiceShared.MakeTestingWallet());
 
             // when verifying calls, the reference object must be the same
             var block = GetExampleBlock();
@@ -54,6 +56,7 @@ namespace Valcoin.UnitTests
             chainServiceMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
             chainServiceMock.Verify(m => m.UpdateBalance(block), Times.Once);
             chainServiceMock.Verify(m => m.CommitBlock(block), Times.Once);
+            chainServiceMock.Verify(m => m.GetMyWallet(), Times.Once);
             chainServiceMock.VerifyNoOtherCalls();
         }
     }

@@ -170,7 +170,7 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        public async Task<Wallet> GetMyWallet()
+        public virtual async Task<Wallet> GetMyWallet()
         {
             return await Db.Wallets.FirstOrDefaultAsync(w => w.PublicKey != null);
         }
