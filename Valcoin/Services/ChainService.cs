@@ -268,7 +268,8 @@ namespace Valcoin.Services
             var branchBlock = await GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
             // the new orphan is the block that was previously in the main chain, that we are now disconnecting
             var newOrphan = await GetBlock(Convert.ToHexString(branchBlock.NextBlockHash));
-            var txsToReRelease = newOrphan.Transactions;
+
+            var txsToReRelease = newOrphan.Transactions ?? new List<Transaction>();
 
             // now, reorganize the structure
             branchBlock.NextBlockHash = previousOrphan.BlockHash; // our new orphan is now disconnected from the chain
