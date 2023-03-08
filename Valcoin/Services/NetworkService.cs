@@ -99,15 +99,26 @@ namespace Valcoin.Services
             Listener.Stop();
         }
 
+        public async Task RelayData(Message msg)
+        {
+            // exclude our local ip by default
+            // we'll probably never have this as an option, but since we have to pass something, we pass this
+            await RelayData(msg, localIP);
+        }
+
         /// <summary>
         /// Relay data to all clients on the network.
         /// </summary>
         /// <param name="data">The data to send (a <see cref="ValcoinBlock"/>, <see cref="Transaction"/>, etc).</param>
         /// <returns></returns>
-        public async Task RelayData(Message msg)
+        public async Task RelayData(Message msg, string ipToExclude)
         {
             foreach (var client in clients)
             {
+                // skip this one
+                if (client.Address == ipToExclude)
+                    continue;
+
                 await SendData(msg, client);
             }
         }
@@ -217,8 +228,15 @@ namespace Valcoin.Services
                         {
                             //got a new transaction.Validate it and send it to the miner, if it's active
                             var tx = message.Transaction;
-                            if (ValidateTx(tx) == ValidationCode.Valid && MiningService.MineBlocks == true)
+                            if (ValidateTx(tx) != ValidationCode.Valid)
+                                break; // invalid, just quit
+
+                            if (MiningService.MineBlocks == true)
                                 MiningService.TransactionPool.Add(tx);
+
+                            // send to the rest of the network
+                            await RelayData(message, clientAddress.ToString());
+
                             break;
                         }
                 }

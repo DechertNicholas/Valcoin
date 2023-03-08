@@ -116,9 +116,13 @@ namespace Valcoin.Services
         {
             // no value for UnlockSignature, as it will be filled in during the signing process
             var input = new TxInput(new string('0', 64), -1, MyWallet.PublicKey);
+            input.UnlockSignature = BitConverter.GetBytes(CandidateBlock.BlockNumber); // coinbase needs to be unique, add the block number here
+
             var output = new TxOutput(50, MyWallet.AddressBytes);
+
             var tx = new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
             MyWallet.SignTransactionInputs(ref tx);
+
             return tx;
         }
 

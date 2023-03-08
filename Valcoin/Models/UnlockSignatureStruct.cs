@@ -25,12 +25,23 @@ namespace Valcoin.Models
         {
             var unlockOverride = new byte[unlockOverrideLength];
             byte[] returnBytes = Array.Empty<byte>();
+
             foreach (var input in tx.Inputs)
             {
                 returnBytes = returnBytes.Concat(Convert.FromHexString(input.PreviousTransactionId)).ToArray();
                 returnBytes = returnBytes.Concat(BitConverter.GetBytes(input.PreviousOutputIndex)).ToArray();
                 returnBytes = returnBytes.Concat(input.UnlockerPublicKey).ToArray();
-                returnBytes = returnBytes.Concat(unlockOverride).ToArray();
+
+                // check if this is a coinbase transaction
+                if (input.PreviousTransactionId.Any(c => c != '0'))
+                {
+                    // use the block number to make it unique
+                    returnBytes = returnBytes.Concat(BitConverter.GetBytes(tx.BlockNumber)).ToArray();
+                }
+                else
+                {
+                    returnBytes = returnBytes.Concat(unlockOverride).ToArray();
+                }
             }
 
             foreach (var output in tx.Outputs)
@@ -41,21 +52,5 @@ namespace Valcoin.Models
 
             return returnBytes;
         }
-
-        // TODO: we don't always know the block number for a tx, and cannot compute the unlock until then
-        //public UnlockSignatureStruct(byte[] publicKey)
-        //{
-        //    // use byte copy to avoid referencing the same object
-        //    PublicKey = new byte[publicKey.Length];
-        //    publicKey.CopyTo(PublicKey, 0);
-        //}
-
-        //public UnlockSignatureStruct(ulong blockNumber, byte[] publicKey)
-        //{
-        //    this.BlockNumber = blockNumber;
-        //    // use byte copy to avoid referencing the same object
-        //    PublicKey = new byte[publicKey.Length];
-        //    publicKey.CopyTo(PublicKey, 0);
-        //}
     }
 }

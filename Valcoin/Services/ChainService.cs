@@ -339,7 +339,7 @@ namespace Valcoin.Services
             foreach (var utxo in Db.UTXOs.OrderBy( u => u.Amount))
             {
                 inputs.Add(new(utxo.TransactionId, utxo.Amount, myWallet.AddressBytes));
-                outputs.First().Amount += utxo.Amount;
+                outputs[0].Amount += utxo.Amount;
 
                 // we will always need a list of inputs that is greater than or equal to the amount we went to send.
                 // if the sum is greater, then the difference will be returned to us in a second output in the transaction
@@ -348,20 +348,41 @@ namespace Valcoin.Services
                 // to recipient = 25
                 // back to us = 4
 
-                if (outputs.First().Amount >= amount)
+                if (outputs[0].Amount >= amount)
                     break;
             }
 
             // add our change, if any
-            var change = outputs.First().Amount - amount;
+            var change = outputs[0].Amount - amount;
             if (change > 0)
             {
+                // correct the original output's amount
+                outputs[0].Amount = amount;
+                // add our change
                 outputs.Add(new(change, myWallet.AddressBytes));
             }
 
             var tx = new Transaction(inputs, outputs);
             myWallet.SignTransactionInputs(ref tx);
-            
+
+            await SendTransaction(tx);
+        }
+
+        /// <summary>
+        /// Commit the transaction to the <see cref="MiningService.TransactionPool"/> (if active), and relay the
+        /// transaction to the network.
+        /// </summary>
+        /// <param name="tx">The transaction to send.</param>
+        public async Task SendTransaction(Transaction tx)
+        {
+            if (MiningService.MineBlocks)
+            {
+                MiningService.TransactionPool.Add(tx);
+            }
+
+            var msg = new Message(tx);
+            msg.MessageType = MessageType.TransactionShare;
+            await App.Current.Services.GetService<INetworkService>().RelayData(msg);
         }
     }
 }
