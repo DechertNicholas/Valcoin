@@ -148,11 +148,6 @@ namespace Valcoin.Services
             if (CandidateBlock.BlockNumber == 2)
             {
                 await chainService.Transact(MyWallet.Address, 20);
-                //var input = new TxInput(lastBlock.Transactions[0].TransactionId, 0, MyWallet.PublicKey);
-                //var output = new TxOutput(lastBlock.Transactions[0].Outputs[0].Amount, MyWallet.AddressBytes);
-                //var spend = new Transaction(CandidateBlock.BlockNumber, new() { input }, new() { output });
-                //MyWallet.SignTransactionInputs(ref spend);
-                //TransactionPool.Add(spend);
             }
 
             if (!TransactionPool.IsEmpty)
