@@ -339,7 +339,7 @@ namespace Valcoin.Services
             // find the transaction's we'll use. Pick the smallest first to keep the UTXO DB smaller
             foreach (var utxo in Db.UTXOs.OrderBy( u => u.Amount))
             {
-                inputs.Add(new(utxo.TransactionId, utxo.Amount, myWallet.AddressBytes));
+                inputs.Add(new(utxo.TransactionId, utxo.OutputIndex, myWallet.PublicKey));
                 outputs[0].Amount += utxo.Amount;
 
                 // we will always need a list of inputs that is greater than or equal to the amount we went to send.
