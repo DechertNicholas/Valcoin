@@ -429,6 +429,12 @@ namespace Valcoin.Services
             }
             else if (syncMessage.MessageType == MessageType.SyncResponse)
             {
+                if (syncMessage.Block == null)
+                {
+                    tcpClient.Close();
+                    return;
+                }
+
                 var localService = chainService.GetFreshService();
                 var stream = tcpClient.GetStream();
                 // say we're ready to start sync

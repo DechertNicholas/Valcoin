@@ -22,8 +22,9 @@ namespace Valcoin.ViewModels
     {
         public Wallet MyWallet { get; set; }
         public Task WalletUpdater { get; set; }
-        public IChainService chainService;
         public Microsoft.UI.Dispatching.DispatcherQueue TheDispatcher { get; set; }
+
+        public IChainService chainService;
         public event EventHandler<TransactionEventHelper> TransactionEvent;
 
         /// <summary>
