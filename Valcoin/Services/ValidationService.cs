@@ -129,7 +129,7 @@ namespace Valcoin.Services
                 return allValidated; // this was the only transaction
 
             // validate the rest as non-coinbase transactions
-            foreach (var tx in txs.Where(t => txs.IndexOf(t) != 0))
+            foreach (var tx in txs.Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)))
             {
                 if (ValidateTx(tx) == ValidationCode.Invalid)
                     return allValidated = ValidationCode.Invalid; // the whole block is bad, exit
