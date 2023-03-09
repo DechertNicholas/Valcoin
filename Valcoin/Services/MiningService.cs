@@ -24,7 +24,7 @@ namespace Valcoin.Services
     public class MiningService : IMiningService
     {
         public static bool MineBlocks { get; set; } = false;
-        private readonly int Difficulty = 2; // this will remain static for the purposes of this application, but normally would auto-adjust over time
+        private readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
         private readonly TimeSpan HashInterval = new(0, 0, 2);
@@ -33,7 +33,6 @@ namespace Valcoin.Services
         private Wallet MyWallet;
         private IChainService chainService;
         private INetworkService networkService;
-        public static event EventHandler<ValcoinEventHelper> MiningEvent;
 
         public string Status { get; set; } = "Stopped";
         public int HashSpeed { get; set; } = 0;
@@ -45,7 +44,7 @@ namespace Valcoin.Services
             this.networkService = networkService;
         }
 
-        public async void Mine()
+        public async Task<string> Mine()
         {
             Thread.CurrentThread.Name = "Mining Thread";
             Status = "Mining";
@@ -63,12 +62,18 @@ namespace Valcoin.Services
                 AssembleCandidateBlock();
                 FindValidHash();
                 if (MineBlocks == false) // when we stop mining, the hashing process stops and we need to not try to commit a block
-                    return;
-                await CommitBlock();
+                    return string.Empty; // no errors
+
+                string errorPath;
+                if ((errorPath = await CommitBlock()) != string.Empty)
+                {
+                    return errorPath;
+                }
             }
             Status = "Stopped";
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
+            return string.Empty;
         }
 
         public async void PopulateWalletInfo()
@@ -197,7 +202,7 @@ namespace Valcoin.Services
             }
         }
 
-        public async Task CommitBlock()
+        public async Task<string> CommitBlock()
         {
             // run our own block through validations before saving
             var valid = ValidationService.ValidateBlock(CandidateBlock);
@@ -205,16 +210,13 @@ namespace Valcoin.Services
             {
                 await chainService.AddBlock(CandidateBlock);
                 await networkService.RelayData(new Message(CandidateBlock));
+                return "";
             }
             else
             {
                 var path = WriteBlockToFile(CandidateBlock);
-                MiningEvent.Invoke(null, new(
-                    $"Invalid block - {CandidateBlock.BlockId}",
-                    "The miner has mined an invalid block. The process has stopped. Please restart the process if you wish to attempt again." +
-                    $"The block data has been written out to file: {path}",
-                    "Ok"));
                 MineBlocks = false;
+                return path;
             }
         }
 

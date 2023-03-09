@@ -15,7 +15,7 @@ namespace Valcoin.Services
         public string Status { get; set; }
         public static ConcurrentBag<Transaction> TransactionPool { get; set; }
 
-        public void Mine();
+        public Task<string> Mine();
         public void PopulateWalletInfo() { }
         public void ComputeHashSpeed();
         public void SetDifficultyMask(int difficulty);
@@ -23,6 +23,6 @@ namespace Valcoin.Services
         public Transaction AssembleCoinbaseTransaction();
         public void AssembleCandidateBlock();
         public void FindValidHash();
-        public Task CommitBlock();
+        public Task<string> CommitBlock();
     }
 }

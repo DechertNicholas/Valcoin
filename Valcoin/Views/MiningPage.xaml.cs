@@ -34,10 +34,11 @@ namespace Valcoin.Views
         public MiningPage()
         {
             this.InitializeComponent();
-            MiningService.MiningEvent += DisplayTransactionEventDialog;
+            ViewModel.TheDispatcher = this.DispatcherQueue;
+            ViewModel.MiningEvent += DisplayTransactionEventDialog;
         }
 
-        private async void DisplayTransactionEventDialog(object sender, ValcoinEventHelper e)
+        public async void DisplayTransactionEventDialog(object sender, ValcoinEventHelper e)
         {
             ContentDialog dialog = new()
             {

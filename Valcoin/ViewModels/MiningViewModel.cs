@@ -1,7 +1,10 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Shapes;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -18,6 +21,8 @@ namespace Valcoin.ViewModels
     public partial class MiningViewModel : ObservableObject
     {
         internal BackgroundWorker MinerWorker { get; set; } = new();
+        public Microsoft.UI.Dispatching.DispatcherQueue TheDispatcher { get; set; }
+        public event EventHandler<ValcoinEventHelper> MiningEvent;
 
         [ObservableProperty]
         private string hashSpeed = "0";
@@ -48,7 +53,17 @@ namespace Valcoin.ViewModels
         private async void BeginMining(object sender, DoWorkEventArgs e)
         {
             MiningService.MineBlocks = true;
-            await Task.Run(() => App.Current.Services.GetService<IMiningService>().Mine());
+            var errorPath = await App.Current.Services.GetService<IMiningService>().Mine();
+            if (errorPath != string.Empty)
+            {
+                TheDispatcher.TryEnqueue(() =>
+                    MiningEvent.Invoke(null, new(
+                        $"Invalid block - {errorPath.Split('\\').Last()}",
+                        "The miner has mined an invalid block. The process has stopped. Please restart the process if you wish to attempt again.\n" +
+                        $"The block data has been written out to file: {errorPath}",
+                        "Ok"))
+                );
+            }
         }
 
         private async Task InvokeUpdateHashSpeedRoutine()
