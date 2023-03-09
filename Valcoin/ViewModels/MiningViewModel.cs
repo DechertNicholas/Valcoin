@@ -59,7 +59,7 @@ namespace Valcoin.ViewModels
                 TheDispatcher.TryEnqueue(() =>
                     MiningEvent.Invoke(null, new(
                         $"Invalid block - {errorPath.Split('\\').Last()}",
-                        "The miner has mined an invalid block. The process has stopped. Please restart the process if you wish to attempt again.\n" +
+                        "The miner has mined an invalid block. The process has stopped. Please restart the process if you wish to attempt again.\n\n" +
                         $"The block data has been written out to file: {errorPath}",
                         "Ok"))
                 );

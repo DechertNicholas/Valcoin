@@ -158,6 +158,14 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
+        public async Task AddPendingTransaction(Transaction tx)
+        {
+            var block = await GetLastMainChainBlock();
+            var blockNumber = block == null ? 0 : block.BlockNumber;
+            var px = new PendingTransaction(tx.TransactionId, tx.Outputs.Sum(o => o.Amount), blockNumber);
+            await CommitPendingTransaction(px);
+        }
+
         public async Task CommitPendingTransaction(PendingTransaction ptx)
         {
             Db.Add(ptx);
@@ -386,14 +394,9 @@ namespace Valcoin.Services
         /// <param name="tx">The transaction to send.</param>
         public async Task SendTransaction(Transaction tx)
         {
-            var block = await GetLastMainChainBlock();
-            var blockNumber = block == null ? 0 : block.BlockNumber;
-            var px = new PendingTransaction(tx.TransactionId, tx.Outputs.Sum(o => o.Amount), blockNumber);
-            await CommitPendingTransaction(px);
-            if (MiningService.MineBlocks)
-            {
-                MiningService.TransactionPool.TryAdd(tx.TransactionId, tx);
-            }
+            await AddPendingTransaction(tx);
+            
+            MiningService.TransactionPool.TryAdd(tx.TransactionId, tx);
 
             var msg = new Message(tx);
             msg.MessageType = MessageType.TransactionShare;
