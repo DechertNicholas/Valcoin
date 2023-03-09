@@ -25,7 +25,7 @@ namespace Valcoin.ViewModels
         public Microsoft.UI.Dispatching.DispatcherQueue TheDispatcher { get; set; }
 
         public IChainService chainService;
-        public event EventHandler<TransactionEventHelper> TransactionEvent;
+        public event EventHandler<ValcoinEventHelper> TransactionEvent;
 
         /// <summary>
         /// The balance of our wallet.

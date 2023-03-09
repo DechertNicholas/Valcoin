@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Helpers
 {
-    public class TransactionEventHelper : EventArgs
+    public class ValcoinEventHelper : EventArgs
     {
         public string Title { get; set; }
         public string Content { get; set; }
         public string CloseButtonText { get; set; }
 
 
-        public TransactionEventHelper(string title, string content, string closeButtonText)
+        public ValcoinEventHelper(string title, string content, string closeButtonText)
         {
             Title = title;
             Content = content;

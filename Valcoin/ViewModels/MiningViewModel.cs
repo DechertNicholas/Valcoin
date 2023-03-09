@@ -1,10 +1,16 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.UI.Xaml;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Valcoin.Helpers;
+using Valcoin.Models;
 using Valcoin.Services;
 
 namespace Valcoin.ViewModels
@@ -39,10 +45,10 @@ namespace Valcoin.ViewModels
             MinerWorker.CancelAsync();
         }
 
-        private void BeginMining(object sender, DoWorkEventArgs e)
+        private async void BeginMining(object sender, DoWorkEventArgs e)
         {
             MiningService.MineBlocks = true;
-            App.Current.Services.GetService<IMiningService>().Mine();
+            await Task.Run(() => App.Current.Services.GetService<IMiningService>().Mine());
         }
 
         private async Task InvokeUpdateHashSpeedRoutine()

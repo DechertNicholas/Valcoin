@@ -104,6 +104,12 @@ namespace Valcoin.Services
                 .ForEach(p => Db.PendingTransactions.Remove(p)));
             await Db.SaveChangesAsync();
 
+            // remove any transactions in our transaction pool that were in this block.
+            // helps our next block we mine to not be immediately invalid
+            block.Transactions.ForEach(t => MiningService.TransactionPool.Where(p => p.Key == t.TransactionId)
+                .ToList()
+                .ForEach(p => MiningService.TransactionPool.Remove(p.Key, out _)));
+
             var lastBlock = await GetLastMainChainBlock();
 
             if (lastBlock == null && block.BlockNumber == 1)
@@ -314,10 +320,10 @@ namespace Valcoin.Services
             }
 
             // add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
-            txsToReRelease.ForEach(t => GetTransactionPool()
-                .Where(p => p.TransactionId != t.TransactionId)
+            txsToReRelease.ForEach(t => MiningService.TransactionPool.ToList()
+                .Where(p => p.Key != t.TransactionId)
                 .ToList()
-                .ForEach(r => AddToTransactionPool(r)));
+                .ForEach(r => MiningService.TransactionPool.TryAdd(r.Key, r.Value)));
 
             // update our branch block
             await UpdateBlock(branchBlock);
@@ -330,16 +336,6 @@ namespace Valcoin.Services
 
             // now add the newHighestBlock
             await CommitBlock(newHighestBlock);
-        }
-
-        public List<Transaction> GetTransactionPool()
-        {
-            return MiningService.TransactionPool.ToList();
-        }
-
-        public void AddToTransactionPool(Transaction t)
-        {
-            MiningService.TransactionPool.Add(t);
         }
 
         public async Task Transact(string recipient, int amount)
@@ -396,7 +392,7 @@ namespace Valcoin.Services
             await CommitPendingTransaction(px);
             if (MiningService.MineBlocks)
             {
-                MiningService.TransactionPool.Add(tx);
+                MiningService.TransactionPool.TryAdd(tx.TransactionId, tx);
             }
 
             var msg = new Message(tx);

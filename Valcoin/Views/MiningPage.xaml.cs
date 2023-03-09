@@ -15,6 +15,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
+using Valcoin.Helpers;
 using Valcoin.Models;
 using Valcoin.Services;
 using Windows.Foundation;
@@ -33,6 +34,20 @@ namespace Valcoin.Views
         public MiningPage()
         {
             this.InitializeComponent();
+            MiningService.MiningEvent += DisplayTransactionEventDialog;
+        }
+
+        private async void DisplayTransactionEventDialog(object sender, ValcoinEventHelper e)
+        {
+            ContentDialog dialog = new()
+            {
+                Title = e.Title,
+                Content = e.Content,
+                CloseButtonText = e.CloseButtonText,
+                XamlRoot = Content.XamlRoot
+            };
+
+            await dialog.ShowAsync();
         }
     }
 }

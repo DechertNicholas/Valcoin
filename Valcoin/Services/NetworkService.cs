@@ -231,8 +231,7 @@ namespace Valcoin.Services
                             if (ValidateTx(tx) != ValidationCode.Valid)
                                 break; // invalid, just quit
 
-                            if (MiningService.MineBlocks == true)
-                                MiningService.TransactionPool.Add(tx);
+                            MiningService.TransactionPool.TryAdd(tx.TransactionId, tx);
 
                             // send to the rest of the network
                             await RelayData(message, clientAddress.ToString());

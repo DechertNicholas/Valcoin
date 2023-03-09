@@ -41,7 +41,7 @@ namespace Valcoin.Views
             args.Cancel = args.NewText.Any(c => !char.IsDigit(c));
         }
 
-        private async void DisplayTransactionEventDialog(object sender, TransactionEventHelper e)
+        private async void DisplayTransactionEventDialog(object sender, ValcoinEventHelper e)
         {
             ContentDialog dialog = new()
             {
