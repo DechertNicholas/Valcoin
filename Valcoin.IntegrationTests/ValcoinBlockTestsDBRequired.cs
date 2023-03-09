@@ -18,7 +18,6 @@ namespace Valcoin.IntegrationTests
         public ValcoinBlockTestsDBRequired(DatabaseFixture fixture)
         {
             this.fixture = fixture;
-            Console.WriteLine("BlockTests");
         }
 
         [Fact]

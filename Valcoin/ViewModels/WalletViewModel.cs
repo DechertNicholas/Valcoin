@@ -42,6 +42,16 @@ namespace Valcoin.ViewModels
         /// </summary>
         [ObservableProperty]
         private string recipientAmount = string.Empty; // use a string here to avoid defaulting to '0' and displaying it
+        /// <summary>
+        /// The text on the Send button. Microinteraction with the user.
+        /// </summary>
+        [ObservableProperty]
+        private string sendButtonText = "Send";
+        /// <summary>
+        /// Determines if the Send button is enabled or not (changes during sending transaction).
+        /// </summary>
+        [ObservableProperty]
+        private bool sendButtonEnabled = true;
         
 
         public WalletViewModel()
@@ -72,6 +82,9 @@ namespace Valcoin.ViewModels
         [RelayCommand]
         public async void SendTransaction()
         {
+            SendButtonText = "Sending...";
+            SendButtonEnabled = false;
+
             // verify the recipient address
             if (RecipientAddress == string.Empty)
             {
@@ -129,6 +142,12 @@ namespace Valcoin.ViewModels
             chainService ??= SetChainService();
 
             await chainService.Transact(RecipientAddress, amount);
+            
+            // reset fields
+            RecipientAddress = string.Empty;
+            RecipientAmount = string.Empty;
+            SendButtonEnabled = true;
+            SendButtonText = "Send";
         }
 
         public IChainService SetChainService()

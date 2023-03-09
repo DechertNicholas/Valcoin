@@ -1,21 +1,22 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
+using Moq;
+using System.Linq;
 using Valcoin.Models;
 using Valcoin.Services;
 using Valcoin.UnitTests.SharedData;
 
 namespace Valcoin.UnitTests
 {
+    [Collection(nameof(DatabaseCollection))]
     public class ChainServiceTests
     {
-        private readonly Mock<ValcoinContext> contextMock;
+        readonly DatabaseFixture fixture;
         private readonly Mock<IMiningService> miningMock;
-        //private readonly Mock<IChainService> chainServiceMock; // for mocking other calls, keep to one function in unit tests
 
-        public ChainServiceTests()
+        public ChainServiceTests(DatabaseFixture fixture)
         {
-            contextMock = new Mock<ValcoinContext>();
             miningMock = new Mock<IMiningService>();
-            //chainServiceMock = new Mock<IChainService>();
+            this.fixture = fixture;
         }
 
         private static ValcoinBlock GetExampleBlock()
@@ -40,7 +41,7 @@ namespace Valcoin.UnitTests
         public async void AddBlockCommitsBlockWhenIsFirstBlock()
         {
             // build a ChainService mock here so that we can mock calls to other functions in the same object
-            var chainServiceMock = new Mock<ChainService>(contextMock.Object);
+            var chainServiceMock = new Mock<ChainService>(fixture.Context);
 
             // we aren't testing these methods, so mock them
             chainServiceMock.Setup(m => m.GetLastMainChainBlock()).ReturnsAsync((ValcoinBlock?)null);
@@ -50,6 +51,7 @@ namespace Valcoin.UnitTests
 
             // when verifying calls, the reference object must be the same
             var block = GetExampleBlock();
+
 
             await chainServiceMock.Object.AddBlock(block);
 

@@ -100,7 +100,8 @@ namespace Valcoin.Services
         {
             // remove any pending transactions of ours
             block.Transactions.ForEach(t => Db.PendingTransactions.Where(p => p.TransactionId == t.TransactionId)
-                .ForEachAsync(p => Db.PendingTransactions.Remove(p)));
+                .ToList()
+                .ForEach(p => Db.PendingTransactions.Remove(p)));
             await Db.SaveChangesAsync();
 
             var lastBlock = await GetLastMainChainBlock();
