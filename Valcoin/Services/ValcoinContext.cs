@@ -7,6 +7,7 @@ namespace Valcoin.Services
     public class ValcoinContext : DbContext
     {
         public virtual DbSet<ValcoinBlock> ValcoinBlocks { get; set; }
+        public DbSet<PendingTransaction> PendingTransactions { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<TxInput> TxInputs { get; set; }
         public DbSet<TxOutput> TxOutputs { get; set; }

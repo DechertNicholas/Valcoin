@@ -98,6 +98,11 @@ namespace Valcoin.Services
 
         public async Task AddBlock(ValcoinBlock block)
         {
+            // remove any pending transactions of ours
+            block.Transactions.ForEach(t => Db.PendingTransactions.Where(p => p.TransactionId == t.TransactionId)
+                .ForEachAsync(p => Db.PendingTransactions.Remove(p)));
+            await Db.SaveChangesAsync();
+
             var lastBlock = await GetLastMainChainBlock();
 
             if (lastBlock == null && block.BlockNumber == 1)
@@ -107,6 +112,7 @@ namespace Valcoin.Services
                 await CommitBlock(block);
                 return;
             }
+
 
             // add a normal block to the chain. check that the lastBlock's number is one less than the incoming, and that the
             // new block references the last block
@@ -142,6 +148,12 @@ namespace Valcoin.Services
         public virtual async Task CommitBlock(ValcoinBlock block)
         {
             Db.Add(block);
+            await Db.SaveChangesAsync();
+        }
+
+        public async Task CommitPendingTransaction(PendingTransaction ptx)
+        {
+            Db.Add(ptx);
             await Db.SaveChangesAsync();
         }
 
@@ -183,7 +195,8 @@ namespace Valcoin.Services
 
         public async Task<int> GetMyBalance()
         {
-            return await Db.UTXOs.SumAsync(u => u.Amount);
+            // return our unspent outputs minus our pending transactions
+            return await Db.UTXOs.SumAsync(u => u.Amount) - await Db.PendingTransactions.SumAsync(p => p.Amount);
         }
 
         private async Task AddToBalance(int amount, int index, string txId)
@@ -376,6 +389,10 @@ namespace Valcoin.Services
         /// <param name="tx">The transaction to send.</param>
         public async Task SendTransaction(Transaction tx)
         {
+            var block = await GetLastMainChainBlock();
+            var blockNumber = block == null ? 0 : block.BlockNumber;
+            var px = new PendingTransaction(tx.TransactionId, tx.Outputs.Sum(o => o.Amount), blockNumber);
+            await CommitPendingTransaction(px);
             if (MiningService.MineBlocks)
             {
                 MiningService.TransactionPool.Add(tx);

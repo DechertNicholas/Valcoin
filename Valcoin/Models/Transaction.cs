@@ -17,7 +17,7 @@ namespace Valcoin.Models
         /// </summary>
         [Key]
         [JsonIgnore]
-        public string TransactionId { get; private set; }
+        public string TransactionId { get; protected set; }
         /// <summary>
         /// The version of transaction data formatting being used.
         /// </summary>
@@ -54,6 +54,7 @@ namespace Valcoin.Models
 
         private List<TxInput> _inputs = new();
         private List<TxOutput> _outputs = new();
+        //private ulong _blockNumber;
 
         /// <summary>
         /// Byte[] serializer used for transferring this transaction over the network.
@@ -61,12 +62,13 @@ namespace Valcoin.Models
         /// <param name="t"></param>
         public static implicit operator byte[](Transaction t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
+
         /// <summary>
         /// Constructor used by Entity Framework Core. Don't delete this.
         /// </summary>
         /// <param name="transactionId"></param>
         /// <param name="blockNumber"></param>
-        private Transaction(string transactionId, ulong blockNumber)
+        protected Transaction(string transactionId, ulong blockNumber)
         {
             TransactionId = transactionId;
             BlockNumber = blockNumber;

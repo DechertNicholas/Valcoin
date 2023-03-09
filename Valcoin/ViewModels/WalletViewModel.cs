@@ -95,7 +95,7 @@ namespace Valcoin.ViewModels
 
             // setup amount
             int amount;
-            if (RecipientAmount == string.Empty)
+            if (RecipientAmount == string.Empty || !RecipientAmount.Any(c => c != '0'))
             {
                 TransactionEvent.Invoke(null, new(
                     "Sending a zero amount",

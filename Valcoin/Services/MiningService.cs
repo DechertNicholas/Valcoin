@@ -157,6 +157,7 @@ namespace Valcoin.Services
                 {
                     if (TransactionPool.TryTake(out Transaction tx))
                     {
+                        tx.BlockNumber = CandidateBlock.BlockNumber;
                         CandidateBlock.AddTx(tx);
                     }
                 }

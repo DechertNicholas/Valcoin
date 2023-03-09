@@ -112,10 +112,9 @@ namespace Valcoin.Services
             if (coinbases.Count > 1)
                 return ValidationCode.Invalid; // more than one coinbase tx
 
-            var coinbase = coinbases.First();
-
-            if (coinbase != null)
+            if (coinbases.Count != 0)
             {
+                var coinbase = coinbases.First();
                 var inputValid = Wallet.VerifyTransactionInputs(coinbase);
 
                 var outputValid = coinbase.Outputs.Count == 1 && coinbase.Outputs[0].Amount == 50; // currently amount is statically set to 50
@@ -125,7 +124,7 @@ namespace Valcoin.Services
                     allValidated = ValidationCode.Invalid;
             }
 
-            if (txs.Count == 1)
+            if (txs.Count == 1 || txs.Count == 0)
                 return allValidated; // this was the only transaction
 
             // validate the rest as non-coinbase transactions

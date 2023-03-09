@@ -109,6 +109,9 @@ namespace Valcoin.Models
             var sig = _ecdsa.SignData(new UnlockSignatureStruct(tx), HashAlgorithmName.SHA256);
             // assign the signature to all inputs
             tx.Inputs.ForEach(i => i.UnlockSignature = sig);
+
+            // we changed the data, need to set the txid as well
+            tx.ComputeAndSetTransactionId();
         }
 
         /// <summary>
@@ -117,14 +120,14 @@ namespace Valcoin.Models
         /// <param name="data"></param>
         /// <param name="signature"></param>
         /// <returns></returns>
-        [Obsolete("Use VerifyTransactionInputs instead.")]
-        public static bool VerifyData(byte[] data, byte[] signature, byte[] publicKey)
-        {
-            var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        //[Obsolete("Use VerifyTransactionInputs instead.")]
+        //public static bool VerifyData(byte[] data, byte[] signature, byte[] publicKey)
+        //{
+        //    var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
 
-            ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
-            return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
-        }
+        //    ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
+        //    return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
+        //}
 
         public static bool VerifyTransactionInputs(Transaction tx)
         {

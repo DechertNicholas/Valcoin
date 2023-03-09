@@ -33,7 +33,7 @@ namespace Valcoin.Models
                 returnBytes = returnBytes.Concat(input.UnlockerPublicKey).ToArray();
 
                 // check if this is a coinbase transaction
-                if (input.PreviousTransactionId.Any(c => c != '0'))
+                if (!input.PreviousTransactionId.Any(c => c != '0'))
                 {
                     // use the block number to make it unique
                     returnBytes = returnBytes.Concat(BitConverter.GetBytes(tx.BlockNumber)).ToArray();
