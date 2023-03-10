@@ -232,7 +232,6 @@ namespace Valcoin.Services
                                 break; // invalid, just quit
 
                             MiningService.TransactionPool.TryAdd(tx.TransactionId, tx);
-                            await chainService.AddPendingTransaction(tx);
 
                             // send to the rest of the network
                             await RelayData(message, clientAddress.ToString());
