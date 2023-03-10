@@ -26,12 +26,20 @@ namespace Valcoin.ViewModels
         public SearchResultsViewModel()
         {
             chainService ??= GetChainService();
-            Populate();
+            //Populate();
         }
 
-        private async void Populate()
+        public async void Populate()
         {
-            Blocks = (await chainService.GetAllBlocks()).OrderBy(p => p.BlockNumber).ToList();
+            Blocks = (await chainService.GetAllBlocks())
+                .Where(b => b.BlockId.Contains(QueryText))
+                .OrderBy(p => p.BlockNumber)
+                .ToList();
+
+            Transactions = (await chainService.GetAllTransactions())
+                .Where(t => t.TransactionId.Contains(QueryText))
+                .OrderBy(t => t.BlockNumber)
+                .ToList();
         }
 
         private IChainService GetChainService()

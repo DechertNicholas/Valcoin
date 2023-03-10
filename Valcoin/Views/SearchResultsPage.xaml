@@ -23,6 +23,7 @@
                    Style="{StaticResource TextBlockStyleTitle}"/>
 
         <Pivot Title="{x:Bind ViewModel.QueryText, Mode=TwoWay}">
+            
             <PivotItem Header="Blocks">
                 <ListView ItemsSource="{x:Bind ViewModel.Blocks}">
                     <ListView.ItemTemplate>
@@ -37,7 +38,12 @@
             
             <PivotItem Header="Transactions">
                 <ListView ItemsSource="{x:Bind ViewModel.Transactions}">
-                    
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Transaction">
+                            <TextBlock Text="{x:Bind TransactionId}"
+                                       FontFamily="Cascadia Code"/>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
                 </ListView>
             </PivotItem>
         </Pivot>

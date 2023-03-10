@@ -32,6 +32,7 @@
         <NavigationView Grid.Row="1"
                         x:Name="NavView"
                         IsBackEnabled="False"
+                        IsBackButtonVisible="Collapsed"
                         IsSettingsVisible="False"
                         Loaded="NavView_Loaded"
                         ItemInvoked="NavView_ItemInvoked">
@@ -42,7 +43,6 @@
                             HorizontalAlignment="Center"
                             Width="260"
                             TextChanged="AutoSuggestBox_TextChanged"
-                            SuggestionChosen="AutoSuggestBox_SuggestionChosen"
                             QuerySubmitted="AutoSuggestBox_QuerySubmitted"/>
         </NavigationView.AutoSuggestBox>
             <NavigationView.MenuItems>

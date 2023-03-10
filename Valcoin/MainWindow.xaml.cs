@@ -142,20 +142,24 @@ namespace Valcoin
 
         private void AutoSuggestBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
         {
+            BuildAndNavigateSearchResult(sender);
+        }
+        // both these methods, while identical, have to exist because the args type is different
+        private void AutoSuggestBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+            BuildAndNavigateSearchResult(sender);
+        }
+
+        private void BuildAndNavigateSearchResult(AutoSuggestBox sender)
+        {
+            // don't search if the user has cleared the previous search string
+            if (sender.Text == string.Empty) return;
+
             ContentFrame.Navigate(typeof(SearchResultsPage), null, new SuppressNavigationTransitionInfo());
             var page = ContentFrame.Content as SearchResultsPage;
             var vm = page.DataContext as SearchResultsViewModel;
             vm.QueryText = sender.Text;
-        }
-
-        private void AutoSuggestBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
-        {
-
-        }
-
-        private void AutoSuggestBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
-        {
-
+            vm.Populate();
         }
     }
 }

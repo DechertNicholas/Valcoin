@@ -92,6 +92,11 @@ namespace Valcoin.Services
                 .FirstOrDefaultAsync();                                             // and return that transaction
         }
 
+        public async Task<List<Transaction>> GetAllTransactions()
+        {
+            return await Db.Transactions.ToListAsync();
+        }
+
         public async Task AddTxs(IEnumerable<Transaction> transactions)
         {
             foreach (Transaction tx in transactions)
