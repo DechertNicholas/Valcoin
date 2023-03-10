@@ -172,6 +172,15 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
+        public async Task UnloadPendingTransactions(ulong blockNumber, int pendingTransactionTimeout)
+        {
+            (await Db.PendingTransactions.ToListAsync())
+                .Where(p => blockNumber - p.CurrentBlockNumber >= (ulong)pendingTransactionTimeout)
+                .ToList()
+                .ForEach(p => Db.PendingTransactions.Remove(p));
+            await Db.SaveChangesAsync();
+        }
+
         public virtual void UpdateBalance(ValcoinBlock block)
         {
             // add any payments we may have gotten

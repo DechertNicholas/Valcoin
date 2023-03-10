@@ -33,6 +33,11 @@ namespace Valcoin.Services
         private Wallet MyWallet;
         private IChainService chainService;
         private INetworkService networkService;
+        /// <summary>
+        /// The number of blocks to be mined before a pending transaction is considered failed and removed from the pending database.
+        /// Essentially, this transaction was not picked up by the mining network and can be re-attempted by the user.
+        /// </summary>
+        private int pendingTransactionTimeout = 3;
 
         public string Status { get; set; } = "Stopped";
         public int HashSpeed { get; set; } = 0;
@@ -55,6 +60,8 @@ namespace Valcoin.Services
             // a difficulty of 6 means the hash bits must start with "000000xxxxxx..."
             SetDifficultyMask(Difficulty);
 
+            
+
             // used to calculate hash speed
             Stopwatch.Start();
             while (MineBlocks == true)
@@ -69,6 +76,7 @@ namespace Valcoin.Services
                 {
                     return errorPath;
                 }
+                await UnloadPendingTransactions();
             }
             Status = "Stopped";
             // cleanup on stop so that we have nice fresh metrics when started again
@@ -82,6 +90,11 @@ namespace Valcoin.Services
             // this should never be called, but exists as a safety.
             // the application should always open to the wallet page first and generate a wallet if none exist
             if (MyWallet == null) { throw new NullReferenceException("A wallet was not found in the database"); }
+        }
+
+        public async Task UnloadPendingTransactions()
+        {
+            await chainService.UnloadPendingTransactions(CandidateBlock.BlockNumber, pendingTransactionTimeout);
         }
 
         public void ComputeHashSpeed()
