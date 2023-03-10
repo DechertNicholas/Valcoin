@@ -7,6 +7,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System.Linq;
 using System.Reflection;
+using Valcoin.ViewModels;
 using Valcoin.Views;
 using WinRT; // required to support Window.As<ICompositionSupportsSystemBackdrop>()
 
@@ -137,6 +138,24 @@ namespace Valcoin
 
             ContentFrame.Navigate(view, null, new EntranceNavigationTransitionInfo());
             return true;
+        }
+
+        private void AutoSuggestBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)
+        {
+            ContentFrame.Navigate(typeof(SearchResultsPage), null, new SuppressNavigationTransitionInfo());
+            var page = ContentFrame.Content as SearchResultsPage;
+            var vm = page.DataContext as SearchResultsViewModel;
+            vm.QueryText = sender.Text;
+        }
+
+        private void AutoSuggestBox_SuggestionChosen(AutoSuggestBox sender, AutoSuggestBoxSuggestionChosenEventArgs args)
+        {
+
+        }
+
+        private void AutoSuggestBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        {
+
         }
     }
 }

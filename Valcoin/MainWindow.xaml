@@ -35,6 +35,16 @@
                         IsSettingsVisible="False"
                         Loaded="NavView_Loaded"
                         ItemInvoked="NavView_ItemInvoked">
+            
+        <NavigationView.AutoSuggestBox>
+            <AutoSuggestBox QueryIcon="Find"
+                            PlaceholderText="Search"
+                            HorizontalAlignment="Center"
+                            Width="260"
+                            TextChanged="AutoSuggestBox_TextChanged"
+                            SuggestionChosen="AutoSuggestBox_SuggestionChosen"
+                            QuerySubmitted="AutoSuggestBox_QuerySubmitted"/>
+        </NavigationView.AutoSuggestBox>
             <NavigationView.MenuItems>
                 
                 <NavigationViewItem Content="Wallet" Tag="WalletPage">
