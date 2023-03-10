@@ -13,6 +13,19 @@
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
             <!-- Other app resources here -->
+
+            <Style
+                x:Key="TextBlockStyleTitle"
+                TargetType="TextBlock">
+                <Setter Property="FontSize" Value="28" />
+                <Setter Property="FontWeight" Value="Semibold" />
+            </Style>
+            <Style
+                x:Key="TextBlockStyleBodyLarge"
+                TargetType="TextBlock">
+                <Setter Property="FontSize" Value="18" />
+            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>
