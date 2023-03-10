@@ -2,17 +2,21 @@
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Documents;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Numerics;
 using System.Reflection.PortableExecutable;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Valcoin.Helpers;
 using Valcoin.Models;
 
 namespace Valcoin.Services
@@ -23,16 +27,21 @@ namespace Valcoin.Services
         private readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
-        private readonly TimeSpan HashInterval = new(0, 0, 10);
+        private readonly TimeSpan HashInterval = new(0, 0, 2);
         private int HashCount = 0;
         private ValcoinBlock CandidateBlock = new();
         private Wallet MyWallet;
         private IChainService chainService;
         private INetworkService networkService;
+        /// <summary>
+        /// The number of blocks to be mined before a pending transaction is considered failed and removed from the pending database.
+        /// Essentially, this transaction was not picked up by the mining network and can be re-attempted by the user.
+        /// </summary>
+        private int pendingTransactionTimeout = 3;
 
         public string Status { get; set; } = "Stopped";
         public int HashSpeed { get; set; } = 0;
-        public static ConcurrentBag<Transaction> TransactionPool { get; set; } = new();
+        public static ConcurrentDictionary<string, Transaction> TransactionPool { get; set; } = new();
 
         public MiningService(IChainService chainService, INetworkService networkService)
         {
@@ -40,7 +49,7 @@ namespace Valcoin.Services
             this.networkService = networkService;
         }
 
-        public async void Mine()
+        public async Task<string> Mine()
         {
             Thread.CurrentThread.Name = "Mining Thread";
             Status = "Mining";
@@ -51,6 +60,8 @@ namespace Valcoin.Services
             // a difficulty of 6 means the hash bits must start with "000000xxxxxx..."
             SetDifficultyMask(Difficulty);
 
+            
+
             // used to calculate hash speed
             Stopwatch.Start();
             while (MineBlocks == true)
@@ -58,12 +69,19 @@ namespace Valcoin.Services
                 AssembleCandidateBlock();
                 FindValidHash();
                 if (MineBlocks == false) // when we stop mining, the hashing process stops and we need to not try to commit a block
-                    return;
-                await CommitBlock();
+                    return string.Empty; // no errors
+
+                string errorPath;
+                if ((errorPath = await CommitBlock()) != string.Empty)
+                {
+                    return errorPath;
+                }
+                await UnloadPendingTransactions();
             }
             Status = "Stopped";
             // cleanup on stop so that we have nice fresh metrics when started again
             HashSpeed = 0;
+            return string.Empty;
         }
 
         public async void PopulateWalletInfo()
@@ -72,6 +90,11 @@ namespace Valcoin.Services
             // this should never be called, but exists as a safety.
             // the application should always open to the wallet page first and generate a wallet if none exist
             if (MyWallet == null) { throw new NullReferenceException("A wallet was not found in the database"); }
+        }
+
+        public async Task UnloadPendingTransactions()
+        {
+            await chainService.UnloadPendingTransactions(CandidateBlock.BlockNumber, pendingTransactionTimeout);
         }
 
         public void ComputeHashSpeed()
@@ -114,13 +137,16 @@ namespace Valcoin.Services
 
         public Transaction AssembleCoinbaseTransaction()
         {
-            // debugging serialization
-            var unlockBytes = (byte[])new UnlockSignatureStruct(CandidateBlock.BlockNumber, MyWallet.PublicKey);
-            var input = new TxInput(new string('0', 64), -1, MyWallet.PublicKey, MyWallet.SignData(unlockBytes));
+            // no value for UnlockSignature, as it will be filled in during the signing process
+            var input = new TxInput(new string('0', 64), -1, MyWallet.PublicKey);
+            input.UnlockSignature = BitConverter.GetBytes(CandidateBlock.BlockNumber); // coinbase needs to be unique, add the block number here
 
             var output = new TxOutput(50, MyWallet.AddressBytes);
 
-            return new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
+            var tx = new Transaction(CandidateBlock.BlockNumber, new List<TxInput> { input }, new List<TxOutput> { output });
+            MyWallet.SignTransactionInputs(ref tx);
+
+            return tx;
         }
 
         public async void AssembleCandidateBlock()
@@ -140,12 +166,21 @@ namespace Valcoin.Services
             // add our coinbase payout to ourselves, and any other transactions in the transaction pool (max 31 others, 32 tx total per block)
             CandidateBlock.AddTx(AssembleCoinbaseTransaction());
 
+            // testing a spend
+            // TODO: Remove this
+            if (CandidateBlock.BlockNumber == 2)
+            {
+                await chainService.Transact(MyWallet.Address, 20);
+            }
+
             if (!TransactionPool.IsEmpty)
             {
-                for (var i = 0; i < Math.Min(31, TransactionPool.Count); i++)
+                // only allow 32 transactions in a block, including the coinbase (so 31 from the pool)
+                for (var i = 0; i < Math.Min(32 - CandidateBlock.Transactions.Count, TransactionPool.Count); i++)
                 {
-                    if (TransactionPool.TryTake(out Transaction tx))
+                    if (TransactionPool.Remove(TransactionPool.First().Key, out var tx))
                     {
+                        tx.BlockNumber = CandidateBlock.BlockNumber;
                         CandidateBlock.AddTx(tx);
                     }
                 }
@@ -180,7 +215,7 @@ namespace Valcoin.Services
             }
         }
 
-        public async Task CommitBlock()
+        public async Task<string> CommitBlock()
         {
             // run our own block through validations before saving
             var valid = ValidationService.ValidateBlock(CandidateBlock);
@@ -188,11 +223,80 @@ namespace Valcoin.Services
             {
                 await chainService.AddBlock(CandidateBlock);
                 await networkService.RelayData(new Message(CandidateBlock));
+                return "";
             }
             else
             {
-                throw new InvalidOperationException($"Validation service returned {valid}");
+                var path = WriteBlockToFile(CandidateBlock);
+                MineBlocks = false;
+                return path;
             }
+        }
+
+        private static string WriteBlockToFile(ValcoinBlock block)
+        {
+            var fileName = Windows.Storage.ApplicationData.Current.LocalFolder.Path + $"\\{block.BlockId}.txt";
+            List<string> data = new()
+            {
+                "*** Block Info ***",
+                $"BlockId: {block.BlockId}",
+                $"BlockNumber: {block.BlockNumber}",
+                $"BlockHash: {Convert.ToHexString(block.BlockHash)}",
+                $"PreviousBlockHash: {Convert.ToHexString(block.PreviousBlockHash)}",
+                $"NextBlockHash: {Convert.ToHexString(block.NextBlockHash)}",
+                $"Nonce: {block.Nonce}",
+                $"TimeUTCTicks: {block.TimeUTCTicks}",
+                $"BlockDifficulty: {block.BlockDifficulty}",
+                $"MerkleRoot: {Convert.ToHexString(block.MerkleRoot)}",
+                $"Version: {block.Version}"
+            };
+
+            foreach (var tx in block.Transactions)
+            {
+                List<string> txData = new()
+                {
+                    "\n\n",
+                    $"*** Transaction Info - {tx.TransactionId} ***",
+                    $"TransactionId: {tx.TransactionId}",
+                    $"Version: {tx.Version}",
+                    $"BlockNumber: {tx.BlockNumber}"
+                };
+
+                txData.ForEach(s => data.Add(s));
+
+                foreach (var input in tx.Inputs)
+                {
+                    List<string> inputData = new()
+                    {
+                        "\n\n",
+                        $"*** TxInput Info - {input.PreviousTransactionId}***",
+                        $"PreviousTransactionId: {input.PreviousTransactionId}",
+                        $"PreviousOutputIndex: {input.PreviousOutputIndex}",
+                        $"UnlockerPublicKey: {Convert.ToHexString(input.UnlockerPublicKey)}",
+                        $"UnlockSignature: {Convert.ToHexString(input.UnlockSignature)}",
+                        $"TransactionId: {input.TransactionId}"
+                    };
+
+                    inputData.ForEach(s => data.Add(s));
+                }
+
+                foreach (var output in tx.Outputs)
+                {
+                    List<string> outputData = new()
+                    {
+                        "\n\n",
+                        $"*** TxOutput Info***",
+                        $"Amount: {output.Amount}",
+                        $"Address: {Convert.ToHexString(output.Address)}",
+                        $"TransactionId: {output.TransactionId}"
+                    };
+
+                    outputData.ForEach(s => data.Add(s));
+                }
+            }
+
+            File.WriteAllLines(fileName, data);
+            return fileName;
         }
     }
 }

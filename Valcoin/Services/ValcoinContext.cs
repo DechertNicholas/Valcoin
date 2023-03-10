@@ -7,13 +7,17 @@ namespace Valcoin.Services
     public class ValcoinContext : DbContext
     {
         public virtual DbSet<ValcoinBlock> ValcoinBlocks { get; set; }
+        public DbSet<PendingTransaction> PendingTransactions { get; set; }
         public DbSet<Transaction> Transactions { get; set; }
         public DbSet<TxInput> TxInputs { get; set; }
         public DbSet<TxOutput> TxOutputs { get; set; }
         public DbSet<Wallet> Wallets { get; set; }
         public DbSet<Client> Clients { get; set; }
+        public DbSet<UTXO> UTXOs { get; set; }
 
+#if !DEBUG___PERSIST_DB && !RELEASE
         private static bool dbRefreshed;
+#endif
 
         protected override void OnConfiguring(DbContextOptionsBuilder options)
             => options.UseSqlite($"Filename=valcoin.db");

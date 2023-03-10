@@ -1,20 +1,22 @@
-﻿using Moq;
+﻿using Microsoft.EntityFrameworkCore;
+using Moq;
+using System.Linq;
 using Valcoin.Models;
 using Valcoin.Services;
+using Valcoin.UnitTests.SharedData;
 
 namespace Valcoin.UnitTests
 {
+    [Collection(nameof(DatabaseCollection))]
     public class ChainServiceTests
     {
-        private readonly Mock<ValcoinContext> contextMock;
+        readonly DatabaseFixture fixture;
         private readonly Mock<IMiningService> miningMock;
-        //private readonly Mock<IChainService> chainServiceMock; // for mocking other calls, keep to one function in unit tests
 
-        public ChainServiceTests()
+        public ChainServiceTests(DatabaseFixture fixture)
         {
-            contextMock = new Mock<ValcoinContext>();
             miningMock = new Mock<IMiningService>();
-            //chainServiceMock = new Mock<IChainService>();
+            this.fixture = fixture;
         }
 
         private static ValcoinBlock GetExampleBlock()
@@ -29,7 +31,7 @@ namespace Valcoin.UnitTests
         {
             return new Transaction(
                 1,
-                new() { new TxInput("0000", 0, new byte[] { 1 }, new byte[] { 1 }) },
+                new() { new TxInput("0000", 0, new byte[] { 1 }) },
                 new() { new TxOutput(50, new byte[] { 1 }) }
             );
         }
@@ -39,21 +41,24 @@ namespace Valcoin.UnitTests
         public async void AddBlockCommitsBlockWhenIsFirstBlock()
         {
             // build a ChainService mock here so that we can mock calls to other functions in the same object
-            var chainServiceMock = new Mock<ChainService>(contextMock.Object);
+            var chainServiceMock = new Mock<ChainService>(fixture.Context);
 
             // we aren't testing these methods, so mock them
             chainServiceMock.Setup(m => m.GetLastMainChainBlock()).ReturnsAsync((ValcoinBlock?)null);
             chainServiceMock.Setup(m => m.UpdateBalance(It.IsAny<ValcoinBlock>()));
             chainServiceMock.Setup(m => m.CommitBlock(It.IsAny<ValcoinBlock>()));
+            chainServiceMock.Setup(m => m.GetMyWallet()).ReturnsAsync(ValidationServiceShared.MakeTestingWallet());
 
             // when verifying calls, the reference object must be the same
             var block = GetExampleBlock();
+
 
             await chainServiceMock.Object.AddBlock(block);
 
             chainServiceMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
             chainServiceMock.Verify(m => m.UpdateBalance(block), Times.Once);
             chainServiceMock.Verify(m => m.CommitBlock(block), Times.Once);
+            chainServiceMock.Verify(m => m.GetMyWallet(), Times.Once);
             chainServiceMock.VerifyNoOtherCalls();
         }
     }

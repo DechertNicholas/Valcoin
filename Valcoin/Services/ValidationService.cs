@@ -105,30 +105,30 @@ namespace Valcoin.Services
         {
             var allValidated = ValidationCode.Valid; // start off as true, then if anything marks as false, it will remain false
             // validate the coinbase transaction
-            if (txs[0].Inputs.Count == 1 &&
-                txs[0].Inputs[0].PreviousTransactionId == new string('0', 64) &&
-                txs[0].Inputs[0].PreviousOutputIndex == -1)
-            {
-                var coinbase = txs[0];
-                // debugging serialization
-                var unlockBytes = (byte[])new UnlockSignatureStruct(coinbase.BlockNumber, coinbase.Inputs[0].UnlockerPublicKey);
-                var inputValid = Wallet.VerifyData(
-                    unlockBytes,
-                    coinbase.Inputs[0].UnlockSignature,
-                    coinbase.Inputs[0].UnlockerPublicKey);
+            // the coinbase tx is not always the first transaction, but it does always reference a blank previous tx with -1 as the input index
+            var coinbases = txs.Where(t => t.Inputs[0].PreviousTransactionId == new string('0', 64))
+                .Where(t => t.Inputs[0].PreviousOutputIndex == -1)
+                .ToList();
+            if (coinbases.Count > 1)
+                return ValidationCode.Invalid; // more than one coinbase tx
 
-                var outputValid = coinbase.Outputs.Count == 1 && coinbase.Outputs[0].Amount == 50;
+            if (coinbases.Count != 0)
+            {
+                var coinbase = coinbases.First();
+                var inputValid = Wallet.VerifyTransactionInputs(coinbase);
+
+                var outputValid = coinbase.Outputs.Count == 1 && coinbase.Outputs[0].Amount == 50; // currently amount is statically set to 50
                 var txValid = coinbase.TransactionId == coinbase.GetTxIdAsString();
 
                 if (!(inputValid && outputValid && txValid))
                     allValidated = ValidationCode.Invalid;
             }
 
-            if (txs.Count == 1)
+            if (txs.Count == 1 || txs.Count == 0)
                 return allValidated; // this was the only transaction
 
             // validate the rest as non-coinbase transactions
-            foreach (var tx in txs.Where(t => txs.IndexOf(t) != 0))
+            foreach (var tx in txs.Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)))
             {
                 if (ValidateTx(tx) == ValidationCode.Invalid)
                     return allValidated = ValidationCode.Invalid; // the whole block is bad, exit
@@ -168,11 +168,8 @@ namespace Valcoin.Services
                 var prevOutput = prevTx.Outputs[input.PreviousOutputIndex];
 
                 // compute the hashes and signatures
-                var p2pkhValid = SHA256.Create().ComputeHash(input.UnlockerPublicKey).SequenceEqual(prevOutput.LockSignature);
-                var sigValid = Wallet.VerifyData(
-                    new UnlockSignatureStruct(prevTx.BlockNumber, input.UnlockerPublicKey),
-                    input.UnlockSignature,
-                    input.UnlockerPublicKey);
+                var p2pkhValid = SHA256.Create().ComputeHash(input.UnlockerPublicKey).SequenceEqual(prevOutput.Address);
+                var sigValid = Wallet.VerifyTransactionInputs(tx);
 
                 if (!(p2pkhValid && sigValid))
                     return ValidationCode.Invalid;

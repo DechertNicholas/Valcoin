@@ -20,7 +20,7 @@ namespace Valcoin.UnitTests
         [Fact]
         public void TxInputSerialization()
         {
-            var input = new TxInput(new string('0', 64), -1, new byte[] { 1 }, new byte[] { 2 })
+            var input = new TxInput(new string('0', 64), -1, new byte[] { 1 })
             {
                 TransactionId = "test" // assign this as if it were read from the database. Should not be considered in a hash or network operation
             };
@@ -52,7 +52,7 @@ namespace Valcoin.UnitTests
         [Fact]
         public void TransactionSerialization()
         {
-            var input = new TxInput(new string('0', 64), -1, new byte[] { 1 }, new byte[] { 2 })
+            var input = new TxInput(new string('0', 64), -1, new byte[] { 1 })
             {
                 TransactionId = "test" // assign this as if it were read from the database. Should not be considered in a hash or network operation
             };
@@ -72,7 +72,7 @@ namespace Valcoin.UnitTests
         [Fact]
         public void ValcoinBlockSerialization()
         {
-            var input = new TxInput(new string('0', 64), -1, new byte[] { 1 }, new byte[] { 2 })
+            var input = new TxInput(new string('0', 64), -1, new byte[] { 1 })
             {
                 TransactionId = "test" // assign this as if it were read from the database. Should not be considered in a hash or network operation
             };

@@ -20,7 +20,7 @@ namespace Valcoin.Helpers
                 return false;
 
             //Check whether the products' properties are equal.
-            return x.Amount == y.Amount && x.LockSignature.SequenceEqual(y.LockSignature);
+            return x.Amount == y.Amount && x.Address.SequenceEqual(y.Address);
         }
 
         public int GetHashCode([DisallowNull] TxOutput output)
@@ -32,7 +32,7 @@ namespace Valcoin.Helpers
             int hashOutputAmount = output.Amount.GetHashCode();
 
             //Get hash code for the Code field.
-            int hashOutputSig = output.LockSignature.GetHashCode();
+            int hashOutputSig = output.Address.GetHashCode();
 
             //Calculate the hash code for the product.
             return hashOutputAmount ^ hashOutputSig;

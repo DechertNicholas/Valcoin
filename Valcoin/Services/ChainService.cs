@@ -20,12 +20,12 @@ namespace Valcoin.Services
     {
         protected ValcoinContext Db { get; private set; }
 
-        private byte[] myAddress;
-        private byte[] myPublicKey;
+        private Wallet myWallet;
 
         public ChainService(ValcoinContext context)
         {
             Db = context;
+            myWallet = GetMyWallet().Result;
         }
 
         /// <summary>
@@ -98,21 +98,34 @@ namespace Valcoin.Services
 
         public async Task AddBlock(ValcoinBlock block)
         {
+            // remove any pending transactions of ours
+            block.Transactions.ForEach(t => Db.PendingTransactions.Where(p => p.TransactionId == t.TransactionId)
+                .ToList()
+                .ForEach(p => Db.PendingTransactions.Remove(p)));
+            await Db.SaveChangesAsync();
+
+            // remove any transactions in our transaction pool that were in this block.
+            // helps our next block we mine to not be immediately invalid
+            block.Transactions.ForEach(t => MiningService.TransactionPool.Where(p => p.Key == t.TransactionId)
+                .ToList()
+                .ForEach(p => MiningService.TransactionPool.Remove(p.Key, out _)));
+
             var lastBlock = await GetLastMainChainBlock();
 
             if (lastBlock == null && block.BlockNumber == 1)
             {
                 // this is the genesis block being added
-                await UpdateBalance(block);
+                UpdateBalance(block);
                 await CommitBlock(block);
                 return;
             }
+
 
             // add a normal block to the chain. check that the lastBlock's number is one less than the incoming, and that the
             // new block references the last block
             if (lastBlock.BlockNumber == block.BlockNumber - 1 && lastBlock.BlockHash.SequenceEqual(block.PreviousBlockHash))
             {
-                await UpdateBalance(block);
+                UpdateBalance(block);
                 // update the next newHighestBlock identifier
                 block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
                 await UpdateBlock(lastBlock);
@@ -145,25 +158,46 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        public virtual async Task UpdateBalance(ValcoinBlock block)
+        public async Task AddPendingTransaction(Transaction tx)
         {
-            myAddress ??= (await GetMyWallet()).AddressBytes;
-            myPublicKey ??= (await GetMyWallet()).PublicKey;
+            var block = await GetLastMainChainBlock();
+            var blockNumber = block == null ? 0 : block.BlockNumber;
+            var px = new PendingTransaction(tx.TransactionId, tx.Outputs.Sum(o => o.Amount), blockNumber);
+            await CommitPendingTransaction(px);
+        }
+
+        public async Task CommitPendingTransaction(PendingTransaction ptx)
+        {
+            Db.Add(ptx);
+            await Db.SaveChangesAsync();
+        }
+
+        public async Task UnloadPendingTransactions(ulong blockNumber, int pendingTransactionTimeout)
+        {
+            (await Db.PendingTransactions.ToListAsync())
+                .Where(p => blockNumber - p.CurrentBlockNumber >= (ulong)pendingTransactionTimeout)
+                .ToList()
+                .ForEach(p => Db.PendingTransactions.Remove(p));
+            await Db.SaveChangesAsync();
+        }
+
+        public virtual void UpdateBalance(ValcoinBlock block)
+        {
             // add any payments we may have gotten
             block.Transactions
                 .ForEach(t => t.Outputs
-                    .Where(o => o.LockSignature.SequenceEqual(myAddress) == true)
+                    .Where(o => o.Address.SequenceEqual(myWallet.AddressBytes) == true)
                     .ToList()
-                    .ForEach(async o => await AddToBalance(o.Amount)));
+                    .ForEach(async o => await AddToBalance(o.Amount, t.Outputs.IndexOf(o), t.TransactionId)));
 
             // subtract any payments we spent
             block.Transactions
                 .Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // filter out coinbase (this transaction is verified)
                 .ToList()
                 .ForEach(t => t.Inputs
-                    .Where(i => i.UnlockerPublicKey.SequenceEqual(myPublicKey) == true)
+                    .Where(i => i.UnlockerPublicKey.SequenceEqual(myWallet.PublicKey) == true)
                     .ToList()
-                    .ForEach(async i => await SubtractFromBalance(t.Outputs.Sum(o => o.Amount))));
+                    .ForEach(async i => await SubtractFromBalance(i)));
         }
 
         public async Task AddWallet(Wallet wallet)
@@ -172,7 +206,7 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        public async Task<Wallet> GetMyWallet()
+        public virtual async Task<Wallet> GetMyWallet()
         {
             return await Db.Wallets.FirstOrDefaultAsync(w => w.PublicKey != null);
         }
@@ -185,21 +219,30 @@ namespace Valcoin.Services
 
         public async Task<int> GetMyBalance()
         {
-            return (await Db.Wallets.FirstAsync()).Balance;
+            // return our unspent outputs minus our pending transactions
+            return await Db.UTXOs.SumAsync(u => u.Amount) - await Db.PendingTransactions.SumAsync(p => p.Amount);
         }
 
-        private async Task AddToBalance(int payment)
+        private async Task AddToBalance(int amount, int index, string txId)
         {
-            var wallet = await GetMyWallet();
-            wallet.Balance += payment;
-            await UpdateWallet(wallet);
+            var utxo = new UTXO(txId, index, amount);
+            Db.Add(utxo);
+            await Db.SaveChangesAsync();
         }
 
-        private async Task SubtractFromBalance(int payment)
+        private async Task SubtractFromBalance(TxInput input)
         {
-            var wallet = await GetMyWallet();
-            wallet.Balance -= payment;
-            await UpdateWallet(wallet);
+            Db.UTXOs.Where(u => u.TransactionId == input.PreviousTransactionId)
+                .Where(u => u.OutputIndex == input.PreviousOutputIndex)
+                .ToList()
+                .ForEach(u => Db.Remove(u));
+            await Db.SaveChangesAsync();
+        }
+
+        private async Task SubtractFromBalance(UTXO utxo)
+        {
+            Db.Remove(utxo);
+            await Db.SaveChangesAsync();
         }
 
         public async Task AddClient(Client client)
@@ -262,7 +305,8 @@ namespace Valcoin.Services
             var branchBlock = await GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
             // the new orphan is the block that was previously in the main chain, that we are now disconnecting
             var newOrphan = await GetBlock(Convert.ToHexString(branchBlock.NextBlockHash));
-            var txsToReRelease = newOrphan.Transactions;
+
+            var txsToReRelease = newOrphan.Transactions ?? new List<Transaction>();
 
             // now, reorganize the structure
             branchBlock.NextBlockHash = previousOrphan.BlockHash; // our new orphan is now disconnected from the chain
@@ -284,18 +328,19 @@ namespace Valcoin.Services
             {
                 foreach (var output in tx.Outputs)
                 {
-                    if (output.LockSignature == myAddress)
+                    if (output.Address == myWallet.AddressBytes)
                     {
-                        await SubtractFromBalance(output.Amount);
+                        var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
+                        await SubtractFromBalance(utxo);
                     }
                 }
             }
 
             // add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
-            txsToReRelease.ForEach(t => GetTransactionPool()
-                .Where(p => p.TransactionId != t.TransactionId)
+            txsToReRelease.ForEach(t => MiningService.TransactionPool.ToList()
+                .Where(p => p.Key != t.TransactionId)
                 .ToList()
-                .ForEach(r => AddToTransactionPool(r)));
+                .ForEach(r => MiningService.TransactionPool.TryAdd(r.Key, r.Value)));
 
             // update our branch block
             await UpdateBlock(branchBlock);
@@ -310,14 +355,61 @@ namespace Valcoin.Services
             await CommitBlock(newHighestBlock);
         }
 
-        public List<Transaction> GetTransactionPool()
+        public async Task Transact(string recipient, int amount)
         {
-            return MiningService.TransactionPool.ToList();
+            List<TxInput> inputs = new();
+            List<TxOutput> outputs = new()
+            {
+                // add the recipient output
+                new(0, Convert.FromHexString(recipient[2..])) // set the amount to 0 initially
+            };
+            // find the transaction's we'll use. Pick the smallest first to keep the UTXO DB smaller
+            foreach (var utxo in Db.UTXOs.OrderBy( u => u.Amount))
+            {
+                inputs.Add(new(utxo.TransactionId, utxo.OutputIndex, myWallet.PublicKey));
+                outputs[0].Amount += utxo.Amount;
+
+                // we will always need a list of inputs that is greater than or equal to the amount we went to send.
+                // if the sum is greater, then the difference will be returned to us in a second output in the transaction
+                // amount = 25,
+                // 1 + 1 + 3 + 5 + 6 + 6 + 7 = 29
+                // to recipient = 25
+                // back to us = 4
+
+                if (outputs[0].Amount >= amount)
+                    break;
+            }
+
+            // add our change, if any
+            var change = outputs[0].Amount - amount;
+            if (change > 0)
+            {
+                // correct the original output's amount
+                outputs[0].Amount = amount;
+                // add our change
+                outputs.Add(new(change, myWallet.AddressBytes));
+            }
+
+            var tx = new Transaction(inputs, outputs);
+            myWallet.SignTransactionInputs(ref tx);
+
+            await SendTransaction(tx);
         }
 
-        public void AddToTransactionPool(Transaction t)
+        /// <summary>
+        /// Commit the transaction to the <see cref="MiningService.TransactionPool"/> (if active), and relay the
+        /// transaction to the network.
+        /// </summary>
+        /// <param name="tx">The transaction to send.</param>
+        public async Task SendTransaction(Transaction tx)
         {
-            MiningService.TransactionPool.Add(t);
+            await AddPendingTransaction(tx);
+            
+            MiningService.TransactionPool.TryAdd(tx.TransactionId, tx);
+
+            var msg = new Message(tx);
+            msg.MessageType = MessageType.TransactionShare;
+            await App.Current.Services.GetService<INetworkService>().RelayData(msg);
         }
     }
 }

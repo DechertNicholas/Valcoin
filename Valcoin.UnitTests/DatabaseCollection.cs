@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Valcoin.IntegrationTests
+namespace Valcoin.UnitTests
 {
     [CollectionDefinition(nameof(DatabaseCollection))]
     public abstract class DatabaseCollection : ICollectionFixture<DatabaseFixture>
