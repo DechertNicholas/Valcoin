@@ -169,6 +169,8 @@ namespace Valcoin.Services
                 var localService = chainService.GetFreshService();
 
                 var memory = await GetDataFromClient(tcpClient);
+                if (memory.Length == 0)
+                    return;
 
                 var data = JsonDocument.Parse(memory);
 
