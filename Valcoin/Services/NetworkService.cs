@@ -350,14 +350,14 @@ namespace Valcoin.Services
 
                 var stream = tcpClient.GetStream();
                 // inform the client we're willing to sync
-                await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
-                // wait for the clien to confirm they're connected and ready
-                var response = await GetDataFromClient(tcpClient);
-                if (response.Length != 1 || response.Span[0] != 1)
-                {
-                    // something is malformed, exit
-                    tcpClient.Close();
-                }
+                //await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
+                //// wait for the clien to confirm they're connected and ready
+                //var response = await GetDataFromClient(tcpClient);
+                //if (response.Length != 1 || response.Span[0] != 1)
+                //{
+                //    // something is malformed, exit
+                //    tcpClient.Close();
+                //}
 
                 var localService = chainService.GetFreshService();
                 ValcoinBlock syncBlock = null;
@@ -365,9 +365,9 @@ namespace Valcoin.Services
 
                 // we send our highest block so the client knows when to no longer expect data. We will send this again later when the
                 // client is actually ready to validate it
-                await stream.WriteAsync((byte[])new Message(ourHighestBlock));
+                await stream.WriteAsync((byte[])new Message(ourHighestBlock) { MessageType = MessageType.SyncResponse});
                 // wait for the clien to confirm they're connected and ready
-                response = await GetDataFromClient(tcpClient);
+                var response = await GetDataFromClient(tcpClient);
                 if (response.Length != 1 || response.Span[0] != 1)
                 {
                     // something is malformed, exit
@@ -428,14 +428,19 @@ namespace Valcoin.Services
             }
             else if (syncMessage.MessageType == MessageType.SyncResponse)
             {
+                var localService = chainService.GetFreshService();
+                var stream = tcpClient.GetStream();
+                // say we're ready to start sync
+                await stream.WriteAsync(new byte[] { 1 }); // just a general value that we wouldn't normally get
+
                 if (syncMessage.Block == null)
                 {
                     tcpClient.Close();
                     return;
                 }
 
-                var localService = chainService.GetFreshService();
-                var stream = tcpClient.GetStream();
+                //var localService = chainService.GetFreshService();
+                //var stream = tcpClient.GetStream();
                 // say we're ready to start sync
                 await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
 
