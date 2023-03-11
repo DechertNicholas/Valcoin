@@ -465,6 +465,14 @@ namespace Valcoin.Services
                 tcpClient.Close();
                 tcpClient.Dispose();
             }
+            finally
+            {
+                if (tcpClient != null)
+                {
+                    tcpClient.Close();
+                    tcpClient.Dispose();
+                }
+            }
         }
 
         public async Task SendSyncRequests()
