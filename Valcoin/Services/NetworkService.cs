@@ -357,6 +357,8 @@ namespace Valcoin.Services
                     var localService = chainService.GetFreshService();
                     ValcoinBlock syncBlock = null;
                     ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
+                    if (ourHighestBlock == null)
+                        return;
 
                     // we send our highest block so the client knows when to no longer expect data. We will send this again later when the
                     // client is actually ready to validate it
