@@ -417,6 +417,7 @@ namespace Valcoin.Services
                     {
                         // something is malformed, exit
                         tcpClient.Close();
+                        return;
                     }
                     // the current nextBlock has a NextBlockHash of 0, but we still need to send it
                     await stream.WriteAsync((byte[])new Message(nextBlock));
