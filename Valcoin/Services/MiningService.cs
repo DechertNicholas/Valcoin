@@ -166,13 +166,6 @@ namespace Valcoin.Services
             // add our coinbase payout to ourselves, and any other transactions in the transaction pool (max 31 others, 32 tx total per block)
             CandidateBlock.AddTx(AssembleCoinbaseTransaction());
 
-            // testing a spend
-            // TODO: Remove this
-            if (CandidateBlock.BlockNumber == 2)
-            {
-                await chainService.Transact(MyWallet.Address, 20);
-            }
-
             if (!TransactionPool.IsEmpty)
             {
                 // only allow 32 transactions in a block, including the coinbase (so 31 from the pool)
