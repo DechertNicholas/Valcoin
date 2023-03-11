@@ -39,21 +39,25 @@ namespace Valcoin.Services
 
         public virtual async Task<ValcoinBlock> GetLastMainChainBlock()
         {
-            uint? lastId = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
-            if (lastId == 1) // this only happens for the first block after the genesis block
-                return Db.ValcoinBlocks.First(b => b.BlockNumber == lastId);
+            uint? highestBlockNumber = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
+            // try to first find any block at that hight with a linked next block
+            ValcoinBlock? highestBlock = Db.ValcoinBlocks.Where(b => b.BlockNumber == highestBlockNumber)
+                .Where(b => !b.NextBlockHash.SequenceEqual(new byte[32]))
+                .FirstOrDefault();
+
+            // if none, then we only have an unlinked genesis block
+            if (highestBlock == null) // this only happens for the first block after the genesis block
+                return Db.ValcoinBlocks.First(b => b.BlockNumber == highestBlockNumber);
 
             // there's probably a fancy LINQ statement for this, but I couldn't get one to work
-            foreach (var b in Db.ValcoinBlocks)
+            foreach (var highBlock in Db.ValcoinBlocks.Where(b => b.BlockNumber == highestBlockNumber).ToList())
             {
-                if (b.BlockNumber == lastId)
+
+                foreach (var b2 in Db.ValcoinBlocks.Where(b => b.BlockNumber == (highBlock.BlockNumber - 1)).ToList())
                 {
-                    foreach (var b2 in Db.ValcoinBlocks)
+                    if (b2.NextBlockHash.SequenceEqual(highBlock.BlockHash))
                     {
-                        if (b2.NextBlockHash.SequenceEqual(b.BlockHash))
-                        {
-                            return b;
-                        }
+                        return highBlock;
                     }
                 }
             }
