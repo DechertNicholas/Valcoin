@@ -349,15 +349,6 @@ namespace Valcoin.Services
                 if (!tcpClient.Connected) { tcpClient.Close(); } // not connected, just leave
 
                 var stream = tcpClient.GetStream();
-                // inform the client we're willing to sync
-                //await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
-                //// wait for the clien to confirm they're connected and ready
-                //var response = await GetDataFromClient(tcpClient);
-                //if (response.Length != 1 || response.Span[0] != 1)
-                //{
-                //    // something is malformed, exit
-                //    tcpClient.Close();
-                //}
 
                 var localService = chainService.GetFreshService();
                 ValcoinBlock syncBlock = null;
@@ -428,25 +419,18 @@ namespace Valcoin.Services
             }
             else if (syncMessage.MessageType == MessageType.SyncResponse)
             {
-                var localService = chainService.GetFreshService();
-                var stream = tcpClient.GetStream();
-                // say we're ready to start sync
-                await stream.WriteAsync(new byte[] { 1 }); // just a general value that we wouldn't normally get
-
                 if (syncMessage.Block == null)
                 {
                     tcpClient.Close();
                     return;
                 }
 
-                //var localService = chainService.GetFreshService();
-                //var stream = tcpClient.GetStream();
-                // say we're ready to start sync
-                await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
-
                 // get the highest block to expect
                 var highestBlockNumber = syncMessage.Block.BlockNumber;
                 var finished = false;
+
+                var localService = chainService.GetFreshService();
+                var stream = tcpClient.GetStream();
 
                 // say we're ready to start sync
                 await stream.WriteAsync(new byte[] { 1 }); // just a general value that we wouldn't normally get
