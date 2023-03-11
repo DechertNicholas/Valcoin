@@ -47,7 +47,7 @@ namespace Valcoin.Services
 
             // if none, then we only have an unlinked genesis block
             if (highestBlock == null) // this only happens for the first block after the genesis block
-                return Db.ValcoinBlocks.First(b => b.BlockNumber == highestBlockNumber);
+                return Db.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == highestBlockNumber);
 
             // there's probably a fancy LINQ statement for this, but I couldn't get one to work
             foreach (var highBlock in Db.ValcoinBlocks.Where(b => b.BlockNumber == highestBlockNumber).ToList())
