@@ -25,11 +25,34 @@
         <Pivot Title="{x:Bind ViewModel.QueryText, Mode=TwoWay}">
             
             <PivotItem Header="Blocks">
-                <ListView ItemsSource="{x:Bind ViewModel.Blocks}">
+                <ListView ItemsSource="{x:Bind ViewModel.Blocks}"
+                          HorizontalAlignment="Stretch">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:ValcoinBlock">
-                            <TextBlock Text="{x:Bind BlockId}"
-                                       FontFamily="Cascadia Code"/>
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Stretch">
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="Block ID:"
+                                               Margin="2"/>
+                                    <TextBlock Text="{x:Bind BlockId}"
+                                               FontFamily="Cascadia Code"
+                                               Margin="2"/>
+                                </StackPanel>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="Nonce:"
+                                               Margin="2"/>
+                                    <TextBlock Text="{x:Bind Nonce}"
+                                               FontFamily="Cascadia Code"
+                                               Margin="2"/>
+                                </StackPanel>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="#"
+                                               Margin="2"/>
+                                    <TextBlock Text="{x:Bind BlockNumber}"
+                                               FontFamily="Cascadia Code"
+                                               Margin="2"/>
+                                </StackPanel>
+                            </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
@@ -40,8 +63,40 @@
                 <ListView ItemsSource="{x:Bind ViewModel.Transactions}">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:Transaction">
-                            <TextBlock Text="{x:Bind TransactionId}"
-                                       FontFamily="Cascadia Code"/>
+                            <StackPanel Orientation="Horizontal"
+                                        HorizontalAlignment="Stretch">
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="Transaction ID:"
+                                               Margin="2"/>
+                                    <TextBlock Text="{x:Bind TransactionId}"
+                                               FontFamily="Cascadia Code"
+                                               Margin="2"/>
+                                </StackPanel>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="Inputs:"
+                                               Margin="2"/>
+                                    <TextBlock Text="{x:Bind Inputs.Count}"
+                                               FontFamily="Cascadia Code"
+                                               Margin="2"
+                                               HorizontalAlignment="Right"/>
+                                </StackPanel>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="Outputs:"
+                                               Margin="2"/>
+                                    <TextBlock Text="{x:Bind Outputs.Count}"
+                                               FontFamily="Cascadia Code"
+                                               Margin="2"
+                                               HorizontalAlignment="Right"/>
+                                </StackPanel>
+                                <StackPanel Margin="2">
+                                    <TextBlock Text="Block Number:"
+                                               Margin="2"/>
+                                    <TextBlock Text="{x:Bind BlockNumber}"
+                                               FontFamily="Cascadia Code"
+                                               Margin="2"
+                                               HorizontalAlignment="Right"/>
+                                </StackPanel>
+                            </StackPanel>
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>

@@ -13,7 +13,7 @@
                 <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
             <!-- Other app resources here -->
-
+            
             <Style
                 x:Key="TextBlockStyleTitle"
                 TargetType="TextBlock">
