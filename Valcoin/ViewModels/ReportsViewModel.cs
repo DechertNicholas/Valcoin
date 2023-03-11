@@ -40,7 +40,7 @@ namespace Valcoin.ViewModels
             }
 
 
-            chainService.GetAllTransactions().Result
+            chainService.GetAllMainChainTransactions().Result
                 .OrderByDescending(t => t.Outputs.Sum(o => o.Amount))
                 .ThenBy(t => t.TransactionId)
                 .ToList()

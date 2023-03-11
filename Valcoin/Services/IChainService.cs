@@ -23,7 +23,7 @@ namespace Valcoin.Services
         public Task UnloadPendingTransactions(ulong blockNumber, int pendingTransactionTimeout);
         public Task<Transaction> GetTx(string transactionId);
         public Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex);
-        public Task<List<Transaction>> GetAllTransactions();
+        public Task<List<Transaction>> GetAllMainChainTransactions();
         public Task AddTxs(IEnumerable<Transaction> txs);
         public Task AddWallet(Wallet wallet);
         public Task UpdateWallet(Wallet wallet);

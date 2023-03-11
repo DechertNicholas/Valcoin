@@ -36,7 +36,7 @@ namespace Valcoin.ViewModels
                 .OrderBy(p => p.BlockNumber)
                 .ToList();
 
-            Transactions = (await chainService.GetAllTransactions())
+            Transactions = (await chainService.GetAllMainChainTransactions())
                 .Where(t => t.TransactionId.Contains(QueryText))
                 .OrderBy(t => t.BlockNumber)
                 .ToList();

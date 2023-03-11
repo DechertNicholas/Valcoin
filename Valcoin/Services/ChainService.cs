@@ -98,9 +98,24 @@ namespace Valcoin.Services
                 .FirstOrDefaultAsync();                                             // and return that transaction
         }
 
-        public async Task<List<Transaction>> GetAllTransactions()
+        public async Task<List<Transaction>> GetAllMainChainTransactions()
         {
-            return await Db.Transactions.ToListAsync();
+            var blocks = await GetAllBlocks();
+            var txs = new List<Transaction>();
+            foreach (var block in blocks)
+            {
+                if (Convert.ToHexString(block.NextBlockHash) == new string('0', 64))
+                    continue; // not main chain
+
+                block.Transactions.ForEach(t => txs.Add(t));
+            }
+
+            // the last main chain will always have a next of 00000... so we need to add it specially
+            var highest = await GetLastMainChainBlock();
+            if (highest != null)
+                highest.Transactions.ForEach(t => txs.Add(t));
+
+            return txs;
         }
 
         public async Task AddTxs(IEnumerable<Transaction> transactions)
@@ -446,7 +461,7 @@ namespace Valcoin.Services
         {
             var wealth = new Dictionary<string, int>();
 
-            var txs = await GetAllTransactions();
+            var txs = await GetAllMainChainTransactions();
             foreach (var tx in txs)
             {
                 // outputs first because they're easy, just add them up
