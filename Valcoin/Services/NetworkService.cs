@@ -375,7 +375,7 @@ namespace Valcoin.Services
                     {
                         // client has no blocks and needs a full sync.
                         // get the first block in the chain
-                        syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
+                        syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
                         if (syncBlock == null) tcpClient.Close(); // we have no blocks either, send nothing
                                                                   // send the initial block
                         await stream.WriteAsync((byte[])new Message(syncBlock));
