@@ -434,6 +434,11 @@ namespace Valcoin.Services
                     var localService = chainService.GetFreshService();
                     var stream = tcpClient.GetStream();
 
+                    if (highestBlockNumber == 0)
+                    {
+                        await stream.WriteAsync(new byte[] { 0 });
+                        return;
+                    }
                     // say we're ready to start sync
                     await stream.WriteAsync(new byte[] { 1 }); // just a general value that we wouldn't normally get
 
