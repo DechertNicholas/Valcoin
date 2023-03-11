@@ -170,6 +170,11 @@ namespace Valcoin.Services
         /// <returns></returns>
         public virtual async Task CommitBlock(ValcoinBlock block)
         {
+            if (Db.ValcoinBlocks.First(b => b.BlockId == block.BlockId) == null)
+            {
+                // we already got this block from where else, like a sync request or a getpreviousblock request
+                return;
+            }
             Db.Add(block);
             await Db.SaveChangesAsync();
         }
