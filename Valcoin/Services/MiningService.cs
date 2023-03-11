@@ -24,7 +24,7 @@ namespace Valcoin.Services
     public class MiningService : IMiningService
     {
         public static bool MineBlocks { get; set; } = false;
-        private readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
+        private readonly int Difficulty = 20; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
         private readonly TimeSpan HashInterval = new(0, 0, 2);
