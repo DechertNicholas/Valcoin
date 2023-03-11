@@ -45,6 +45,11 @@ namespace Valcoin.Services
                 .Where(b => !b.NextBlockHash.SequenceEqual(new byte[32]))
                 .FirstOrDefault();
 
+            if (highestBlock != null)
+            {
+                return highestBlock;
+            }
+
             // if none, then we only have an unlinked genesis block
             if (highestBlock == null) // this only happens for the first block after the genesis block
                 return Db.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == highestBlockNumber);
