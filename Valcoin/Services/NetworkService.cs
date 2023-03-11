@@ -436,17 +436,13 @@ namespace Valcoin.Services
 
                 var localService = chainService.GetFreshService();
                 var stream = tcpClient.GetStream();
-                // say we're ready to start sync
-                await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
 
                 // get the highest block to expect
-                var memoryHighest = await GetDataFromClient(tcpClient);
-                var dataHighest = JsonDocument.Parse(memoryHighest);
-                var highestBlockNumber = dataHighest.Deserialize<Message>().Block.BlockNumber;
+                var highestBlockNumber = syncMessage.Block.BlockNumber;
                 var finished = false;
 
-                // begin the sync
-                await stream.WriteAsync(new byte[] { 1 });
+                // say we're ready to start sync
+                await stream.WriteAsync(new byte[] { 1 }); // just a general value that we wouldn't normally get
 
                 do
                 {
