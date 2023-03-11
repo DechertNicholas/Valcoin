@@ -82,6 +82,12 @@ namespace Valcoin.Services
             return await Db.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId);
         }
 
+        /// <summary>
+        /// This checks if a transaction has been spent already by finding a transaction with the same ID and index reference.
+        /// </summary>
+        /// <param name="previousTransactionId"></param>
+        /// <param name="outputIndex"></param>
+        /// <returns></returns>
         public async Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex)
         {
             return await Db.Transactions
@@ -420,6 +426,57 @@ namespace Valcoin.Services
             var msg = new Message(tx);
             msg.MessageType = MessageType.TransactionShare;
             await App.Current.Services.GetService<INetworkService>().RelayData(msg);
+        }
+
+        /// <summary>
+        /// Gets the wealth of all addresses in the chain. Each address has the specified amount of Valcoin.
+        /// </summary>
+        /// <returns>Returns a dictionary of addresses and amounts.</returns>
+        public async Task<Dictionary<string, int>> GetAllAddressWealth()
+        {
+            var wealth = new Dictionary<string, int>();
+
+            var txs = await GetAllTransactions();
+            foreach (var tx in txs)
+            {
+                // outputs first because they're easy, just add them up
+                foreach (var output in tx.Outputs)
+                {
+                    var address = "0x" + Convert.ToHexString(output.Address);
+                    if (!wealth.ContainsKey(address))
+                    {
+                        wealth.Add(address, output.Amount);
+                    }
+                    else
+                    {
+                        wealth[address] += output.Amount;
+                    }
+                }
+
+                // inputs are slightly more complicated as we need to get the referenced transaction first,
+                // find the owning address,then subtract the output amount from that address.
+                foreach (var input in tx.Inputs)
+                {
+                    if (input.PreviousTransactionId == new string('0', 64))
+                        continue; // this is a coinbase
+
+                    var ptx = await Db.Transactions.FirstOrDefaultAsync(t => t.TransactionId == input.PreviousTransactionId);
+                    var address = "0x" + Convert.ToHexString(ptx.Outputs[input.PreviousOutputIndex].Address);
+                    var amount = ptx.Outputs.Sum(o => o.Amount);
+
+                    if (!wealth.ContainsKey(address))
+                    {
+                        wealth.Add(address, 0 - amount);
+                    }
+                    else
+                    {
+                        wealth[address] -= amount;
+                    }
+                }
+            }
+
+            var orderedWealth = wealth.OrderBy(w => w.Value).ToDictionary(x => x.Key, x => x.Value);
+            return orderedWealth;
         }
     }
 }

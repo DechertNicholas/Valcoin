@@ -60,6 +60,12 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
 
+                <NavigationViewItem Content="Reports" Tag="ReportsPage">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE9F9;"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
             </NavigationView.MenuItems>
             <Frame x:Name="ContentFrame"/>
         </NavigationView>

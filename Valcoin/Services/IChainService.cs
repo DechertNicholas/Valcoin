@@ -33,5 +33,6 @@ namespace Valcoin.Services
         public Task<List<Client>> GetClients();
         public Task UpdateClient(Client client);
         public Task Transact(string recipient, int amount);
+        public Task<Dictionary<string, int>> GetAllAddressWealth();
     }
 }

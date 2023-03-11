@@ -50,6 +50,7 @@
   <ItemGroup>
     <None Remove="Valcoin_TemporaryKey.pfx" />
     <None Remove="Views\MiningPage.xaml" />
+    <None Remove="Views\ReportsPage.xaml" />
     <None Remove="Views\SearchResultsPage.xaml" />
     <None Remove="Views\WalletPage.xaml" />
   </ItemGroup>
@@ -66,6 +67,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.1.0" />
+    <PackageReference Include="CommunityToolkit.WinUI.UI.Controls.DataGrid" Version="7.1.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.3" />
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.2.230217.4" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.755" />
@@ -101,6 +103,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PRIResource Remove="Packages\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Page Update="Views\ReportsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Views\SearchResultsPage.xaml">
