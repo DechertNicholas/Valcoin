@@ -135,6 +135,11 @@ namespace Valcoin.Services
                 await CommitBlock(block);
                 return;
             }
+            else if (lastBlock == null)
+            {
+                // not the coinbase block, but something has happened. leave
+                return;
+            }
 
 
             // add a normal block to the chain. check that the lastBlock's number is one less than the incoming, and that the
