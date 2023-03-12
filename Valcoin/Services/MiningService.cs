@@ -220,17 +220,18 @@ namespace Valcoin.Services
             }
             else
             {
-                var path = WriteBlockToFile(CandidateBlock);
+                var path = WriteBlockToFile(CandidateBlock, valid);
                 MineBlocks = false;
                 return path;
             }
         }
 
-        private static string WriteBlockToFile(ValcoinBlock block)
+        private static string WriteBlockToFile(ValcoinBlock block, ValidationService.ValidationCode returnCode)
         {
             var fileName = Windows.Storage.ApplicationData.Current.LocalFolder.Path + $"\\{block.BlockId}.txt";
             List<string> data = new()
             {
+                $"Validation code: {returnCode}\n\n",
                 "*** Block Info ***",
                 $"BlockId: {block.BlockId}",
                 $"BlockNumber: {block.BlockNumber}",
