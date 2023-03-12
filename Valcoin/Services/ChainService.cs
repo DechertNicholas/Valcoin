@@ -394,13 +394,20 @@ namespace Valcoin.Services
                 newChain.Push(await GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)));
                 currentChain.Push(await GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)));
 
-                if (GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)).Result.PreviousBlockHash.SequenceEqual(new byte[32]))
+                //if (GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)).Result.PreviousBlockHash.SequenceEqual(new byte[32]))
+                if (GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)).Result == null
+                    && Convert.ToHexString(newChain.Peek().PreviousBlockHash) == new string('0', 64))
                 {
                     // client may have a different genesis block. check ours as well
-                    if (GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)).Result.PreviousBlockHash.SequenceEqual(new byte[32]))
+                    //if (GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)).Result.PreviousBlockHash.SequenceEqual(new byte[32]))
+                    if (GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)).Result == null
+                        && Convert.ToHexString(currentChain.Peek().PreviousBlockHash) == new string('0', 64))
                     {
                         // different genesis. The current top-of-stack of each Stack is the genesis for the respective chain
                         differentGenesis = true;
+                        //// add our genesis blocks
+                        //newChain.Push(await GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)));
+                        //currentChain.Push(await GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)));
                     }
                 }
             }
