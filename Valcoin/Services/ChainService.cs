@@ -184,6 +184,8 @@ namespace Valcoin.Services
             else
             {
                 // this is some other block from the network, possibly an orphan or some other block we requested
+                // reset the next hash as this may be an orphan chain. It should be re-added during the reorganization if needed.
+                block.NextBlockHash = new byte[32];
                 await CommitBlock(block);
             }
         }
