@@ -366,8 +366,15 @@ namespace Valcoin.Services
                         syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
                         if (syncBlock == null)
                         {
-                            // we don't have this block, send nothing
-                            return;
+                            // just send our first block and start the sync from genesis
+                            syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
+                            if (syncBlock == null)
+                            {
+                                syncBlock = (await localService.GetBlocksByNumber(1)).FirstOrDefault();
+                                if (syncBlock == null)
+                                    return;
+                                // we have no blocks either, send nothing
+                            }
                         }
 
                         // check if they already are at the last main chain block - same block height as us, and
@@ -463,9 +470,14 @@ namespace Valcoin.Services
 
                         // all data is transmitted in a message
                         var message = data.Deserialize<Message>();
-                        if (ValidateBlock(message.Block) == ValidationCode.Valid)
+                        var validation = ValidateBlock(message.Block);
+                        if (validation == ValidationCode.Valid)
                         {
                             await localService.AddBlock(message.Block);
+                        }
+                        else if (validation != ValidationCode.Existing)
+                        {
+                            throw new InvalidOperationException($"Block validation was: {validation}");
                         }
                         if (message.Block.BlockNumber == highestBlockNumber)
                         {
