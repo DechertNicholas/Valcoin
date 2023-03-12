@@ -19,33 +19,37 @@
         <viewModels:ReportsViewModel x:Name="ViewModel"/>
     </Page.DataContext>
 
-    <StackPanel>
-        <StackPanel Orientation="Horizontal">
-            <TextBlock Text="Blockchain Reports:"
+    <ScrollViewer VerticalScrollMode="Enabled" IsVerticalScrollChainingEnabled="True">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="Blockchain Reports:"
                        Margin="5"
                        Style="{StaticResource TitleTextBlockStyle}"/>
 
-            <TextBlock Text="{x:Bind ViewModel.LastReportTime}"
+                <TextBlock Text="{x:Bind ViewModel.LastReportTime}"
                        Style="{StaticResource TitleTextBlockStyle}"
                        Margin="5"/>
-        </StackPanel>
+            </StackPanel>
 
-        <Pivot>
-            <PivotItem Header="Address Wealth">
-                <controls:DataGrid AutoGenerateColumns="True"
+            <Pivot>
+                <PivotItem Header="Address Wealth">
+                    <controls:DataGrid AutoGenerateColumns="True"
                                    ItemsSource="{x:Bind ViewModel.ReportWealthResult}"
                                    FontFamily="Cascadia Code"
                                    IsReadOnly="True">
-                </controls:DataGrid>
-            </PivotItem>
+                    </controls:DataGrid>
+                </PivotItem>
 
             <PivotItem Header="Largest Transactions">
-                <controls:DataGrid AutoGenerateColumns="True"
+                    <controls:DataGrid AutoGenerateColumns="True"
                                    ItemsSource="{x:Bind ViewModel.ReportLargestTransactions}"
                                    FontFamily="Cascadia Code"
-                                   IsReadOnly="True">
-                </controls:DataGrid>
-            </PivotItem>
-        </Pivot>
-    </StackPanel>
+                                   IsReadOnly="True"
+                                   VerticalScrollBarVisibility="Auto"
+                                   CanUserSortColumns="True">
+                    </controls:DataGrid>
+                </PivotItem>
+            </Pivot>
+        </StackPanel>
+    </ScrollViewer>
 </Page>
