@@ -383,6 +383,20 @@ namespace Valcoin.Services
                             syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
                             syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
                             return; // already sync'd
+
+                        // check if the block the client is requesting a sync from is a main chain block, and respond with a genesis if not
+                        if (Convert.ToHexString(syncBlock.NextBlockHash) == new string('0', 64))
+                        {
+                            // just send our first block and start the sync from genesis
+                            syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
+                            if (syncBlock == null)
+                            {
+                                syncBlock = (await localService.GetBlocksByNumber(1)).FirstOrDefault();
+                                if (syncBlock == null)
+                                    return;
+                                // we have no blocks either, send nothing
+                            }
+                        }
                     }
 
                     // the client sent out sync requests to multiple clients, then closed the connection.
