@@ -178,7 +178,7 @@ namespace Valcoin.Services
             }
             // check if this newHighestBlock is part of a longer blockchain
             else if (block.PreviousBlockHash != lastBlock.BlockHash && block.BlockNumber == lastBlock.BlockNumber + 1)
-                await Reorganize(block);
+                await Reorganize(block, lastBlock);
             else
             {
                 // this is some other block from the network, possibly an orphan or some other block we requested
@@ -316,7 +316,7 @@ namespace Valcoin.Services
         /// Reorganize the blockchain under the new highest block.
         /// </summary>
         /// <param name="newHighestBlock">The new highest block in the chain to reorganize under.</param>
-        private async Task Reorganize(ValcoinBlock newHighestBlock)
+        private async Task Reorganize(ValcoinBlock newHighestBlock, ValcoinBlock lastBlock)
         {
             /*
              * It is easier to visualize what is going on here than to try to just write it down.
@@ -350,30 +350,74 @@ namespace Valcoin.Services
              * By having this method called, we already know the new block has been verified and is from the orphan chain, so we have no need to re-verify here.
              */
 
-            var previousOrphan = await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
-            // the branch block is the block which had two different block referring back to it (the main chain and the orphan chain)
-            var branchBlock = await GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
-            // the new orphan is the block that was previously in the main chain, that we are now disconnecting
-            var newOrphan = await GetBlock(Convert.ToHexString(branchBlock.NextBlockHash));
+            if(lastBlock.BlockNumber !=  newHighestBlock.BlockNumber - 1)
+            {
+                throw new Exception("Last block number was not one less than new highest");
+            }
 
-            var txsToReRelease = newOrphan.Transactions ?? new List<Transaction>();
+            Stack<ValcoinBlock> newChain = new();
+            Stack<ValcoinBlock> currentChain = new();
 
-            // now, reorganize the structure
-            branchBlock.NextBlockHash = previousOrphan.BlockHash; // our new orphan is now disconnected from the chain
-            // remove any transactions from our list that were already processed in the new two blocks
-            previousOrphan.Transactions
-                .ForEach(t => txsToReRelease
+            newChain.Push(await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash))); // push the new block's previous hash, (eg, new is #48, prev is #47)
+            currentChain.Push(await GetBlock(Convert.ToHexString(lastBlock.BlockHash)));           // and our current highest, so they are at the same height (current is #47)
+
+            while (newChain.Peek().BlockId != currentChain.Peek().BlockId) // eventually we will converge on a single block (where the chain split).
+            {
+                // keep stacking down the chain, until we find the block that they split from (the branch block)
+                newChain.Push(await GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)));
+                currentChain.Push(await GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)));
+            }
+
+            /*
+             * because each computer on the network builds a block with a different block hash (due to using UTCNow.Ticks, never will be *exactly* the same),
+             * it's possible to build up a longer "secondary chain" that is racing with the current main chain to become the new main chain.
+             * 
+             * Block:        3 4 5 6 7 8 9
+             *                 ⌌-□-□-□-□   <- secondary chain
+             * our chain -> -■-■-■-■-■-■-▣ <- current main
+             *                            \   block being mined
+             * 
+             * if the current chain is unlucky and loses to a longer secondary chain, we need to progress potentially quite a ways to migrate to the new chain
+             * 
+             * Block:        2 3 4 5 6 7 8 9
+             *                 ⌌-□-□-□-□-□-□ <- secondary chain (now new main)
+             * our chain -> -■-■-■-■-■-■-▣   <- current main
+             *   branch block /
+             * 
+             * we build each stack until each stack's last item is the branch block. We'll now migrate to the new chain
+             */
+
+            var txsToReRelease = new List<Transaction>();
+            var processedTxs = new List<Transaction>();
+
+            while (currentChain.Count > 0)
+            {
+                var processingBlock = currentChain.Pop();
+                processingBlock.Transactions.Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // skip the coinbase transactions
+                    .ToList()
+                    .ForEach(t => txsToReRelease.Add(t));
+                processingBlock.NextBlockHash = new byte[32]; // unlink the block
+                Db.Update(processingBlock);
+            }
+
+            while (newChain.Count > 0)
+            {
+                var processingBlock = newChain.Pop();
+                // the last element we remove won't have a block in the stack
+                processingBlock.NextBlockHash = newChain.TryPeek(out var nextBlock) ? nextBlock.BlockHash : newHighestBlock.BlockHash;
+
+                // transactions in this chain have already been processed, so we need to note them down
+                processingBlock.Transactions.ForEach(t => processedTxs.Add(t));
+                Db.Update(processingBlock);
+            }
+
+            // remove all processed transactions from our tx list
+            processedTxs.ForEach(t => txsToReRelease
                     .Where(r => r.TransactionId == t.TransactionId)
                     .ToList()
                     .ForEach(x => txsToReRelease.Remove(x)));
 
-            // do the same for the new highest block
-            newHighestBlock.Transactions
-                .ForEach(t => txsToReRelease
-                    .Where(r => r.TransactionId == t.TransactionId)
-                    .ToList()
-                    .ForEach(x => txsToReRelease.Remove(x)));
-
+            // remove any UTXOs we have
             foreach (var tx in txsToReRelease)
             {
                 foreach (var output in tx.Outputs)
@@ -392,17 +436,65 @@ namespace Valcoin.Services
                 .ToList()
                 .ForEach(r => MiningService.TransactionPool.TryAdd(r.Key, r.Value)));
 
-            // update our branch block
-            await UpdateBlock(branchBlock);
+            await Db.SaveChangesAsync();
 
-            // the previous orphan was already in the database, so we only need to update the NextBlockHash property
-            previousOrphan.NextBlockHash = newHighestBlock.BlockHash;
-            await UpdateBlock(previousOrphan);
-            // the new orphan block is now an orphan (because branchBlock does not point to it) and there is no need
-            // to perform any operations on it (other than having gotten the list of transactions).
-
-            // now add the newHighestBlock
+            // finally, actually add the new highest block
             await CommitBlock(newHighestBlock);
+
+
+            //var previousOrphan = await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
+            //// the branch block is the block which had two different block referring back to it (the main chain and the orphan chain)
+            //var branchBlock = await GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
+            //// the new orphan is the block that was previously in the main chain, that we are now disconnecting
+            //var newOrphan = await GetBlock(Convert.ToHexString(branchBlock.NextBlockHash));
+
+            //var txsToReRelease = newOrphan.Transactions ?? new List<Transaction>();
+
+            //// now, reorganize the structure
+            //branchBlock.NextBlockHash = previousOrphan.BlockHash; // our new orphan is now disconnected from the chain
+            //// remove any transactions from our list that were already processed in the new two blocks
+            //previousOrphan.Transactions
+            //    .ForEach(t => txsToReRelease
+            //        .Where(r => r.TransactionId == t.TransactionId)
+            //        .ToList()
+            //        .ForEach(x => txsToReRelease.Remove(x)));
+
+            //// do the same for the new highest block
+            //newHighestBlock.Transactions
+            //    .ForEach(t => txsToReRelease
+            //        .Where(r => r.TransactionId == t.TransactionId)
+            //        .ToList()
+            //        .ForEach(x => txsToReRelease.Remove(x)));
+
+            //foreach (var tx in txsToReRelease)
+            //{
+            //    foreach (var output in tx.Outputs)
+            //    {
+            //        if (output.Address == myWallet.AddressBytes)
+            //        {
+            //            var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
+            //            await SubtractFromBalance(utxo);
+            //        }
+            //    }
+            //}
+
+            //// add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
+            //txsToReRelease.ForEach(t => MiningService.TransactionPool.ToList()
+            //    .Where(p => p.Key != t.TransactionId)
+            //    .ToList()
+            //    .ForEach(r => MiningService.TransactionPool.TryAdd(r.Key, r.Value)));
+
+            //// update our branch block
+            //await UpdateBlock(branchBlock);
+
+            //// the previous orphan was already in the database, so we only need to update the NextBlockHash property
+            //previousOrphan.NextBlockHash = newHighestBlock.BlockHash;
+            //await UpdateBlock(previousOrphan);
+            //// the new orphan block is now an orphan (because branchBlock does not point to it) and there is no need
+            //// to perform any operations on it (other than having gotten the list of transactions).
+
+            //// now add the newHighestBlock
+            //await CommitBlock(newHighestBlock);
         }
 
         public async Task Transact(string recipient, int amount)
