@@ -206,8 +206,15 @@ namespace Valcoin.Services
                 // we already got this block from where else, like a sync request or a getpreviousblock request
                 return;
             }
-            Db.Add(block);
-            await Db.SaveChangesAsync();
+            try
+            {
+                Db.Add(block);
+                await Db.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                // nothing, this happens sometimes especially during debug. We already have the block, so there's nothing to save
+            }
         }
 
         public async Task AddPendingTransaction(Transaction tx)
