@@ -383,7 +383,11 @@ namespace Valcoin.Services
                     else
                     {
                         syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
-                        if (syncBlock == null) tcpClient.Close(); // we don't have this block, send nothing
+                        if (syncBlock == null)
+                        {
+                            tcpClient.Close(); // we don't have this block, send nothing
+                            return;
+                        }
 
                         // check if they already are at the last main chain block - same block height as us, and
                         // no next block defined yet
@@ -450,7 +454,16 @@ namespace Valcoin.Services
                     do
                     {
                         var memory = await GetDataFromClient(tcpClient);
-                        var data = JsonDocument.Parse(memory);
+                        JsonDocument data;
+                        try
+                        {
+                            data = JsonDocument.Parse(memory);
+                        }
+                        catch
+                        {
+                            // invalid json, just leave
+                            return;
+                        }
 
                         // all data is transmitted in a message
                         var message = data.Deserialize<Message>();

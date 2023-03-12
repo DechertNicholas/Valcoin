@@ -21,6 +21,8 @@ namespace Valcoin.Services
         protected ValcoinContext Db { get; private set; }
 
         private Wallet myWallet;
+        private static bool reorganizing = false;
+        private static readonly object padlock = new();
 
         public ChainService(ValcoinContext context)
         {
@@ -350,6 +352,21 @@ namespace Valcoin.Services
              * By having this method called, we already know the new block has been verified and is from the orphan chain, so we have no need to re-verify here.
              */
 
+            // it's possible to enter this method multiple times, so we need to ensure we're locked
+            if (!reorganizing)
+            {
+                lock (padlock)
+                {
+                    if (!reorganizing)
+                    {
+                        reorganizing = true;
+                    }
+                    else { return; }
+                }
+            }
+            else { return; }
+
+
             if(lastBlock.BlockNumber !=  newHighestBlock.BlockNumber - 1)
             {
                 throw new Exception("Last block number was not one less than new highest");
@@ -440,6 +457,8 @@ namespace Valcoin.Services
 
             // finally, actually add the new highest block
             await CommitBlock(newHighestBlock);
+
+            reorganizing = false;
 
 
             //var previousOrphan = await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
