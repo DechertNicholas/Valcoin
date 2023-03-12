@@ -406,17 +406,24 @@ namespace Valcoin.Services
 
             var txsToReRelease = new List<Transaction>();
             var processedTxs = new List<Transaction>();
+            var coinbases = new List<Transaction>();
 
+            // build up the current chain
             while (currentChain.Count > 0)
             {
                 var processingBlock = currentChain.Pop();
                 processingBlock.Transactions.Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // skip the coinbase transactions
                     .ToList()
                     .ForEach(t => txsToReRelease.Add(t));
+                // now add the coinbases to a separate list, as they will need to be removed
+                processingBlock.Transactions.Where(t => t.Inputs[0].PreviousTransactionId == new string('0', 64))
+                    .ToList()
+                    .ForEach(t => coinbases.Add(t));
                 processingBlock.NextBlockHash = new byte[32]; // unlink the block
                 Db.Update(processingBlock);
             }
 
+            // build up the new chain
             while (newChain.Count > 0)
             {
                 var processingBlock = newChain.Pop();
@@ -436,6 +443,19 @@ namespace Valcoin.Services
 
             // remove any UTXOs we have
             foreach (var tx in txsToReRelease)
+            {
+                foreach (var output in tx.Outputs)
+                {
+                    if (output.Address == myWallet.AddressBytes)
+                    {
+                        var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
+                        await SubtractFromBalance(utxo);
+                    }
+                }
+            }
+
+            // same with coinbases
+            foreach (var tx in coinbases)
             {
                 foreach (var output in tx.Outputs)
                 {
