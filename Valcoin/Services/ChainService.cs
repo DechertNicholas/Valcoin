@@ -446,7 +446,7 @@ namespace Valcoin.Services
             {
                 foreach (var output in tx.Outputs)
                 {
-                    if (output.Address == myWallet.AddressBytes)
+                    if (output.Address.SequenceEqual(myWallet.AddressBytes))
                     {
                         var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
                         await SubtractFromBalance(utxo);
@@ -459,7 +459,7 @@ namespace Valcoin.Services
             {
                 foreach (var output in tx.Outputs)
                 {
-                    if (output.Address == myWallet.AddressBytes)
+                    if (output.Address.SequenceEqual(myWallet.AddressBytes))
                     {
                         var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
                         await SubtractFromBalance(utxo);
@@ -479,61 +479,6 @@ namespace Valcoin.Services
             await CommitBlock(newHighestBlock);
 
             reorganizing = false;
-
-
-            //var previousOrphan = await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash));
-            //// the branch block is the block which had two different block referring back to it (the main chain and the orphan chain)
-            //var branchBlock = await GetBlock(Convert.ToHexString(previousOrphan.PreviousBlockHash));
-            //// the new orphan is the block that was previously in the main chain, that we are now disconnecting
-            //var newOrphan = await GetBlock(Convert.ToHexString(branchBlock.NextBlockHash));
-
-            //var txsToReRelease = newOrphan.Transactions ?? new List<Transaction>();
-
-            //// now, reorganize the structure
-            //branchBlock.NextBlockHash = previousOrphan.BlockHash; // our new orphan is now disconnected from the chain
-            //// remove any transactions from our list that were already processed in the new two blocks
-            //previousOrphan.Transactions
-            //    .ForEach(t => txsToReRelease
-            //        .Where(r => r.TransactionId == t.TransactionId)
-            //        .ToList()
-            //        .ForEach(x => txsToReRelease.Remove(x)));
-
-            //// do the same for the new highest block
-            //newHighestBlock.Transactions
-            //    .ForEach(t => txsToReRelease
-            //        .Where(r => r.TransactionId == t.TransactionId)
-            //        .ToList()
-            //        .ForEach(x => txsToReRelease.Remove(x)));
-
-            //foreach (var tx in txsToReRelease)
-            //{
-            //    foreach (var output in tx.Outputs)
-            //    {
-            //        if (output.Address == myWallet.AddressBytes)
-            //        {
-            //            var utxo = new UTXO(tx.TransactionId, tx.Outputs.IndexOf(output), output.Amount);
-            //            await SubtractFromBalance(utxo);
-            //        }
-            //    }
-            //}
-
-            //// add the remaining transactions to the pool for the miner. There should be no duplicates, but just in case, check
-            //txsToReRelease.ForEach(t => MiningService.TransactionPool.ToList()
-            //    .Where(p => p.Key != t.TransactionId)
-            //    .ToList()
-            //    .ForEach(r => MiningService.TransactionPool.TryAdd(r.Key, r.Value)));
-
-            //// update our branch block
-            //await UpdateBlock(branchBlock);
-
-            //// the previous orphan was already in the database, so we only need to update the NextBlockHash property
-            //previousOrphan.NextBlockHash = newHighestBlock.BlockHash;
-            //await UpdateBlock(previousOrphan);
-            //// the new orphan block is now an orphan (because branchBlock does not point to it) and there is no need
-            //// to perform any operations on it (other than having gotten the list of transactions).
-
-            //// now add the newHighestBlock
-            //await CommitBlock(newHighestBlock);
         }
 
         public async Task Transact(string recipient, int amount)
