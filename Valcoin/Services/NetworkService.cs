@@ -342,50 +342,29 @@ namespace Valcoin.Services
             {
                 if (syncMessage.MessageType == MessageType.Sync)
                 {
-                    // the client sent out sync requests to multiple clients, then closed the connection.
-                    // we need to establish a new connection that does not stop
-                    tcpClient = new();
-                    if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000)) // wait two seconds to try and connect
-                    {
-                        // we didn't connect
-                        return;
-                    }
-                    if (!tcpClient.Connected) { tcpClient.Close(); } // not connected, just leave
-
-                    var stream = tcpClient.GetStream();
-
                     var localService = chainService.GetFreshService();
                     ValcoinBlock syncBlock = null;
                     ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
                     if (ourHighestBlock == null)
                         return;
 
-                    // we send our highest block so the client knows when to no longer expect data. We will send this again later when the
-                    // client is actually ready to validate it
-                    await stream.WriteAsync((byte[])new Message(ourHighestBlock) { MessageType = MessageType.SyncResponse });
-                    // wait for the clien to confirm they're connected and ready
-                    var response = await GetDataFromClient(tcpClient);
-                    if (response.Length != 1 || response.Span[0] != 1)
-                    {
-                        // something is malformed, exit
-                        tcpClient.Close();
-                    }
-
                     if (syncMessage.HighestBlockNumber == 0 && syncMessage.BlockId == "")
                     {
                         // client has no blocks and needs a full sync.
                         // get the first block in the chain
                         syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
-                        if (syncBlock == null) tcpClient.Close(); // we have no blocks either, send nothing
-                                                                  // send the initial block
-                        await stream.WriteAsync((byte[])new Message(syncBlock));
+                        if (syncBlock == null)
+                        {
+                            // we have no blocks either, send nothing
+                            return;
+                        }
                     }
                     else
                     {
                         syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
                         if (syncBlock == null)
                         {
-                            tcpClient.Close(); // we don't have this block, send nothing
+                            // we don't have this block, send nothing
                             return;
                         }
 
@@ -394,14 +373,29 @@ namespace Valcoin.Services
                         if (syncBlock != null &&
                             syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
                             syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
-                            tcpClient.Close(); // already sync'd
+                            return; // already sync'd
                     }
 
+                    // the client sent out sync requests to multiple clients, then closed the connection.
+                    // we need to establish a new connection that does not stop
+                    tcpClient = new();
+                    if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000)) // wait two seconds to try and connect
+                    {
+                        // we didn't connect
+                        return;
+                    }
+                    if (!tcpClient.Connected) { return; } // not connected, just leave
 
+                    var stream = tcpClient.GetStream();
 
-                    // get the next block in the chain. We don't really care if we're on the main
-                    var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
-                    do
+                    // we send our highest block so the client knows when to no longer expect data. We will send this again later when the
+                    // client is actually ready to validate it
+                    await stream.WriteAsync((byte[])new Message(ourHighestBlock) { MessageType = MessageType.SyncResponse });
+
+                    Memory<byte> response;
+                    var nextBlock = syncBlock;
+
+                    while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])) // while not 32 bytes of 0
                     {
                         // wait for the client to be ready each time
                         response = await GetDataFromClient(tcpClient);
@@ -413,7 +407,7 @@ namespace Valcoin.Services
                         await stream.WriteAsync((byte[])new Message(nextBlock));
                         nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
                     }
-                    while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
+                    
 
                     // wait once more
                     response = await GetDataFromClient(tcpClient);
