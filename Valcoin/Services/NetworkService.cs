@@ -355,8 +355,10 @@ namespace Valcoin.Services
                         syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
                         if (syncBlock == null)
                         {
+                            syncBlock = (await localService.GetBlocksByNumber(1)).FirstOrDefault();
+                            if (syncBlock == null)
+                                return;
                             // we have no blocks either, send nothing
-                            return;
                         }
                     }
                     else
