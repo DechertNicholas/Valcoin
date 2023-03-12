@@ -383,15 +383,26 @@ namespace Valcoin.Services
 
             Stack<ValcoinBlock> newChain = new();
             Stack<ValcoinBlock> currentChain = new();
+            bool differentGenesis = false;
 
             newChain.Push(await GetBlock(Convert.ToHexString(newHighestBlock.PreviousBlockHash))); // push the new block's previous hash, (eg, new is #48, prev is #47)
             currentChain.Push(await GetBlock(Convert.ToHexString(lastBlock.BlockHash)));           // and our current highest, so they are at the same height (current is #47)
 
-            while (newChain.Peek().BlockId != currentChain.Peek().BlockId) // eventually we will converge on a single block (where the chain split).
+            while (!differentGenesis && newChain.Peek().BlockId != currentChain.Peek().BlockId) // eventually we will converge on a single block (where the chain split).
             {
                 // keep stacking down the chain, until we find the block that they split from (the branch block)
                 newChain.Push(await GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)));
                 currentChain.Push(await GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)));
+
+                if (GetBlock(Convert.ToHexString(newChain.Peek().PreviousBlockHash)).Result.PreviousBlockHash.SequenceEqual(new byte[32]))
+                {
+                    // client may have a different genesis block. check ours as well
+                    if (GetBlock(Convert.ToHexString(currentChain.Peek().PreviousBlockHash)).Result.PreviousBlockHash.SequenceEqual(new byte[32]))
+                    {
+                        // different genesis. The current top-of-stack of each Stack is the genesis for the respective chain
+                        differentGenesis = true;
+                    }
+                }
             }
 
             /*
