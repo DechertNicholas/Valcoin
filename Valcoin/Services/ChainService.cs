@@ -159,6 +159,7 @@ namespace Valcoin.Services
                 // this is the genesis block being added
                 UpdateBalance(block);
                 await CommitBlock(block);
+                MiningService.NewBlockFound = true;
                 return;
             }
             else if (lastBlock == null)
@@ -177,6 +178,7 @@ namespace Valcoin.Services
                 block.BlockHash.CopyTo(lastBlock.NextBlockHash, 0);
                 await UpdateBlock(lastBlock);
                 await CommitBlock(block);
+                MiningService.NewBlockFound = true;
             }
             // check if this newHighestBlock is part of a longer blockchain
             else if (block.PreviousBlockHash != lastBlock.BlockHash && block.BlockNumber == lastBlock.BlockNumber + 1)
@@ -225,6 +227,11 @@ namespace Valcoin.Services
             var blockNumber = block == null ? 0 : block.BlockNumber;
             var px = new PendingTransaction(tx.TransactionId, tx.Outputs.Sum(o => o.Amount), blockNumber);
             await CommitPendingTransaction(px);
+        }
+
+        public async Task<List<PendingTransaction>> GetPendingTransactions()
+        {
+            return await Db.PendingTransactions.ToListAsync();
         }
 
         public async Task CommitPendingTransaction(PendingTransaction ptx)
@@ -442,10 +449,12 @@ namespace Valcoin.Services
                 processingBlock.Transactions.Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // skip the coinbase transactions
                     .ToList()
                     .ForEach(t => txsToReRelease.Add(t));
+
                 // now add the coinbases to a separate list, as they will need to be removed
                 processingBlock.Transactions.Where(t => t.Inputs[0].PreviousTransactionId == new string('0', 64))
                     .ToList()
                     .ForEach(t => coinbases.Add(t));
+
                 processingBlock.NextBlockHash = new byte[32]; // unlink the block
                 Db.Update(processingBlock);
             }
@@ -506,6 +515,7 @@ namespace Valcoin.Services
             await CommitBlock(newHighestBlock);
 
             reorganizing = false;
+            MiningService.NewBlockFound = true;
         }
 
         public async Task Transact(string recipient, int amount)

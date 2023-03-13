@@ -19,6 +19,7 @@ namespace Valcoin.Services
         public Task AddBlock(ValcoinBlock block);
         public Task UpdateBlock(ValcoinBlock block);
         public Task AddPendingTransaction(Transaction tx);
+        public Task<List<PendingTransaction>> GetPendingTransactions();
         public Task CommitPendingTransaction(PendingTransaction px);
         public Task UnloadPendingTransactions(ulong blockNumber, int pendingTransactionTimeout);
         public Task<Transaction> GetTx(string transactionId);

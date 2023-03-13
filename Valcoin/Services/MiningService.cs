@@ -24,7 +24,8 @@ namespace Valcoin.Services
     public class MiningService : IMiningService
     {
         public static bool MineBlocks { get; set; } = false;
-        private readonly int Difficulty = 20; // this will remain static for the purposes of this application, but normally would auto-adjust over time
+        public static bool NewBlockFound { get; set; } = false;
+        private readonly int Difficulty = 24; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
         private readonly TimeSpan HashInterval = new(0, 0, 2);
@@ -186,6 +187,29 @@ namespace Valcoin.Services
             // check on each hash if a stop has been requested
             while (!hashFound && MineBlocks == true)
             {
+                if (NewBlockFound)
+                {
+                    // new blocks added will have removed transactinos from the pending transaction table.
+                    // anything left still hasn't been processed, and should be included in the next block.
+                    var unprocessed = chainService.GetPendingTransactions().Result;
+                    List<Transaction> toRemove = new();
+                    
+                    foreach (var tx in CandidateBlock.Transactions)
+                    {
+                        if (unprocessed.FirstOrDefault(p => p.TransactionId == tx.TransactionId) == null)
+                        {
+                            toRemove.Add(tx);
+                        }
+                    }
+
+                    foreach (var remove in toRemove)
+                    {
+                        CandidateBlock.Transactions.Remove(remove);
+                    }
+
+                    AssembleCandidateBlock();
+                    NewBlockFound = false;
+                }
                 // update every 10 seconds
                 if (Stopwatch.Elapsed >= HashInterval)
                     ComputeHashSpeed();
