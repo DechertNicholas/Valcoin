@@ -78,7 +78,7 @@ namespace Valcoin.Services
             return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
         }
 
-        public async Task<List<ValcoinBlock>> GetBlocksByNumber(ulong blockNumber)
+        public async Task<List<ValcoinBlock>> GetBlocksByNumber(long blockNumber)
         {
             return await Db.ValcoinBlocks.Where(b => b.BlockNumber == blockNumber).ToListAsync();
         }
@@ -227,7 +227,7 @@ namespace Valcoin.Services
             await CommitPendingTransaction(px);
         }
 
-        public async Task<List<Transaction>> GetTransactionsAtOrAfterBlock(ulong blockNumber)
+        public async Task<List<Transaction>> GetTransactionsAtOrAfterBlock(long blockNumber)
         {
             return await Db.Transactions.Where(t => t.BlockNumber >= blockNumber).ToListAsync();
         }
@@ -238,10 +238,10 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
-        public async Task UnloadPendingTransactions(ulong blockNumber, int pendingTransactionTimeout)
+        public async Task UnloadPendingTransactions(long blockNumber, int pendingTransactionTimeout)
         {
             (await Db.PendingTransactions.ToListAsync())
-                .Where(p => blockNumber - p.CurrentBlockNumber >= (ulong)pendingTransactionTimeout)
+                .Where(p => blockNumber - p.CurrentBlockNumber >= (long)pendingTransactionTimeout)
                 .ToList()
                 .ForEach(p => Db.PendingTransactions.Remove(p));
             await Db.SaveChangesAsync();

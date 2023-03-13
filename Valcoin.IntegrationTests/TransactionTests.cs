@@ -33,7 +33,7 @@ namespace Valcoin.IntegrationTests
         [Fact]
         public void BuildTransaction()
         {
-            ulong blockId = 10; // this tx is part of block 10
+            long blockId = 10; // this tx is part of block 10
 
             var input = new TxInput(new string('0', 64), -1, wallet.PublicKey);
 
