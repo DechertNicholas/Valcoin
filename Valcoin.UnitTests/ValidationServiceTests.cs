@@ -36,7 +36,7 @@ namespace Valcoin.UnitTests
 
             var result = ValidationService.ValidateTx(ValidationServiceShared.ValidSpendBlock.Transactions[1], serviceMock.Object);
 
-            Assert.Equal(ValidationService.ValidationCode.Invalid, result);
+            Assert.Equal(ValidationService.ValidationCode.Already_Spent, result);
         }
     }
 }

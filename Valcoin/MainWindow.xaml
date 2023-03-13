@@ -32,9 +32,19 @@
         <NavigationView Grid.Row="1"
                         x:Name="NavView"
                         IsBackEnabled="False"
+                        IsBackButtonVisible="Collapsed"
                         IsSettingsVisible="False"
                         Loaded="NavView_Loaded"
                         ItemInvoked="NavView_ItemInvoked">
+            
+        <NavigationView.AutoSuggestBox>
+            <AutoSuggestBox QueryIcon="Find"
+                            PlaceholderText="Search"
+                            HorizontalAlignment="Center"
+                            Width="260"
+                            TextChanged="AutoSuggestBox_TextChanged"
+                            QuerySubmitted="AutoSuggestBox_QuerySubmitted"/>
+        </NavigationView.AutoSuggestBox>
             <NavigationView.MenuItems>
                 
                 <NavigationViewItem Content="Wallet" Tag="WalletPage">
@@ -47,6 +57,12 @@
                     <NavigationViewItem.Icon>
                         <!--image: Flaticon.com-->
                         <BitmapIcon UriSource="ms-appx:///Assets/pickaxe-24.png"/>
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItem Content="Reports" Tag="ReportsPage">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE9F9;"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
 

@@ -53,7 +53,7 @@ namespace Valcoin.UnitTests
             var block = GetExampleBlock();
 
 
-            await chainServiceMock.Object.AddBlock(block);
+            await chainServiceMock.Object.AddBlock(block, false);
 
             chainServiceMock.Verify(m => m.GetLastMainChainBlock(), Times.Once);
             chainServiceMock.Verify(m => m.UpdateBalance(block), Times.Once);

@@ -28,7 +28,7 @@ namespace Valcoin.Models
     {
         public int ListenPort { get; private set; } = NetworkService.ListenPort;
         public MessageType MessageType { get; set; }
-        public ulong HighestBlockNumber { get; set; } = 0;
+        public long HighestBlockNumber { get; set; } = 0;
         public string BlockId { get; set; }
         public List<Client> Clients { get; set; } = new();
         public ValcoinBlock Block { get; set; }
@@ -52,7 +52,7 @@ namespace Valcoin.Models
         /// </summary>
         /// <param name="highestBlockNumber">The highest block number the client has.</param>
         /// <param name="blockId">The blockId of the client's highest main-chain block.</param>
-        public Message(ulong highestBlockNumber, string blockId)
+        public Message(long highestBlockNumber, string blockId)
         {
             MessageType = MessageType.Sync;
             HighestBlockNumber = highestBlockNumber;

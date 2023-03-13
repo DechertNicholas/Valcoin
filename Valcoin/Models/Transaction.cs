@@ -50,11 +50,10 @@ namespace Valcoin.Models
         /// <summary>
         /// The block in which this transaction was in. Part of the unlock signature.
         /// </summary>
-        public ulong BlockNumber { get; set; }
+        public long BlockNumber { get; set; }
 
         private List<TxInput> _inputs = new();
         private List<TxOutput> _outputs = new();
-        //private ulong _blockNumber;
 
         /// <summary>
         /// Byte[] serializer used for transferring this transaction over the network.
@@ -68,7 +67,7 @@ namespace Valcoin.Models
         /// </summary>
         /// <param name="transactionId"></param>
         /// <param name="blockNumber"></param>
-        protected Transaction(string transactionId, ulong blockNumber)
+        protected Transaction(string transactionId, long blockNumber)
         {
             TransactionId = transactionId;
             BlockNumber = blockNumber;
@@ -89,7 +88,7 @@ namespace Valcoin.Models
         /// <param name="inputs">The group of inputs for this transaction.</param>
         /// <param name="outputs">The group of outputs for this transaction.</param>
         [JsonConstructor] // for serialization over the network
-        public Transaction(ulong blockNumber, List<TxInput> inputs, List<TxOutput> outputs)
+        public Transaction(long blockNumber, List<TxInput> inputs, List<TxOutput> outputs)
         {
             if (outputs.Distinct(new TxOutputComparer()).Count() != outputs.Count)
                 throw new InvalidOperationException("You cannot assign two outputs of the same amount to the same address in the same transaction.");

@@ -19,7 +19,15 @@ namespace Valcoin.Services
             Valid,
             Existing,         // we already have it
             Invalid,          // codes after "Invalid" are requests for more information. Currently, the transaction cannot be validated or invalidated
-            Miss_Prev_Block
+            Miss_Prev_Block,
+            Already_Spent,
+            TxId_Mimsatch,
+            Block_Difficulty_Mismatch,
+            Block_Computation_Mismatch,
+            Coinbase_Tx_Amount_Invalid,
+            Coinbase_Tx_Invalid,
+            Tx_Signature_Invalid,
+            Tx_Amount_Invalid
         }
 
         public static ValidationCode ValidateBlock(ValcoinBlock block)
@@ -64,7 +72,7 @@ namespace Valcoin.Services
             {
                 if (block.BlockHash[i] > difficultyMask[i])
                 {
-                    return ValidationCode.Invalid;
+                    return ValidationCode.Block_Difficulty_Mismatch;
                 }
             }
 
@@ -88,7 +96,7 @@ namespace Valcoin.Services
             block.ComputeAndSetMerkleRoot();
             if (!(givenHash.SequenceEqual(block.BlockHash) && givenRoot.SequenceEqual(block.MerkleRoot)))
             {
-                return ValidationCode.Invalid;
+                return ValidationCode.Block_Computation_Mismatch;
             }
 
             // all passes
@@ -103,14 +111,13 @@ namespace Valcoin.Services
         /// <returns></returns>
         public static ValidationCode ValidateBlockTxs(List<Transaction> txs)
         {
-            var allValidated = ValidationCode.Valid; // start off as true, then if anything marks as false, it will remain false
             // validate the coinbase transaction
             // the coinbase tx is not always the first transaction, but it does always reference a blank previous tx with -1 as the input index
             var coinbases = txs.Where(t => t.Inputs[0].PreviousTransactionId == new string('0', 64))
                 .Where(t => t.Inputs[0].PreviousOutputIndex == -1)
                 .ToList();
             if (coinbases.Count > 1)
-                return ValidationCode.Invalid; // more than one coinbase tx
+                return ValidationCode.Coinbase_Tx_Amount_Invalid; // more than one coinbase tx
 
             if (coinbases.Count != 0)
             {
@@ -121,20 +128,21 @@ namespace Valcoin.Services
                 var txValid = coinbase.TransactionId == coinbase.GetTxIdAsString();
 
                 if (!(inputValid && outputValid && txValid))
-                    allValidated = ValidationCode.Invalid;
+                    return ValidationCode.Coinbase_Tx_Invalid;
             }
 
             if (txs.Count == 1 || txs.Count == 0)
-                return allValidated; // this was the only transaction
+                return ValidationCode.Valid; // this was the only transaction
 
             // validate the rest as non-coinbase transactions
             foreach (var tx in txs.Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)))
             {
-                if (ValidateTx(tx) == ValidationCode.Invalid)
-                    return allValidated = ValidationCode.Invalid; // the whole block is bad, exit
+                var result = ValidateTx(tx);
+                if (result != ValidationCode.Invalid)
+                    return result; // the whole block is bad, exit
             }
 
-            return allValidated;
+            return ValidationCode.Valid;
         }
 
         /// <summary>
@@ -153,7 +161,7 @@ namespace Valcoin.Services
 
             // validate the hash first since it's simple
             if (tx.TransactionId != tx.GetTxIdAsString())
-                return ValidationCode.Invalid;
+                return ValidationCode.TxId_Mimsatch;
 
             // validate the inputs
             foreach (var input in tx.Inputs)
@@ -161,7 +169,7 @@ namespace Valcoin.Services
                 // first, check if a tx already exists that references the same input
                 var spend = chainService.GetTxByInput(input.PreviousTransactionId, input.PreviousOutputIndex).Result;
                 if (spend != null)
-                    return ValidationCode.Invalid;
+                    return ValidationCode.Already_Spent;
 
                 // get the referenced transaction data
                 var prevTx = chainService.GetTx(input.PreviousTransactionId).Result;
@@ -172,7 +180,7 @@ namespace Valcoin.Services
                 var sigValid = Wallet.VerifyTransactionInputs(tx);
 
                 if (!(p2pkhValid && sigValid))
-                    return ValidationCode.Invalid;
+                    return ValidationCode.Tx_Signature_Invalid;
 
                 // add all the input amounts up to ensure the total output amount is equal to this.
                 // since each input comes from a different transaction and needs a db call to aquire,
@@ -182,7 +190,7 @@ namespace Valcoin.Services
 
             // ensure the transaction has spent correctly
             if (tx.Outputs.Sum(o => o.Amount) != inputSum)
-                return ValidationCode.Invalid;
+                return ValidationCode.Tx_Amount_Invalid;
 
             return ValidationCode.Valid;
         }

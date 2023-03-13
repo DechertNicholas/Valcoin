@@ -169,6 +169,8 @@ namespace Valcoin.Services
                 var localService = chainService.GetFreshService();
 
                 var memory = await GetDataFromClient(tcpClient);
+                if (memory.Length == 0)
+                    return;
 
                 var data = JsonDocument.Parse(memory);
 
@@ -212,13 +214,24 @@ namespace Valcoin.Services
                             switch (ValidateBlock(block))
                             {
                                 case ValidationCode.Miss_Prev_Block:
-                                    var returnMessage = new Message(Convert.ToHexString(block.PreviousBlockHash));
+                                    Message returnMessage;
+                                    var highest = await chainService.GetLastMainChainBlock();
+                                    if (highest.BlockNumber > block.BlockNumber + 1)
+                                    {
+                                        // we're missing blocks below this one, need to sync
+                                        returnMessage = new Message(highest) { MessageType = MessageType.Sync };
+                                    }
+                                    else
+                                    {
+                                        returnMessage = new Message(Convert.ToHexString(block.PreviousBlockHash));
+                                    }
+
                                     // relay to the network
                                     await RelayData(returnMessage);
                                     break;
 
                                 case ValidationCode.Valid:
-                                    await localService.AddBlock(block);
+                                    await localService.AddBlock(block, true);
                                     break;
                             }
                             break;
@@ -336,138 +349,185 @@ namespace Valcoin.Services
 
         public async Task SynchronizeChainWithClient(Client client, Message syncMessage, TcpClient tcpClient = null)
         {
-            if (syncMessage.MessageType == MessageType.Sync)
+            try
             {
-                // the client sent out sync requests to multiple clients, then closed the connection.
-                // we need to establish a new connection that does not stop
-                tcpClient = new();
-                if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000)) // wait two seconds to try and connect
+                if (syncMessage.MessageType == MessageType.Sync)
                 {
-                    // we didn't connect
-                    return;
-                }
-                if (!tcpClient.Connected) { tcpClient.Close(); } // not connected, just leave
+                    var localService = chainService.GetFreshService();
+                    ValcoinBlock syncBlock = null;
+                    ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
+                    if (ourHighestBlock == null)
+                        return;
 
-                var stream = tcpClient.GetStream();
-                // inform the client we're willing to sync
-                await stream.WriteAsync((byte[])new Message(MessageType.SyncResponse));
-                // wait for the clien to confirm they're connected and ready
-                var response = await GetDataFromClient(tcpClient);
-                if (response.Length != 1 || response.Span[0] != 1)
-                {
-                    // something is malformed, exit
-                    tcpClient.Close();
-                }
+                    if (syncMessage.HighestBlockNumber == 0 && syncMessage.BlockId == "")
+                    {
+                        // client has no blocks and needs a full sync.
+                        // get the first block in the chain
+                        syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
+                        if (syncBlock == null)
+                        {
+                            syncBlock = (await localService.GetBlocksByNumber(1)).FirstOrDefault();
+                            if (syncBlock == null)
+                                return;
+                            // we have no blocks either, send nothing
+                        }
+                    }
+                    else
+                    {
+                        syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
+                        if (syncBlock == null)
+                        {
+                            // just send our first block and start the sync from genesis
+                            syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
+                            if (syncBlock == null)
+                            {
+                                syncBlock = (await localService.GetBlocksByNumber(1)).FirstOrDefault();
+                                if (syncBlock == null)
+                                    return;
+                                // we have no blocks either, send nothing
+                            }
+                        }
 
-                var localService = chainService.GetFreshService();
-                ValcoinBlock syncBlock = null;
-                ValcoinBlock ourHighestBlock = await localService.GetLastMainChainBlock();
+                        // check if they already are at the last main chain block - same block height as us, and
+                        // no next block defined yet
+                        if (syncBlock != null &&
+                            syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
+                            syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
+                            return; // already sync'd
 
-                // we send our highest block so the client knows when to no longer expect data. We will send this again later when the
-                // client is actually ready to validate it
-                await stream.WriteAsync((byte[])new Message(ourHighestBlock));
-                // wait for the clien to confirm they're connected and ready
-                response = await GetDataFromClient(tcpClient);
-                if (response.Length != 1 || response.Span[0] != 1)
-                {
-                    // something is malformed, exit
-                    tcpClient.Close();
-                }
+                        // check if the block the client is requesting a sync from is a main chain block, and respond with a genesis if not
+                        if (Convert.ToHexString(syncBlock.NextBlockHash) == new string('0', 64))
+                        {
+                            // just send our first block and start the sync from genesis
+                            syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => !b.NextBlockHash.SequenceEqual(new byte[32])).FirstOrDefault();
+                            if (syncBlock == null)
+                            {
+                                syncBlock = (await localService.GetBlocksByNumber(1)).FirstOrDefault();
+                                if (syncBlock == null)
+                                    return;
+                                // we have no blocks either, send nothing
+                            }
+                        }
+                    }
 
-                if (syncMessage.HighestBlockNumber == 0 && syncMessage.BlockId == "")
-                {
-                    // client has no blocks and needs a full sync.
-                    // get the first block in the chain
-                    syncBlock = (await localService.GetBlocksByNumber(1)).Where(b => b.NextBlockHash != new byte[32]).FirstOrDefault();
-                    if (syncBlock == null) tcpClient.Close(); // we have no blocks either, send nothing
-                    // send the initial block
-                    await stream.WriteAsync((byte[])new Message(syncBlock));
-                }
-                else
-                {
-                    syncBlock = await localService.GetBlock(syncMessage.BlockId); // the client's highest block
-                    if (syncBlock == null) tcpClient.Close(); // we don't have this block, send nothing
+                    // the client sent out sync requests to multiple clients, then closed the connection.
+                    // we need to establish a new connection that does not stop
+                    tcpClient = new();
+                    if (!tcpClient.ConnectAsync(client.Address, client.Port).Wait(2000)) // wait two seconds to try and connect
+                    {
+                        // we didn't connect
+                        return;
+                    }
+                    if (!tcpClient.Connected) { return; } // not connected, just leave
 
-                    // check if they already are at the last main chain block - same block height as us, and
-                    // no next block defined yet
-                    if (syncBlock != null &&
-                        syncBlock.NextBlockHash.SequenceEqual(new byte[32]) &&
-                        syncBlock.BlockNumber == ourHighestBlock.BlockNumber)
-                        tcpClient.Close(); // already sync'd
-                }
+                    var stream = tcpClient.GetStream();
 
-                
+                    // we send our highest block so the client knows when to no longer expect data. We will send this again later when the
+                    // client is actually ready to validate it
+                    await stream.WriteAsync((byte[])new Message(ourHighestBlock) { MessageType = MessageType.SyncResponse });
 
-                // get the next block in the chain. We don't really care if we're on the main
-                var nextBlock = await localService.GetBlock(Convert.ToHexString(syncBlock.NextBlockHash));
-                do
-                {
-                    // wait for the client to be ready each time
+                    Memory<byte> response;
+                    var nextBlock = syncBlock;
+
+                    while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])) // while not 32 bytes of 0
+                    {
+                        // wait for the client to be ready each time
+                        response = await GetDataFromClient(tcpClient);
+                        if (response.Length != 1 || response.Span[0] != 1)
+                        {
+                            // something is malformed, exit
+                            tcpClient.Close();
+                        }
+                        await stream.WriteAsync((byte[])new Message(nextBlock));
+                        nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
+                    }
+                    
+
+                    // wait once more
                     response = await GetDataFromClient(tcpClient);
                     if (response.Length != 1 || response.Span[0] != 1)
                     {
                         // something is malformed, exit
                         tcpClient.Close();
+                        return;
                     }
+                    // the current nextBlock has a NextBlockHash of 0, but we still need to send it
                     await stream.WriteAsync((byte[])new Message(nextBlock));
-                    nextBlock = await localService.GetBlock(Convert.ToHexString(nextBlock.NextBlockHash));
-                }
-                while (!nextBlock.NextBlockHash.SequenceEqual(new byte[32])); // while not 32 bytes of 0
-
-                // wait once more
-                response = await GetDataFromClient(tcpClient);
-                if (response.Length != 1 || response.Span[0] != 1)
-                {
-                    // something is malformed, exit
+                    // now we've sent all blocks
                     tcpClient.Close();
                 }
-                // the current nextBlock has a NextBlockHash of 0, but we still need to send it
-                await stream.WriteAsync((byte[])new Message(nextBlock));
-                // now we've sent all blocks
-                tcpClient.Close();
+                else if (syncMessage.MessageType == MessageType.SyncResponse)
+                {
+                    if (syncMessage.Block == null)
+                    {
+                        tcpClient.Close();
+                        return;
+                    }
+
+                    // get the highest block to expect
+                    var highestBlockNumber = syncMessage.Block.BlockNumber;
+                    var finished = false;
+
+                    var localService = chainService.GetFreshService();
+                    var stream = tcpClient.GetStream();
+
+                    if (highestBlockNumber == 0)
+                    {
+                        await stream.WriteAsync(new byte[] { 0 });
+                        return;
+                    }
+                    // say we're ready to start sync
+                    await stream.WriteAsync(new byte[] { 1 }); // just a general value that we wouldn't normally get
+
+                    do
+                    {
+                        var memory = await GetDataFromClient(tcpClient);
+                        JsonDocument data;
+                        try
+                        {
+                            data = JsonDocument.Parse(memory);
+                        }
+                        catch
+                        {
+                            // invalid json, just leave
+                            return;
+                        }
+
+                        // all data is transmitted in a message
+                        var message = data.Deserialize<Message>();
+                        var validation = ValidateBlock(message.Block);
+                        if (validation == ValidationCode.Valid)
+                        {
+                            await localService.AddBlock(message.Block, true);
+                        }
+                        else if (validation != ValidationCode.Existing)
+                        {
+                            throw new InvalidOperationException($"Block validation was: {validation}");
+                        }
+                        if (message.Block.BlockNumber == highestBlockNumber)
+                        {
+                            finished = true;
+                            break;
+                        }
+                        await stream.WriteAsync(new byte[] { 1 });
+                    }
+                    while (!finished);
+                    tcpClient.Close();
+                }
             }
-            else if (syncMessage.MessageType == MessageType.SyncResponse)
+            catch (ObjectDisposedException)
             {
-                if (syncMessage.Block == null)
+                // someone left early, just exit
+                tcpClient.Close();
+                tcpClient.Dispose();
+            }
+            finally
+            {
+                if (tcpClient != null)
                 {
                     tcpClient.Close();
-                    return;
+                    tcpClient.Dispose();
                 }
-
-                var localService = chainService.GetFreshService();
-                var stream = tcpClient.GetStream();
-                // say we're ready to start sync
-                await stream.WriteAsync(new byte[] {1}); // just a general value that we wouldn't normally get
-
-                // get the highest block to expect
-                var memoryHighest = await GetDataFromClient(tcpClient);
-                var dataHighest = JsonDocument.Parse(memoryHighest);
-                var highestBlockNumber = dataHighest.Deserialize<Message>().Block.BlockNumber;
-                var finished = false;
-
-                // begin the sync
-                await stream.WriteAsync(new byte[] { 1 });
-
-                do
-                {
-                    var memory = await GetDataFromClient(tcpClient);
-                    var data = JsonDocument.Parse(memory);
-
-                    // all data is transmitted in a message
-                    var message = data.Deserialize<Message>();
-                    if (ValidateBlock(message.Block) == ValidationCode.Valid)
-                    {
-                        await localService.AddBlock(message.Block);
-                    }
-                    if (message.Block.BlockNumber == highestBlockNumber)
-                    {
-                        finished = true;
-                        break;
-                    }
-                    await stream.WriteAsync(new byte[] { 1 });
-                }
-                while (!finished);
-                tcpClient.Close();
             }
         }
 

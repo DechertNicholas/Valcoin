@@ -14,14 +14,17 @@ namespace Valcoin.Services
         public abstract IChainService GetFreshService();
         public Task<ValcoinBlock> GetLastMainChainBlock();
         public Task<ValcoinBlock> GetBlock(string blockId);
-        public Task<List<ValcoinBlock>> GetBlocksByNumber(ulong blockNumber);
-        public Task AddBlock(ValcoinBlock block);
+        public Task<List<ValcoinBlock>> GetBlocksByNumber(long blockNumber);
+        public Task<List<ValcoinBlock>> GetAllBlocks();
+        public Task AddBlock(ValcoinBlock block, bool fromNetwork);
         public Task UpdateBlock(ValcoinBlock block);
         public Task AddPendingTransaction(Transaction tx);
+        public Task<List<Transaction>> GetTransactionsAtOrAfterBlock(long blockNumber);
         public Task CommitPendingTransaction(PendingTransaction px);
-        public Task UnloadPendingTransactions(ulong blockNumber, int pendingTransactionTimeout);
+        public Task UnloadPendingTransactions(long blockNumber, int pendingTransactionTimeout);
         public Task<Transaction> GetTx(string transactionId);
         public Task<Transaction> GetTxByInput(string previousTransactionId, int outputIndex);
+        public Task<List<Transaction>> GetAllMainChainTransactions();
         public Task AddTxs(IEnumerable<Transaction> txs);
         public Task AddWallet(Wallet wallet);
         public Task UpdateWallet(Wallet wallet);
@@ -31,5 +34,6 @@ namespace Valcoin.Services
         public Task<List<Client>> GetClients();
         public Task UpdateClient(Client client);
         public Task Transact(string recipient, int amount);
+        public Task<Dictionary<string, int>> GetAllAddressWealth();
     }
 }

@@ -24,7 +24,8 @@ namespace Valcoin.Services
     public class MiningService : IMiningService
     {
         public static bool MineBlocks { get; set; } = false;
-        private readonly int Difficulty = 22; // this will remain static for the purposes of this application, but normally would auto-adjust over time
+        public static bool NewBlockFoundFromNetwork { get; set; } = false;
+        private readonly int Difficulty = 24; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
         private readonly TimeSpan HashInterval = new(0, 0, 2);
@@ -166,13 +167,6 @@ namespace Valcoin.Services
             // add our coinbase payout to ourselves, and any other transactions in the transaction pool (max 31 others, 32 tx total per block)
             CandidateBlock.AddTx(AssembleCoinbaseTransaction());
 
-            // testing a spend
-            // TODO: Remove this
-            if (CandidateBlock.BlockNumber == 2)
-            {
-                await chainService.Transact(MyWallet.Address, 20);
-            }
-
             if (!TransactionPool.IsEmpty)
             {
                 // only allow 32 transactions in a block, including the coinbase (so 31 from the pool)
@@ -189,10 +183,31 @@ namespace Valcoin.Services
 
         public void FindValidHash()
         {
+            var random = new Random();
             var hashFound = false;
             // check on each hash if a stop has been requested
             while (!hashFound && MineBlocks == true)
             {
+                if (NewBlockFoundFromNetwork)
+                {
+                    // get all transactions processed at and after the block we're mining, as we'll need to ensure we don't re-process them
+                    var processed = chainService.GetTransactionsAtOrAfterBlock(CandidateBlock.BlockNumber).Result; 
+
+                    foreach (var tx in CandidateBlock.Transactions)
+                    {
+                        if (tx.Inputs[0].PreviousTransactionId == new string('0', 64))
+                            continue; // skip the coinbase transaction
+
+                        // if not in unprocessed, then it has not been processed and we need to re-add the transaction to the TransactionPool
+                        if (processed.FirstOrDefault(p => p.TransactionId == tx.TransactionId) == null)
+                        {
+                            TransactionPool.TryAdd(tx.TransactionId, tx);
+                        }
+                    }
+
+                    AssembleCandidateBlock();
+                    NewBlockFoundFromNetwork = false;
+                }
                 // update every 10 seconds
                 if (Stopwatch.Elapsed >= HashInterval)
                     ComputeHashSpeed();
@@ -204,7 +219,7 @@ namespace Valcoin.Services
                     if (CandidateBlock.BlockHash[i] > DifficultyMask[i])
                     {
                         // didn't get the hash, try new nonce
-                        CandidateBlock.Nonce++;
+                        CandidateBlock.Nonce = (ulong)random.NextInt64(long.MinValue, long.MaxValue); // uses signed min/max, but convert to ulong at assign
                         break;
                     }
                     else if (i == DifficultyMask.Length - 1)
@@ -221,23 +236,24 @@ namespace Valcoin.Services
             var valid = ValidationService.ValidateBlock(CandidateBlock);
             if (valid == ValidationService.ValidationCode.Valid)
             {
-                await chainService.AddBlock(CandidateBlock);
+                await chainService.AddBlock(CandidateBlock, false);
                 await networkService.RelayData(new Message(CandidateBlock));
                 return "";
             }
             else
             {
-                var path = WriteBlockToFile(CandidateBlock);
+                var path = WriteBlockToFile(CandidateBlock, valid);
                 MineBlocks = false;
                 return path;
             }
         }
 
-        private static string WriteBlockToFile(ValcoinBlock block)
+        private static string WriteBlockToFile(ValcoinBlock block, ValidationService.ValidationCode returnCode)
         {
             var fileName = Windows.Storage.ApplicationData.Current.LocalFolder.Path + $"\\{block.BlockId}.txt";
             List<string> data = new()
             {
+                $"Validation code: {returnCode}\n\n",
                 "*** Block Info ***",
                 $"BlockId: {block.BlockId}",
                 $"BlockNumber: {block.BlockNumber}",

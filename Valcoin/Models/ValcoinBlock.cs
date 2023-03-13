@@ -23,7 +23,7 @@ namespace Valcoin.Models
         /// <summary>
         /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid (due to SQLite not storing starting at 0).
         /// </summary>
-        public ulong BlockNumber { get; set; } = 0;
+        public long BlockNumber { get; set; } = 0;
         /// <summary>
         /// The hash of the current block data that is in the block header.
         /// </summary>
@@ -81,7 +81,7 @@ namespace Valcoin.Models
         /// <param name="merkleRoot"></param>
         /// <param name="transactions"></param>
         [JsonConstructor] // for serialization over the network
-        public ValcoinBlock (string blockId, ulong blockNumber, byte[] blockHash, byte[] previousBlockHash,
+        public ValcoinBlock (string blockId, long blockNumber, byte[] blockHash, byte[] previousBlockHash,
             ulong nonce, long timeUTCTicks, int blockDifficulty, byte[] merkleRoot, List<Transaction> transactions)
         {
             BlockNumber = blockNumber;
@@ -95,7 +95,7 @@ namespace Valcoin.Models
             MerkleRoot = merkleRoot;
         }
 
-        public ValcoinBlock(ulong blockNumber, byte[] previousBlockHash, ulong nonce, long timeUTCTicks, int blockDifficulty)
+        public ValcoinBlock(long blockNumber, byte[] previousBlockHash, ulong nonce, long timeUTCTicks, int blockDifficulty)
         {
             BlockNumber = blockNumber;
             PreviousBlockHash = previousBlockHash;
