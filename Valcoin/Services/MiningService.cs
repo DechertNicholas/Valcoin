@@ -191,7 +191,7 @@ namespace Valcoin.Services
                 if (NewBlockFoundFromNetwork)
                 {
                     // get all transactions processed at and after the block we're mining, as we'll need to ensure we don't re-process them
-                    var processed = chainService.GetTransactionsAtOrAfterBlock(CandidateBlock.TimeUTCTicks).Result; 
+                    var processed = chainService.GetTransactionsAtOrAfterBlock(CandidateBlock.BlockNumber).Result; 
 
                     foreach (var tx in CandidateBlock.Transactions)
                     {
