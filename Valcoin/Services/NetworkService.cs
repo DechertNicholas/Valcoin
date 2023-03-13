@@ -214,7 +214,18 @@ namespace Valcoin.Services
                             switch (ValidateBlock(block))
                             {
                                 case ValidationCode.Miss_Prev_Block:
-                                    var returnMessage = new Message(Convert.ToHexString(block.PreviousBlockHash));
+                                    Message returnMessage;
+                                    var highest = await chainService.GetLastMainChainBlock();
+                                    if (highest.BlockNumber > block.BlockNumber + 1)
+                                    {
+                                        // we're missing blocks below this one, need to sync
+                                        returnMessage = new Message(highest) { MessageType = MessageType.Sync };
+                                    }
+                                    else
+                                    {
+                                        returnMessage = new Message(Convert.ToHexString(block.PreviousBlockHash));
+                                    }
+
                                     // relay to the network
                                     await RelayData(returnMessage);
                                     break;
