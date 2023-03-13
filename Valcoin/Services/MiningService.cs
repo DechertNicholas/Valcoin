@@ -183,28 +183,26 @@ namespace Valcoin.Services
 
         public void FindValidHash()
         {
+            var random = new Random();
             var hashFound = false;
             // check on each hash if a stop has been requested
             while (!hashFound && MineBlocks == true)
             {
                 if (NewBlockFound)
                 {
-                    // new blocks added will have removed transactinos from the pending transaction table.
-                    // anything left still hasn't been processed, and should be included in the next block.
-                    var unprocessed = chainService.GetPendingTransactions().Result;
-                    List<Transaction> toRemove = new();
-                    
+                    // get all transactions processed at and after the block we're mining, as we'll need to ensure we don't re-process them
+                    var processed = chainService.GetTransactionsAtOrAfterBlock(CandidateBlock.BlockNumber).Result; 
+
                     foreach (var tx in CandidateBlock.Transactions)
                     {
-                        if (unprocessed.FirstOrDefault(p => p.TransactionId == tx.TransactionId) == null)
-                        {
-                            toRemove.Add(tx);
-                        }
-                    }
+                        if (tx.Inputs[0].PreviousTransactionId == new string('0', 64))
+                            continue; // skip the coinbase transaction
 
-                    foreach (var remove in toRemove)
-                    {
-                        CandidateBlock.Transactions.Remove(remove);
+                        // if not in unprocessed, then it has not been processed and we need to re-add the transaction to the TransactionPool
+                        if (processed.FirstOrDefault(p => p.TransactionId == tx.TransactionId) == null)
+                        {
+                            TransactionPool.TryAdd(tx.TransactionId, tx);
+                        }
                     }
 
                     AssembleCandidateBlock();
@@ -221,7 +219,7 @@ namespace Valcoin.Services
                     if (CandidateBlock.BlockHash[i] > DifficultyMask[i])
                     {
                         // didn't get the hash, try new nonce
-                        CandidateBlock.Nonce++;
+                        CandidateBlock.Nonce = (ulong)random.NextInt64(long.MinValue, long.MaxValue); // uses signed min/max, but convert to ulong at assign
                         break;
                     }
                     else if (i == DifficultyMask.Length - 1)

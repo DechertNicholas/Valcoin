@@ -229,9 +229,9 @@ namespace Valcoin.Services
             await CommitPendingTransaction(px);
         }
 
-        public async Task<List<PendingTransaction>> GetPendingTransactions()
+        public async Task<List<Transaction>> GetTransactionsAtOrAfterBlock(ulong blockNumber)
         {
-            return await Db.PendingTransactions.ToListAsync();
+            return await Db.Transactions.Where(t => t.BlockNumber >= blockNumber).ToListAsync();
         }
 
         public async Task CommitPendingTransaction(PendingTransaction ptx)
