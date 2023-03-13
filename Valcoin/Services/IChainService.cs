@@ -16,7 +16,7 @@ namespace Valcoin.Services
         public Task<ValcoinBlock> GetBlock(string blockId);
         public Task<List<ValcoinBlock>> GetBlocksByNumber(ulong blockNumber);
         public Task<List<ValcoinBlock>> GetAllBlocks();
-        public Task AddBlock(ValcoinBlock block);
+        public Task AddBlock(ValcoinBlock block, bool fromNetwork);
         public Task UpdateBlock(ValcoinBlock block);
         public Task AddPendingTransaction(Transaction tx);
         public Task<List<Transaction>> GetTransactionsAtOrAfterBlock(ulong blockNumber);

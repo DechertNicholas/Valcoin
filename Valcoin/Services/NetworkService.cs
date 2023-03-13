@@ -220,7 +220,7 @@ namespace Valcoin.Services
                                     break;
 
                                 case ValidationCode.Valid:
-                                    await localService.AddBlock(block);
+                                    await localService.AddBlock(block, true);
                                     break;
                             }
                             break;
@@ -487,7 +487,7 @@ namespace Valcoin.Services
                         var validation = ValidateBlock(message.Block);
                         if (validation == ValidationCode.Valid)
                         {
-                            await localService.AddBlock(message.Block);
+                            await localService.AddBlock(message.Block, true);
                         }
                         else if (validation != ValidationCode.Existing)
                         {

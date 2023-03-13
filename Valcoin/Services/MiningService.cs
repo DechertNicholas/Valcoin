@@ -24,7 +24,7 @@ namespace Valcoin.Services
     public class MiningService : IMiningService
     {
         public static bool MineBlocks { get; set; } = false;
-        public static bool NewBlockFound { get; set; } = false;
+        public static bool NewBlockFoundFromNetwork { get; set; } = false;
         private readonly int Difficulty = 24; // this will remain static for the purposes of this application, but normally would auto-adjust over time
         private byte[] DifficultyMask = new byte[32];
         private readonly Stopwatch Stopwatch = new();
@@ -188,7 +188,7 @@ namespace Valcoin.Services
             // check on each hash if a stop has been requested
             while (!hashFound && MineBlocks == true)
             {
-                if (NewBlockFound)
+                if (NewBlockFoundFromNetwork)
                 {
                     // get all transactions processed at and after the block we're mining, as we'll need to ensure we don't re-process them
                     var processed = chainService.GetTransactionsAtOrAfterBlock(CandidateBlock.BlockNumber).Result; 
@@ -206,7 +206,7 @@ namespace Valcoin.Services
                     }
 
                     AssembleCandidateBlock();
-                    NewBlockFound = false;
+                    NewBlockFoundFromNetwork = false;
                 }
                 // update every 10 seconds
                 if (Stopwatch.Elapsed >= HashInterval)
@@ -236,7 +236,7 @@ namespace Valcoin.Services
             var valid = ValidationService.ValidateBlock(CandidateBlock);
             if (valid == ValidationService.ValidationCode.Valid)
             {
-                await chainService.AddBlock(CandidateBlock);
+                await chainService.AddBlock(CandidateBlock, false);
                 await networkService.RelayData(new Message(CandidateBlock));
                 return "";
             }

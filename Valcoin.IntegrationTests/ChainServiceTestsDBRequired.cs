@@ -50,7 +50,7 @@ namespace Valcoin.IntegrationTests
 
             // perform the reorganize (through the AddBlock method)
             var service = new ChainService(new ValcoinContext());
-            await service.AddBlock(block3);
+            await service.AddBlock(block3, false);
 
             var lastMainBlock = await service.GetLastMainChainBlock();
 
