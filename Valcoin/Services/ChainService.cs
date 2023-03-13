@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
@@ -444,6 +445,15 @@ namespace Valcoin.Services
             while (currentChain.Count > 0)
             {
                 var processingBlock = currentChain.Pop();
+
+                if (!differentGenesis && processingBlock.BlockId == newChain.Peek().BlockId)
+                {
+                    // if we do have a branch block (where the chain split), then this block is actaully valid and we only need
+                    // to re-link it to a new next block
+                    processingBlock.NextBlockHash = new byte[32];
+                    continue;
+                }
+
                 processingBlock.Transactions.Where(t => t.Inputs[0].PreviousTransactionId != new string('0', 64)) // skip the coinbase transactions
                     .ToList()
                     .ForEach(t => txsToReRelease.Add(t));
