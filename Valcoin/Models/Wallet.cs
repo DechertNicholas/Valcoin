@@ -13,10 +13,14 @@ using Valcoin.Services;
 
 namespace Valcoin.Models
 {
+    /// <summary>
+    /// A wallet is a public/private key pair that can unlock a locked TxOutput.
+    /// </summary>
     public class Wallet
     {
         /// <summary>
         /// Hex string representation of the hashed public key, for readability by people. Prefexed by '0x' to know that it is an address and not a block or transaction hash.
+        /// This prefix hopefully helps prevent the accidental sending of Valcoin to other hashes, like a block hash or transaction hash.
         /// </summary>
         [Key]
         public string Address { get; set; }
@@ -37,7 +41,7 @@ namespace Valcoin.Models
         public byte[] PrivateKey { get; set; }
 
         /// <summary>
-        /// The current balance of this wallet.
+        /// The current balance of this wallet. Used as a display on the UI.
         /// </summary>
         public int Balance { get; set; }
 
@@ -48,7 +52,7 @@ namespace Valcoin.Models
         private readonly ECDsa _ecdsa;
 
         /// <summary>
-        /// Private constructor to get around EFCore's constructor weirdness. Even though a paramaterized constructor exists matching
+        /// Constructor to get around EFCore's constructor weirdness. Even though a paramaterized constructor exists matching
         /// the values in the EFCore database, it will ALWAYS call the paramaterless constructor first. If <see cref="Create"/> were a
         /// constructor, a new <see cref="_ecdsa"/> would be created each call, yet the <see cref="PublicKey"/> and other properties
         /// would be set to the database values. This creates a mismatch between what is actually being used and what the user and
@@ -56,8 +60,6 @@ namespace Valcoin.Models
         /// values. Moving the constructor to a <see cref="Create"/> method is not ideal, but I could not
         /// get EFCore to play nicely with parameterless and parameterized constructors.
         /// </summary>
-        /// <param name="address">Hashed public key value, converted to hex string.</param>
-        /// <param name="addressBytes">Hashed public key value.</param>
         /// <param name="publicKey">The public key.</param>
         /// <param name="privateKey">The private key.</param>
         public Wallet(byte[] publicKey, byte[] privateKey)
@@ -77,7 +79,7 @@ namespace Valcoin.Models
         /// <summary>
         /// Creates a new instance of Wallet. To be used in place of a constructor.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A wallet with a new public/private key pair.</returns>
         public static Wallet Create()
         {
             var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
@@ -94,16 +96,10 @@ namespace Valcoin.Models
         }
 
         /// <summary>
-        /// Signs data using the wallet's key pair.
+        /// Sets the <see cref="TxInput.UnlockSignature"/> property in a transaction. The transaction data is converted to a byte[] by using
+        /// an <see cref="UnlockSignatureStruct"/> before siging that data, and setting the result as the UnlockSignature.
         /// </summary>
-        /// <param name="data">The data to sign. Normally used in a <see cref="TxOutput"/>'s <see cref="TxOutput.Address"/>.</param>
-        /// <returns></returns>
-        [Obsolete("Use SignTransactionInputs instead.")]
-        public byte[] SignData(byte[] data)
-        {
-            return _ecdsa.SignData(data, HashAlgorithmName.SHA256);
-        }
-
+        /// <param name="tx"></param>
         public void SignTransactionInputs(ref Transaction tx)
         {
             var sig = _ecdsa.SignData(new UnlockSignatureStruct(tx), HashAlgorithmName.SHA256);
@@ -115,20 +111,10 @@ namespace Valcoin.Models
         }
 
         /// <summary>
-        /// Verifies data that was previously signed. 
+        /// Verifies the <see cref="TxInput.UnlockSignature"/> that was previously signed.
         /// </summary>
-        /// <param name="data"></param>
-        /// <param name="signature"></param>
-        /// <returns></returns>
-        //[Obsolete("Use VerifyTransactionInputs instead.")]
-        //public static bool VerifyData(byte[] data, byte[] signature, byte[] publicKey)
-        //{
-        //    var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-
-        //    ecdsa.ImportSubjectPublicKeyInfo(publicKey, out _);
-        //    return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
-        //}
-
+        /// <param name="tx">The transaction containing the inputs.</param>
+        /// <returns>A boolean indicating the success or failure of the verification.</returns>
         public static bool VerifyTransactionInputs(Transaction tx)
         {
             var pubKey = tx.Inputs.First().UnlockerPublicKey;

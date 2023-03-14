@@ -21,7 +21,7 @@ namespace Valcoin.Models
         [Key]
         public string BlockId { get; set; }
         /// <summary>
-        /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid (due to SQLite not storing starting at 0).
+        /// The number of the block in the blockchain sequence. Starts at 1. A block with index 0 is invalid.
         /// </summary>
         public long BlockNumber { get; set; } = 0;
         /// <summary>
@@ -33,7 +33,7 @@ namespace Valcoin.Models
         /// </summary>
         public byte[] PreviousBlockHash { get; set; } = new byte[32];
         /// <summary>
-        /// Property used for database chain tracking. Tracks the next block in the longest chain.
+        /// The next block in the longest chain.
         /// </summary>
 #nullable enable
         public byte[]? NextBlockHash { get; set; } = new byte[32];
@@ -66,20 +66,14 @@ namespace Valcoin.Models
 
         public static implicit operator byte[](ValcoinBlock b) => JsonSerializer.SerializeToUtf8Bytes(b);
 
+        /// <summary>
+        /// Parameterless constructor. Creates a default block.
+        /// </summary>
         public ValcoinBlock() { }
 
         /// <summary>
         /// Json constructor. For DB operations, not normal use.
         /// </summary>
-        /// <param name="blockId"></param>
-        /// <param name="blockNumber"></param>
-        /// <param name="blockHash"></param>
-        /// <param name="previousBlockHash"></param>
-        /// <param name="nonce"></param>
-        /// <param name="timeUTCTicks"></param>
-        /// <param name="blockDifficulty"></param>
-        /// <param name="merkleRoot"></param>
-        /// <param name="transactions"></param>
         [JsonConstructor] // for serialization over the network
         public ValcoinBlock (string blockId, long blockNumber, byte[] blockHash, byte[] previousBlockHash,
             ulong nonce, long timeUTCTicks, int blockDifficulty, byte[] merkleRoot, List<Transaction> transactions)
@@ -95,6 +89,14 @@ namespace Valcoin.Models
             MerkleRoot = merkleRoot;
         }
 
+        /// <summary>
+        /// The standard constructor. Fills out required info to make an empty new block.
+        /// </summary>
+        /// <param name="blockNumber">The number in the chain this block will be.</param>
+        /// <param name="previousBlockHash">The previous block's hash.</param>
+        /// <param name="nonce">A random value to change when mining.</param>
+        /// <param name="timeUTCTicks">The current time in UTC ticks.</param>
+        /// <param name="blockDifficulty">The difficulty at the time of creation.</param>
         public ValcoinBlock(long blockNumber, byte[] previousBlockHash, ulong nonce, long timeUTCTicks, int blockDifficulty)
         {
             BlockNumber = blockNumber;
@@ -104,6 +106,10 @@ namespace Valcoin.Models
             BlockDifficulty = blockDifficulty;
         }
 
+        /// <summary>
+        /// Add a transaction to this block.
+        /// </summary>
+        /// <param name="tx">The transaction to add.</param>
         public void AddTx(Transaction tx)
         {
             tx.ComputeAndSetTransactionId();
@@ -111,6 +117,10 @@ namespace Valcoin.Models
             ComputeAndSetMerkleRoot();
         }
 
+        /// <summary>
+        /// Add multiple transactions at once to the block.
+        /// </summary>
+        /// <param name="txs">An enumerable of transactions to add.</param>
         public void AddTx(IEnumerable<Transaction> txs)
         {
             foreach (Transaction tx in txs)
@@ -139,6 +149,9 @@ namespace Valcoin.Models
             BlockId = Convert.ToHexString(BlockHash);
         }
 
+        /// <summary>
+        /// Compute the Merkle Root (hash tree) of all transactions in the block.
+        /// </summary>
         public void ComputeAndSetMerkleRoot()
         {
             // first, we sort the transactions. This preserves the order for hashing.

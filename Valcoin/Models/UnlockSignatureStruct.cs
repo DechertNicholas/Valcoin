@@ -5,14 +5,21 @@ using System.Text.Json;
 
 namespace Valcoin.Models
 {
+    /// <summary>
+    /// A helper struct used to get the byte[] data of the UnlockSignature on a TxInput.
+    /// </summary>
     public struct UnlockSignatureStruct
     {
+        /// <summary>
+        /// The transaction we are computing TxInput UnlockSignatures for.
+        /// </summary>
+        public Transaction Transaction { get; set; }
+
         /// <summary>
         /// The length of the byte[] used as the override on the transaction input's UnlockSignature. We cannot know the signature
         /// before it is computed, to it is instead computed with this value and overwritten with the result.
         /// </summary>
         private const int unlockOverrideLength = 4;
-        public Transaction Transaction { get; set; }
 
         public static implicit operator byte[](UnlockSignatureStruct u) => GetBytes(u.Transaction);
 
@@ -21,6 +28,11 @@ namespace Valcoin.Models
             Transaction = tx;
         }
 
+        /// <summary>
+        /// Gets the byte[] data for the unlock signature, to be passed to the wallet to Sign.
+        /// </summary>
+        /// <param name="tx"></param>
+        /// <returns></returns>
         private static byte[] GetBytes(Transaction tx)
         {
             var unlockOverride = new byte[unlockOverrideLength];

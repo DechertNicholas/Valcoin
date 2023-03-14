@@ -13,15 +13,17 @@ using Valcoin.Models;
 namespace Valcoin.Services
 {
     /// <summary>
-    /// The chain service sits just above the <see cref="StorageService"/>, and handles data linking and <see cref="Wallet"/> balance.
-    /// Anything directly related to the blockchain such as <see cref="ValcoinBlock"/>s or <see cref="Transaction"/>s should pass through here and not the
-    /// <see cref="StorageService"/>.
+    /// This service handles all database operations and ensures the chain remains consistant. 
     /// </summary>
     public class ChainService : IChainService
     {
+        /// <summary>
+        /// EFCore database reference.
+        /// </summary>
         protected ValcoinContext Db { get; private set; }
 
         private Wallet myWallet;
+        // reorganizing and padlock are to ensure that reorganize is not called again while already processing. This is a critical operation.
         private static bool reorganizing = false;
         private static readonly object padlock = new();
 
@@ -32,7 +34,9 @@ namespace Valcoin.Services
         }
 
         /// <summary>
-        /// This gets a fresh context and is mainly used by the network
+        /// This gets a fresh context and is mainly used by the network. EFCore's DbContext can only do so much in a short period of time. Attempting
+        /// to keep reusing a context, especially in threaded operations, results in a lot of errors. It's better to get a fresh service with a 
+        /// fresh context if you're in anything but the main thread.
         /// </summary>
         /// <returns></returns>
         public IChainService GetFreshService()
@@ -40,6 +44,10 @@ namespace Valcoin.Services
             return new ChainService(new ValcoinContext());
         }
 
+        /// <summary>
+        /// Returns the highest block inthe main chain.
+        /// </summary>
+        /// <returns>The highest ValcoinBlock. Null if no block is found (fresh db or a chain error).</returns>
         public virtual async Task<ValcoinBlock> GetLastMainChainBlock()
         {
             uint? highestBlockNumber = await Db.ValcoinBlocks.MaxAsync(b => (uint?)b.BlockNumber);
@@ -58,6 +66,7 @@ namespace Valcoin.Services
                 return Db.ValcoinBlocks.FirstOrDefault(b => b.BlockNumber == highestBlockNumber);
 
             // there's probably a fancy LINQ statement for this, but I couldn't get one to work
+            // we have to look at the previous block and ensure it points to this one.
             foreach (var highBlock in Db.ValcoinBlocks.Where(b => b.BlockNumber == highestBlockNumber).ToList())
             {
 
@@ -74,21 +83,40 @@ namespace Valcoin.Services
             return (ValcoinBlock)null;
         }
 
+        /// <summary>
+        /// Gets a block with a specified BlockId.
+        /// </summary>
+        /// <param name="blockId">The ID of the block to get.</param>
+        /// <returns>The block with the specified ID.</returns>
         public async Task<ValcoinBlock> GetBlock(string blockId)
         {
             return await Db.ValcoinBlocks.FirstOrDefaultAsync(b => b.BlockId == blockId);
         }
 
+        /// <summary>
+        /// Returns all blocks with a specific block number.
+        /// </summary>
+        /// <param name="blockNumber">The block number to query.</param>
+        /// <returns>All blocks with that block number.</returns>
         public async Task<List<ValcoinBlock>> GetBlocksByNumber(long blockNumber)
         {
             return await Db.ValcoinBlocks.Where(b => b.BlockNumber == blockNumber).ToListAsync();
         }
 
+        /// <summary>
+        /// Gets all blocks in the database.
+        /// </summary>
+        /// <returns>All blocks in the database.</returns>
         public async Task<List<ValcoinBlock>> GetAllBlocks()
         {
             return await Db.ValcoinBlocks.ToListAsync();
         }
 
+        /// <summary>
+        /// Gets a specific transaction.
+        /// </summary>
+        /// <param name="transactionId">The ID of the transaction to get.</param>
+        /// <returns>The transaction matching that ID.</returns>
         public async Task<Transaction> GetTx(string transactionId)
         {
             return await Db.Transactions.FirstOrDefaultAsync(t => t.TransactionId == transactionId);
@@ -110,6 +138,10 @@ namespace Valcoin.Services
                 .FirstOrDefaultAsync();                                             // and return that transaction
         }
 
+        /// <summary>
+        /// Gets all transactions in the main chain.
+        /// </summary>
+        /// <returns>All transactions in the main chain.</returns>
         public async Task<List<Transaction>> GetAllMainChainTransactions()
         {
             var blocks = await GetAllBlocks();
@@ -124,12 +156,15 @@ namespace Valcoin.Services
 
             // the last main chain will always have a next of 00000... so we need to add it specially
             var highest = await GetLastMainChainBlock();
-            if (highest != null)
-                highest.Transactions.ForEach(t => txs.Add(t));
+            highest?.Transactions.ForEach(t => txs.Add(t));
 
             return txs;
         }
 
+        /// <summary>
+        /// Adds transactions to the database.
+        /// </summary>
+        /// <param name="transactions">The transactions to add.</param>
         public async Task AddTxs(IEnumerable<Transaction> transactions)
         {
             foreach (Transaction tx in transactions)
@@ -139,6 +174,11 @@ namespace Valcoin.Services
             await Db.SaveChangesAsync();
         }
 
+        /// <summary>
+        /// Adds a block to the database, reorganizing if necessary, and handling all or any linking.
+        /// </summary>
+        /// <param name="block">The block to add.</param>
+        /// <param name="fromNetwork">Bool indicating if this was from the network. If true, then the mining service will be notified of a new block being added.</param>
         public async Task AddBlock(ValcoinBlock block, bool fromNetwork)
         {
             // remove any pending transactions of ours
@@ -191,6 +231,10 @@ namespace Valcoin.Services
                 MiningService.NewBlockFoundFromNetwork = true;
         }
 
+        /// <summary>
+        /// Updates an existing block, normally to update the NextBlockHash property.
+        /// </summary>
+        /// <param name="block">The block to update.</param>
         public async Task UpdateBlock(ValcoinBlock block)
         {
             Db.Update(block);
@@ -198,7 +242,7 @@ namespace Valcoin.Services
         }
 
         /// <summary>
-        /// Saves a block to the database raw, without any additional checking or changes.
+        /// Saves a block to the database raw, minimal checking or changes.
         /// </summary>
         /// <param name="block"></param>
         /// <returns></returns>
@@ -220,19 +264,34 @@ namespace Valcoin.Services
             }
         }
 
+        /// <summary>
+        /// Adds a pending spend to the database to keep track.
+        /// </summary>
+        /// <param name="tx">The transaction to track.</param>
         public async Task AddPendingTransaction(Transaction tx)
         {
             var block = await GetLastMainChainBlock();
             var blockNumber = block == null ? 0 : block.BlockNumber;
+            // EFCore can't track two databases of the same entity, so we convert it to a pointer class.
             var px = new PendingTransaction(tx.TransactionId, tx.Outputs.Sum(o => o.Amount), blockNumber);
             await CommitPendingTransaction(px);
         }
 
+        /// <summary>
+        /// Gets all transactions at the specified block hight, and after.
+        /// </summary>
+        /// <param name="blockNumber">The block number to start from.</param>
+        /// <returns>The transactions at or after that hight.</returns>
         public async Task<List<Transaction>> GetTransactionsAtOrAfterBlock(long blockNumber)
         {
             return await Db.Transactions.Where(t => t.BlockNumber >= blockNumber).ToListAsync();
         }
 
+        /// <summary>
+        /// Saves a PendingTransaction to the database with no additional checks or changes.
+        /// </summary>
+        /// <param name="ptx"></param>
+        /// <returns></returns>
         public async Task CommitPendingTransaction(PendingTransaction ptx)
         {
             Db.Add(ptx);
