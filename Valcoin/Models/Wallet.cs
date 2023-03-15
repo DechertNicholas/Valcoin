@@ -41,11 +41,6 @@ namespace Valcoin.Models
         public byte[] PrivateKey { get; set; }
 
         /// <summary>
-        /// The current balance of this wallet. Used as a display on the UI.
-        /// </summary>
-        public int Balance { get; set; }
-
-        /// <summary>
         /// RSA implementation object that does not need to be re-created each time it is used.
         /// </summary>
         [NotMapped]
@@ -125,11 +120,6 @@ namespace Valcoin.Models
             ecdsa.ImportSubjectPublicKeyInfo(pubKey, out _);
 
             return ecdsa.VerifyData(new UnlockSignatureStruct(tx), sig, HashAlgorithmName.SHA256);
-        }
-
-        public async void UpdateBalance()
-        {
-            Balance = await App.Current.Services.GetService<IChainService>().GetMyBalance();
         }
     }
 }
