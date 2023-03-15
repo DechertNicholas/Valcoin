@@ -47,7 +47,7 @@
         </NavigationView.AutoSuggestBox>
             <NavigationView.MenuItems>
                 
-                <NavigationViewItem Content="Wallet" Tag="WalletPage">
+                <NavigationViewItem Content="Send and Receive" Tag="WalletPage">
                     <NavigationViewItem.Icon>
                         <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE825;"/>
                     </NavigationViewItem.Icon>

@@ -20,7 +20,9 @@
 
 
     <StackPanel Margin="10">
-        <TextBlock Text="Mining Page" Margin="5"/>
+        <TextBlock Text="Mining Controls" 
+                   Style="{StaticResource TitleTextBlockStyle}"
+                   Margin="5"/>
         
         <Button Content="Start"
                 Margin="5"
