@@ -32,20 +32,6 @@ namespace Valcoin.UnitTests
             wallet = new Wallet(ecdsa.ExportSubjectPublicKeyInfo(), ecdsa.ExportECPrivateKey());
         }
 
-        // this test is broken after the changes to TxInput.UnlockSignature
-        //[Fact]
-        //public void SignsDataCorrectly()
-        //{
-        //    var input = new TxInput("0000", -1, new byte[] { 1 });
-        //    var output = new TxOutput(50, new byte[] { 2 });
-        //    var tx = new Transaction(new() { input }, new() { output });
-
-        //    wallet.SignTransactionInputs(ref tx);
-
-        //    var valid = Wallet.VerifyData(sigStruct, unlockSignature, wallet.PublicKey);
-        //    Assert.True(valid);
-        //}
-
         [Fact]
         public void SignsDataCorrectlyInTransactions()
         {
@@ -146,20 +132,6 @@ namespace Valcoin.UnitTests
             var valid = Wallet.VerifyTransactionInputs(block2.Transactions.First());
             Assert.True(valid);
         }
-
-        // broken after changes to Wallet.VerifyTransactionInputs
-        //[Fact]
-        //public void VerifiesDataCorrectlyWithImportedPublicKey()
-        //{
-        //    // string exported from the wallet params above
-        //    var publicKey = Convert.FromHexString("3059301306072A8648CE3D020106082A8648CE3D03010703420004BED612DDD11CA8237AF64DEE0EF9B5605A7C487C97E457F117D23CD111BFB376DA9EF038E8A08898A219171226107ACCB77DA940EA40B5CF0295BF28B7A2C5F0");
-        //    var dataToSign = new UnlockSignatureStruct(1, publicKey);
-        //    var signature = Convert.FromHexString("39599C71E871C7A5C07B098E8EAE3F9EC56E9ACCDF936B09843415298587A1F4BDCFB4EC3F40828C4E06EA90C656996FDE5047B85030ADC2DD94B2C43FAA5F56");
-
-        //    var valid = Wallet.VerifyData(dataToSign, signature, publicKey);
-
-        //    Assert.True(valid);
-        //}
 
         [Fact]
         public void VerifiesSerializedDataCorrectly()

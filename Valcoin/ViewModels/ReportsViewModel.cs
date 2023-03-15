@@ -36,7 +36,6 @@ namespace Valcoin.ViewModels
             foreach (var key in result.Keys)
             {
                 ReportWealthResult.Add(new() { Address = key, Wealth = result[key] });
-                //ReportWealthResult = ReportWealthResult.OrderBy(w => w.Wealth).ToList();
             }
 
 
