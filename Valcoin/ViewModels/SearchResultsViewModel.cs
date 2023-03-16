@@ -26,7 +26,6 @@ namespace Valcoin.ViewModels
         public SearchResultsViewModel()
         {
             chainService ??= GetChainService();
-            //Populate();
         }
 
         public async void Populate()

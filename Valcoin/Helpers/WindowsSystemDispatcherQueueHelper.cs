@@ -2,6 +2,10 @@
 
 using System.Runtime.InteropServices; // For DllImport
 
+/// <summary>
+/// Helper class for the Mica controller. From the Microsoft Learn article:
+/// https://learn.microsoft.com/en-us/windows/apps/windows-app-sdk/system-backdrop-controller#example-use-mica-in-a-windows-appsdkwinui-3-app
+/// </summary>
 class WindowsSystemDispatcherQueueHelper
 {
     [StructLayout(LayoutKind.Sequential)]

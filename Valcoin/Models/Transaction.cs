@@ -10,6 +10,9 @@ using Valcoin.Helpers;
 
 namespace Valcoin.Models
 {
+    /// <summary>
+    /// A transaction on the network, allowing one client to send Valcoin to another.
+    /// </summary>
     public class Transaction
     {
         /// <summary>
@@ -23,8 +26,7 @@ namespace Valcoin.Models
         /// </summary>
         public int Version { get; set; } = 1;
         /// <summary>
-        /// <see cref="TxInput"/>s used for this transaction. Can include any number of <see cref="TxInput"/>s so long as the resulting value of all 
-        /// <see cref="TxInput"/>s is greater than or equal to the <see cref="TxOutput"/>s for this transaction.
+        /// <see cref="TxInput"/>s used for this transaction.
         /// </summary>
         public List<TxInput> Inputs
         {
@@ -48,10 +50,11 @@ namespace Valcoin.Models
             }
         }
         /// <summary>
-        /// The block in which this transaction was in. Part of the unlock signature.
+        /// The block in which this transaction was in. Also part of the coinbase transaction's lock signature.
         /// </summary>
         public long BlockNumber { get; set; }
 
+        // backing fields.
         private List<TxInput> _inputs = new();
         private List<TxOutput> _outputs = new();
 
@@ -73,6 +76,12 @@ namespace Valcoin.Models
             BlockNumber = blockNumber;
         }
 
+        /// <summary>
+        /// Create a new transaction from only inputs and outputs. Needed when transacting a new transaction, 
+        /// as we don't yet know the block number it will be in.
+        /// </summary>
+        /// <param name="inputs">Inputs for the transaction.</param>
+        /// <param name="outputs">Outputs for the transaction - max 2.</param>
         public Transaction(List<TxInput> inputs, List<TxOutput> outputs)
         {
             Inputs = inputs.OrderBy(i => i.PreviousTransactionId).ThenBy(i => i.PreviousOutputIndex).ToList();
@@ -100,6 +109,10 @@ namespace Valcoin.Models
             TransactionId = GetTxIdAsString();
         }
 
+        /// <summary>
+        /// Returns the transaction hash as a hex string.
+        /// </summary>
+        /// <returns>A hex string of the hash.</returns>
         public string GetTxIdAsString()
         {
             return Convert.ToHexString(
@@ -112,6 +125,9 @@ namespace Valcoin.Models
             );
         }
 
+        /// <summary>
+        /// Computes the hex string of the hash, and sets it as the TransactionId.
+        /// </summary>
         public void ComputeAndSetTransactionId()
         {
             TransactionId = GetTxIdAsString();

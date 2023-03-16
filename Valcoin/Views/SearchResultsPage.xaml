@@ -7,6 +7,7 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:Valcoin.Views"
     xmlns:models="using:Valcoin.Models"
+    xmlns:controls="using:CommunityToolkit.WinUI.UI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="using:Valcoin.ViewModels" 
@@ -18,90 +19,50 @@
         <viewModels:SearchResultsViewModel x:Name="ViewModel"/>
     </Page.DataContext>
 
-    <StackPanel>
-        <TextBlock Text="Search Results"
-                   Style="{StaticResource TextBlockStyleTitle}"/>
+    <ScrollViewer VerticalScrollMode="Enabled" 
+                  IsVerticalScrollChainingEnabled="True"
+                  Margin="10">
+        <StackPanel>
+            <TextBlock Text="Search Results"
+                       Style="{StaticResource TextBlockStyleTitle}"/>
 
-        <Pivot Title="{x:Bind ViewModel.QueryText, Mode=TwoWay}">
-            
-            <PivotItem Header="Blocks">
-                <ListView ItemsSource="{x:Bind ViewModel.Blocks}"
-                          HorizontalAlignment="Stretch">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="models:ValcoinBlock">
-                            <StackPanel Orientation="Horizontal"
-                                        HorizontalAlignment="Stretch">
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="Block ID:"
-                                               Margin="2"/>
-                                    <TextBlock Text="{x:Bind BlockId}"
-                                               FontFamily="Cascadia Code"
-                                               Margin="2"/>
-                                </StackPanel>
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="Nonce:"
-                                               Margin="2"/>
-                                    <TextBlock Text="{x:Bind Nonce}"
-                                               FontFamily="Cascadia Code"
-                                               Margin="2"/>
-                                </StackPanel>
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="#"
-                                               Margin="2"/>
-                                    <TextBlock Text="{x:Bind BlockNumber}"
-                                               FontFamily="Cascadia Code"
-                                               Margin="2"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-            </PivotItem>
-            
-            
-            <PivotItem Header="Transactions">
-                <ListView ItemsSource="{x:Bind ViewModel.Transactions}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate x:DataType="models:Transaction">
-                            <StackPanel Orientation="Horizontal"
-                                        HorizontalAlignment="Stretch">
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="Transaction ID:"
-                                               Margin="2"/>
-                                    <TextBlock Text="{x:Bind TransactionId}"
-                                               FontFamily="Cascadia Code"
-                                               Margin="2"/>
-                                </StackPanel>
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="Inputs:"
-                                               Margin="2"/>
-                                    <TextBlock Text="{x:Bind Inputs.Count}"
-                                               FontFamily="Cascadia Code"
-                                               Margin="2"
-                                               HorizontalAlignment="Right"/>
-                                </StackPanel>
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="Outputs:"
-                                               Margin="2"/>
-                                    <TextBlock Text="{x:Bind Outputs.Count}"
-                                               FontFamily="Cascadia Code"
-                                               Margin="2"
-                                               HorizontalAlignment="Right"/>
-                                </StackPanel>
-                                <StackPanel Margin="2">
-                                    <TextBlock Text="Block Number:"
-                                               Margin="2"/>
-                                    <TextBlock Text="{x:Bind BlockNumber}"
-                                               FontFamily="Cascadia Code"
-                                               Margin="2"
-                                               HorizontalAlignment="Right"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
-                </ListView>
-            </PivotItem>
-        </Pivot>
+            <Pivot Title="{x:Bind ViewModel.QueryText, Mode=TwoWay}">
 
-    </StackPanel>
+                <PivotItem Header="Blocks">
+                    <controls:DataGrid AutoGenerateColumns="False"
+                                       ItemsSource="{x:Bind ViewModel.Blocks}"
+                                       FontFamily="Cascadia Code"
+                                       IsReadOnly="True">
+                        <controls:DataGrid.Columns>
+                            <controls:DataGridTextColumn Binding="{Binding BlockId}"
+                                                         Header="BlockId"/>
+                            <controls:DataGridTextColumn Binding="{Binding Nonce}"
+                                                         Header="Nonce"/>
+                            <controls:DataGridTextColumn Binding="{Binding BlockNumber}"
+                                                         Header="BlockNumber"/>
+                        </controls:DataGrid.Columns>
+                    </controls:DataGrid>
+                </PivotItem>
+
+
+                <PivotItem Header="Transactions">
+                    <controls:DataGrid AutoGenerateColumns="False"
+                                       ItemsSource="{x:Bind ViewModel.Transactions}"
+                                       FontFamily="Cascadia Code"
+                                       IsReadOnly="True">
+                        <controls:DataGrid.Columns>
+                            <controls:DataGridTextColumn Binding="{Binding TransactionId}"
+                                                         Header="TransactionId"/>
+                            <controls:DataGridTextColumn Binding="{Binding Inputs.Count}"
+                                                         Header="Inputs"/>
+                            <controls:DataGridTextColumn Binding="{Binding Outputs.Count}"
+                                                         Header="Outputs"/>
+                            <controls:DataGridTextColumn Binding="{Binding BlockNumber}"
+                                                         Header="BlockNumber"/>
+                        </controls:DataGrid.Columns>
+                    </controls:DataGrid>
+                </PivotItem>
+            </Pivot>
+        </StackPanel>
+    </ScrollViewer>
 </Page>

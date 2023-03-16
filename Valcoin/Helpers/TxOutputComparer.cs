@@ -8,6 +8,9 @@ using Valcoin.Models;
 
 namespace Valcoin.Helpers
 {
+    /// <summary>
+    /// IEqualityComparer for TxOutput, makes using .Distinct() easier.
+    /// </summary>
     public class TxOutputComparer : IEqualityComparer<TxOutput>
     {
         public bool Equals(TxOutput x, TxOutput y)

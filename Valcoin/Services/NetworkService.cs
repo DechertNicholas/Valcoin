@@ -56,7 +56,7 @@ namespace Valcoin.Services
             // needing to use the internet. These do not need to be kept in a database
             clients.Add(new Client("10.11.5.100", ListenPort));
             clients.Add(new Client("10.11.5.101", ListenPort));
-
+#endif
             // we also need to know our IP, so we don't keep re-ingesting our own data
             using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
             {
@@ -64,7 +64,6 @@ namespace Valcoin.Services
                 IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
                 localIP = endPoint.Address.ToString();
             }
-#endif
 
             try
             {

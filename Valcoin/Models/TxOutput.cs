@@ -11,6 +11,9 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
+    /// <summary>
+    /// The outputs of a transaction.
+    /// </summary>
     [PrimaryKey(nameof(TransactionId), nameof(Amount), nameof(Address))] // known issue, if you send the same amount twice to the same address, you won't have a unique key. Not supported.
     public class TxOutput
     {

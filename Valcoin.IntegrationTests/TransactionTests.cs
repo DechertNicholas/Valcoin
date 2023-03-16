@@ -46,8 +46,6 @@ namespace Valcoin.IntegrationTests
             Assert.NotNull(tx.TransactionId);
             Assert.NotNull(tx.Inputs);
             Assert.NotNull(tx.Outputs);
-            //Assert.NotNull(tx.JsonInputs);
-            //Assert.NotNull(tx.JsonOutputs);
             Assert.NotNull(tx.Inputs[0].UnlockerPublicKey);
             Assert.NotNull(tx.Inputs[0].UnlockSignature);
             Assert.NotNull(tx.Outputs[0].Address);

@@ -19,7 +19,9 @@
         <viewModels:ReportsViewModel x:Name="ViewModel"/>
     </Page.DataContext>
 
-    <ScrollViewer VerticalScrollMode="Enabled" IsVerticalScrollChainingEnabled="True">
+    <ScrollViewer VerticalScrollMode="Enabled" 
+                  IsVerticalScrollChainingEnabled="True"
+                  Margin="10">
         <StackPanel>
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Blockchain Reports:"

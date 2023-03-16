@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
+    /// <summary>
+    /// A remote Valcoin client that we know of. Stored in a database so that we can reference previous peers after a program stop/start.
+    /// </summary>
     public class Client : IEquatable<Client>
     {
         /// <summary>
@@ -20,7 +23,8 @@ namespace Valcoin.Models
         public string Address { get; set; }
 
         /// <summary>
-        /// The port the client is listening on.
+        /// The port the client is listening on. When we receive a TcpClient, the Port property on the Tcp object is the sending port, which is ephemeral.
+        /// The listening port information is included in this Client Port property so that we know how to reach back to them.
         /// </summary>
         public int Port { get; set; }
 

@@ -10,11 +10,14 @@ using System.Threading.Tasks;
 
 namespace Valcoin.Models
 {
+    /// <summary>
+    /// An input for a transaction.
+    /// </summary>
     [PrimaryKey("PreviousTransactionId", "PreviousOutputIndex", "TransactionId")]
     public class TxInput
     {
         /// <summary>
-        /// The previous transaction referenced by this Input
+        /// The previous transaction referenced by this Input.
         /// </summary>
         public string PreviousTransactionId { get; set; }
         /// <summary>
@@ -41,19 +44,14 @@ namespace Valcoin.Models
 
         public static implicit operator byte[](TxInput t) => JsonSerializer.SerializeToUtf8Bytes(t);
 
+        /// <summary>
+        /// Create a new TxInput.
+        /// </summary>
         public TxInput(string previousTransactionId, int previousOutputIndex, byte[] unlockerPublicKey)
         {
             PreviousTransactionId = previousTransactionId;
             PreviousOutputIndex = previousOutputIndex;
             UnlockerPublicKey = unlockerPublicKey;
         }
-
-        //public TxInput(string previousTransactionId, int previousOutputIndex, byte[] unlockerPublicKey, byte[] unlockSignature)
-        //{
-        //    PreviousTransactionId = previousTransactionId;
-        //    PreviousOutputIndex = previousOutputIndex;
-        //    UnlockerPublicKey = unlockerPublicKey;
-        //    UnlockSignature = unlockSignature;
-        //}
     }
 }

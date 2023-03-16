@@ -18,8 +18,9 @@
         <viewModels:WalletViewModel x:Name="ViewModel"/>
     </Page.DataContext>
 
-    <StackPanel>
-        <TextBlock Text="Wallet Page"/>
+    <StackPanel Margin="10">
+        <TextBlock Text="Send and Receive"
+                   Style="{StaticResource TitleTextBlockStyle}"/>
         <StackPanel Orientation="Horizontal">
             <TextBlock Text="My address:"/>
             <TextBlock Text="{x:Bind ViewModel.MyWallet.Address}"

@@ -8,6 +8,9 @@ using Windows.Devices.Bluetooth.Advertisement;
 
 namespace Valcoin.Models
 {
+    /// <summary>
+    /// A struct to hold the Transaction data when computing the hash and excluding other properties.
+    /// </summary>
     public struct TransactionStruct
     {
         public int Version { get; set; }
