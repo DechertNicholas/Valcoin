@@ -1,7 +1,7 @@
 $env:Solution_Name = "Valcoin.sln"
 $env:Solution_Name = "Valcoin"
 $env:Configuration = "Debug"
-$env:Platform = "x64"
+$env:Platform = "x86"
 $env:Appx_Package_Build_Mode = "SideloadOnly"
 $env:Appx_Bundle = "Never"
 $env:CertificatePath = Resolve-Path .\Valcoin\Valcoin_TemporaryKey.pfx
