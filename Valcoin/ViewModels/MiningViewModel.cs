@@ -25,7 +25,7 @@ namespace Valcoin.ViewModels
         public event EventHandler<ValcoinEventHelper> MiningEvent;
 
         [ObservableProperty]
-        private string hashSpeed = "0";
+        private int hashSpeed = 0;
 
         public MiningViewModel()
         {
@@ -73,10 +73,10 @@ namespace Valcoin.ViewModels
             {
                 // check the current hash speed every second
                 await Task.Delay(1000);
-                HashSpeed = App.Current.Services.GetService<IMiningService>().HashSpeed.ToString();
+                HashSpeed = App.Current.Services.GetService<IMiningService>().HashSpeed;
             }
             // cleanup on stop so that we have nice fresh metrics when started again
-            HashSpeed = "0";
+            HashSpeed = 0;
         }
     }
 }
