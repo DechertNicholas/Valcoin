@@ -19,7 +19,9 @@
         <viewModels:SearchResultsViewModel x:Name="ViewModel"/>
     </Page.DataContext>
 
-    <ScrollViewer VerticalScrollMode="Enabled" IsVerticalScrollChainingEnabled="True">
+    <ScrollViewer VerticalScrollMode="Enabled" 
+                  IsVerticalScrollChainingEnabled="True"
+                  Margin="10">
         <StackPanel>
             <TextBlock Text="Search Results"
                        Style="{StaticResource TextBlockStyleTitle}"/>
